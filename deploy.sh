@@ -54,9 +54,14 @@ if ! command -v pm2 &> /dev/null; then
     npm install -g pm2
 fi
 
+# Ensure port 3000 is free
+echo "🔫 Killing any process on port 3000..."
+npx kill-port 3000 || true
+
 if pm2 list | grep -q "$APP_NAME"; then
     echo "♻️ Restarting existing process..."
-    pm2 restart "$APP_NAME"
+    pm2 delete "$APP_NAME"
+    pm2 start pnpm --name "$APP_NAME" -- start
 else
     echo "▶️ Starting new process..."
     # Start using pnpm to ensure proper environment
