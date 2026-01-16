@@ -5,7 +5,7 @@ import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const redirectUrl = "/"; // Force redirect to root to avoid localhost issues
+  const redirectUrl = searchParams.get("redirectUrl") || "/";
 
   const token = await getToken({
     req: request,
