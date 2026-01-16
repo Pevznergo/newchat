@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SERVER="root@74.208.193.3"
+SERVER="root@70.34.255.16"
 REMOTE_DIR="/var/www/app.aporto.tech"
 SSH_KEY="/Users/igortkachenko/.ssh/vast_id_ed25519"
 
@@ -51,11 +51,14 @@ ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SERVER" "cd $REMOTE_DIR && \
     if ! command -v pnpm &> /dev/null; then npm install -g pnpm; fi && \
     echo '📦 Installing/Pruning production dependencies...' && \
     pnpm install --prod --frozen-lockfile && \
-    echo '🔫 Killing old process...' && \
+    echo '🔫 Killing old process on port 3000...' && \
     npx kill-port 3000 || true && \
     echo '▶️ Restarting PM2...' && \
     if pm2 list | grep -q 'ai-chatbot'; then pm2 delete 'ai-chatbot'; fi && \
-    auth_secret=\$(grep AUTH_SECRET .env | cut -d '=' -f2) && \
+    # Ensure .env exists!
+    if [ -f .env ]; then
+      auth_secret=\$(grep AUTH_SECRET .env | cut -d '=' -f2)
+    fi && \
     pm2 start npm --name 'ai-chatbot' -- start"
 
 echo "🎉 Deployment successfully completed!"
