@@ -1,3 +1,5 @@
+import { generateText } from "ai";
+import { Bot, webhookCallback } from "grammy";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -10,8 +12,6 @@ import {
   saveMessages,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
-import { generateText } from "ai";
-import { Bot, webhookCallback } from "grammy";
 
 export const maxDuration = 60;
 
@@ -117,29 +117,33 @@ bot.on("message:text", async (ctx) => {
     // Convert to CoreMessages for AI SDK
     // DBMessage parts are JSON, so we need to ensure correct format
     const _coreMessages = history.map((msg) => {
-       // msg.parts is JSON, assume it's compatible or needs parsing
-       // Based on schema, it's `json("parts")`. In DBMessage type, it matches core message parts.
-       const content = (msg.parts as any[]).map(p => {
-           if (p.type === 'text') return { type: 'text', text: p.text };
-           // Handle other types if needed, or filter
-           return { type: 'text', text: '' }; 
-       });
-       return { role: msg.role as "user" | "assistant" | "system", content: content.map(c => c.text).join('\n') }; // simplified for now, or use complex struct
+      // msg.parts is JSON, assume it's compatible or needs parsing
+      // Based on schema, it's `json("parts")`. In DBMessage type, it matches core message parts.
+      const content = (msg.parts as any[]).map((p) => {
+        if (p.type === "text") {
+          return { type: "text", text: p.text };
+        }
+        // Handle other types if needed, or filter
+        return { type: "text", text: "" };
+      });
+      return {
+        role: msg.role as "user" | "assistant" | "system",
+        content: content.map((c) => c.text).join("\n"),
+      }; // simplified for now, or use complex struct
     });
-    
+
     // Better: use convertToUIMessages then convertToCoreMessages if available, or just map manually
     // Simplest for now: user/assistant alternating text.
-    
+
     // Actually, `generateText` accepts `messages` as `CoreMessage[]`.
     const aiMessages: any[] = history.map((m) => ({
       role: m.role,
       content: (m.parts as any[]).map((p) => p.text).join("\n"),
     }));
 
-
     // 5. Generate Response
     const modelId = DEFAULT_CHAT_MODEL;
-    
+
     await ctx.replyWithChatAction("typing");
 
     const response = await generateText({
@@ -173,7 +177,6 @@ bot.on("message:text", async (ctx) => {
         },
       ],
     });
-
   } catch (error) {
     console.error("Telegram Webhook Error:", error);
     await ctx.reply("Sorry, something went wrong processing your message.");

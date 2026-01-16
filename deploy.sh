@@ -26,6 +26,9 @@ echo "📦 Installing dependencies..."
 pnpm install
 
 # 3. Check Code (Lint & Type Check)
+echo "🧹 Auto-formatting code..."
+pnpm run format
+
 echo "🔍 Checking code (Linting)..."
 pnpm run lint
 

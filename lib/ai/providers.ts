@@ -1,10 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
-import {
-  customProvider,
-  type LanguageModel,
-} from "ai";
+import { customProvider, type LanguageModel } from "ai";
 import { isTestEnvironment } from "../constants";
 
 export const myProvider = isTestEnvironment
@@ -50,8 +47,10 @@ export function getLanguageModel(modelId: string): LanguageModel {
   }
 
   // Fallback or legacy gateway support if needed, but per request we use connected providers directly
-  console.warn(`Unknown model provider for ${modelId}, trying OpenAI as default fallback`);
-  return openai("gpt-4o"); 
+  console.warn(
+    `Unknown model provider for ${modelId}, trying OpenAI as default fallback`
+  );
+  return openai("gpt-4o");
 }
 
 export function getTitleModel() {

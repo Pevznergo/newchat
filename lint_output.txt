@@ -1,0 +1,37 @@
+
+> ai-chatbot@3.1.0 lint
+> ultracite check
+
+app/(chat)/api/telegram/webhook/route.ts:123:9 lint/style/useBlockStatements  FIXABLE  ━━━━━━━━━━
+
+  × Block statements are preferred in this position.
+  
+    121 │       // Based on schema, it's `json("parts")`. In DBMessage type, it matches core message parts.
+    122 │       const content = (msg.parts as any[]).map((p) => {
+  > 123 │         if (p.type === "text") return { type: "text", text: p.text };
+        │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    124 │         // Handle other types if needed, or filter
+    125 │         return { type: "text", text: "" };
+  
+  i Unsafe fix: Wrap the statement with a `JsBlockStatement`
+  
+    123 │ ········if·(p.type·===·"text")·{·return·{·type:·"text",·text:·p.text·};·}
+        │                                ++                                      ++
+
+Checked 179 files in 116ms. No fixes applied.
+Found 1 error.
+check ━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+Error: Lint errors found
+    at file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/ultracite@7.0.11_typescript@5.8.2/node_modules/ultracite/dist/index.js:313:13045
+    at async resolveMiddleware (file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:221:17)
+    at async callRecursive (file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async callRecursive (file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async procedure (file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:281:18)
+    at async file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_modules/@trpc/server/dist/tracked-D4V22yc5.mjs:298:13
+    at async Command.<anonymous> (file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+server@11.8.1_typescript@5.8.2__zod@4.3.5/node_modules/trpc-cli/dist/index.js:355:32)
+    at async Command.parseAsync (/Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1122:5)
+    at async Object.run (file:///Users/igortkachenko/Downloads/newchat/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+server@11.8.1_typescript@5.8.2__zod@4.3.5/node_modules/trpc-cli/dist/index.js:461:9)

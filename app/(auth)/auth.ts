@@ -99,8 +99,8 @@ export const {
         } else {
           const [dbUser] = users;
           if (!dbUser.googleId) {
-             // Link existing account
-             await linkGoogleAccount(email, account.providerAccountId);
+            // Link existing account
+            await linkGoogleAccount(email, account.providerAccountId);
           }
         }
       }

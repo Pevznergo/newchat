@@ -66,7 +66,10 @@ export async function createGoogleUser(email: string, googleId: string) {
   try {
     return await db.insert(user).values({ email, googleId }).returning();
   } catch (_error) {
-    throw new ChatSDKError("bad_request:database", "Failed to create google user");
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create google user"
+    );
   }
 }
 
@@ -78,16 +81,25 @@ export async function linkGoogleAccount(email: string, googleId: string) {
       .where(eq(user.email, email))
       .returning();
   } catch (_error) {
-    throw new ChatSDKError("bad_request:database", "Failed to link google account");
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to link google account"
+    );
   }
 }
 
 export async function createTelegramUser(telegramId: string, email?: string) {
   try {
     const finalEmail = email || `telegram-${telegramId}@telegram.bot`;
-    return await db.insert(user).values({ email: finalEmail, telegramId }).returning();
+    return await db
+      .insert(user)
+      .values({ email: finalEmail, telegramId })
+      .returning();
   } catch (_error) {
-    throw new ChatSDKError("bad_request:database", "Failed to create telegram user");
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create telegram user"
+    );
   }
 }
 
@@ -95,7 +107,10 @@ export async function getUserByTelegramId(telegramId: string) {
   try {
     return await db.select().from(user).where(eq(user.telegramId, telegramId));
   } catch (_error) {
-    throw new ChatSDKError("bad_request:database", "Failed to get user by telegram id");
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user by telegram id"
+    );
   }
 }
 
