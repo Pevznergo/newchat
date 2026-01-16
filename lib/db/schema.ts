@@ -17,7 +17,6 @@ export const user = pgTable("User", {
   password: varchar("password", { length: 64 }),
   googleId: varchar("googleId", { length: 255 }), // Using varchar for external IDs is safer
   telegramId: varchar("telegramId", { length: 255 }), // Telegram IDs are numbers but storing as string avoids overflow/precision issues
-  yandexId: varchar("yandexId", { length: 255 }), // Yandex User ID
 });
 
 export type User = InferSelectModel<typeof user>;

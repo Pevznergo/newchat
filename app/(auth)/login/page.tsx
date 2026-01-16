@@ -10,8 +10,6 @@ import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
 import { type LoginActionState, login } from "../actions";
 
-import { TelegramLoginButton } from "@/components/telegram-login-button";
-
 export default function Page() {
   const router = useRouter();
 
@@ -79,17 +77,6 @@ export default function Page() {
           >
             Sign in with Google
           </button>
-          <button
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-            onClick={() => signIn("yandex")}
-            type="button"
-          >
-            Sign in with Yandex
-          </button>
-          
-          <div className="flex justify-center mt-2">
-            <TelegramLoginButton botName={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || ""} />
-          </div>
           <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">
             {"Don't have an account? "}
             <Link
