@@ -71,9 +71,9 @@ export default function Page() {
             </div>
           </div>
           <button
-            type="button"
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
             onClick={() => signIn("google")}
+            type="button"
           >
             Sign in with Google
           </button>

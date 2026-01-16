@@ -1,17 +1,17 @@
-import { Bot, webhookCallback } from "grammy";
-import { generateText } from "ai";
+import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { systemPrompt } from "@/lib/ai/prompts";
+import { getLanguageModel } from "@/lib/ai/providers";
 import {
   createTelegramUser,
+  getChatsByUserId,
+  getMessagesByChatId,
   getUserByTelegramId,
   saveChat,
   saveMessages,
-  getChatsByUserId,
-  getMessagesByChatId,
 } from "@/lib/db/queries";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { systemPrompt } from "@/lib/ai/prompts";
 import { generateUUID } from "@/lib/utils";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { generateText } from "ai";
+import { Bot, webhookCallback } from "grammy";
 
 export const maxDuration = 60;
 
@@ -25,7 +25,9 @@ const bot = new Bot(token);
 
 bot.command("start", async (ctx) => {
   const telegramId = ctx.from?.id.toString();
-  if (!telegramId) return;
+  if (!telegramId) {
+    return;
+  }
 
   const firstName = ctx.from?.first_name || "";
   const username = ctx.from?.username || "";
@@ -80,13 +82,13 @@ bot.on("message:text", async (ctx) => {
     });
 
     let chatId: string;
-    let isNewChat = false;
+    let _isNewChat = false;
 
     if (chats.length > 0) {
       chatId = chats[0].id;
     } else {
       chatId = generateUUID();
-      isNewChat = true;
+      _isNewChat = true;
       await saveChat({
         id: chatId,
         userId: user.id,
@@ -114,7 +116,7 @@ bot.on("message:text", async (ctx) => {
     const history = await getMessagesByChatId({ id: chatId });
     // Convert to CoreMessages for AI SDK
     // DBMessage parts are JSON, so we need to ensure correct format
-    const coreMessages = history.map((msg) => {
+    const _coreMessages = history.map((msg) => {
        // msg.parts is JSON, assume it's compatible or needs parsing
        // Based on schema, it's `json("parts")`. In DBMessage type, it matches core message parts.
        const content = (msg.parts as any[]).map(p => {
@@ -129,9 +131,9 @@ bot.on("message:text", async (ctx) => {
     // Simplest for now: user/assistant alternating text.
     
     // Actually, `generateText` accepts `messages` as `CoreMessage[]`.
-    const aiMessages: any[] = history.map(m => ({
-        role: m.role,
-        content: (m.parts as any[]).map(p => p.text).join('\n')
+    const aiMessages: any[] = history.map((m) => ({
+      role: m.role,
+      content: (m.parts as any[]).map((p) => p.text).join("\n"),
     }));
 
 

@@ -1,9 +1,8 @@
-import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 import {
   customProvider,
-  wrapLanguageModel,
   type LanguageModel,
 } from "ai";
 import { isTestEnvironment } from "../constants";

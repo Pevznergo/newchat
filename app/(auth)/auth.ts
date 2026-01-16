@@ -3,7 +3,6 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { DUMMY_PASSWORD } from "@/lib/constants";
 import {
   createGoogleUser,
   createGuestUser,
@@ -85,10 +84,12 @@ export const {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "google") {
         const email = user.email;
-        if (!email) return false;
+        if (!email) {
+          return false;
+        }
 
         const users = await getUser(email);
 
