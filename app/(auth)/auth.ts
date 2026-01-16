@@ -90,13 +90,13 @@ export const {
         const { id, first_name, last_name, username, photo_url, auth_date, hash } = credentials;
         
         // Verify Telegram data
-        const dataCheckArr = [];
-        if (auth_date) dataCheckArr.push(`auth_date=${auth_date}`);
-        if (first_name) dataCheckArr.push(`first_name=${first_name}`);
-        if (id) dataCheckArr.push(`id=${id}`);
-        if (last_name) dataCheckArr.push(`last_name=${last_name}`);
-        if (photo_url) dataCheckArr.push(`photo_url=${photo_url}`);
-        if (username) dataCheckArr.push(`username=${username}`);
+        const dataCheckArr: string[] = [];
+        if (auth_date) { dataCheckArr.push(`auth_date=${auth_date}`); }
+        if (first_name) { dataCheckArr.push(`first_name=${first_name}`); }
+        if (id) { dataCheckArr.push(`id=${id}`); }
+        if (last_name) { dataCheckArr.push(`last_name=${last_name}`); }
+        if (photo_url) { dataCheckArr.push(`photo_url=${photo_url}`); }
+        if (username) { dataCheckArr.push(`username=${username}`); }
         
         dataCheckArr.sort();
         const dataCheckString = dataCheckArr.join('\n');
@@ -131,7 +131,7 @@ export const {
 
         // Check auth_date freshness (e.g. within 24 hours)
         const now = Math.floor(Date.now() / 1000);
-        if (now - parseInt(auth_date) > 86400) {
+        if (now - Number.parseInt(auth_date, 10) > 86400) {
            console.error("Telegram auth data outdated");
            return null;
         }
