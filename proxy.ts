@@ -24,16 +24,10 @@ export async function proxy(request: NextRequest) {
   });
 
   if (!token) {
-    // FIX: Use relative path for redirectUrl param to avoid localhost
-    const relativePath = request.nextUrl.pathname + request.nextUrl.search;
-    const redirectUrl = encodeURIComponent(relativePath);
-    
-    // FIX: Use trusted base URL if available, otherwise fallback to request.url
-    // This prevents "localhost" showing up in the Location header when proxied
-    const baseUrl = process.env.NEXTAUTH_URL || request.url;
+    const redirectUrl = encodeURIComponent(request.url);
 
     return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, baseUrl)
+      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
     );
   }
 
