@@ -6,6 +6,8 @@ APP_NAME="ai-chatbot"
 echo "🚀 Starting deployment..."
 
 # 0. Pull latest changes
+echo "🛑 Resetting local changes to ensure clean pull..."
+git reset --hard HEAD
 echo "📥 Pulling latest changes from git..."
 git pull
 
@@ -32,11 +34,18 @@ pnpm run format
 echo "🔍 Checking code (Linting)..."
 pnpm run lint
 
-# 4. Build & Migrate
+# 4. Stop App (Free up RAM)
+echo "🛑 Stopping existing process to free up memory..."
+pm2 stop "$APP_NAME" || true
+
+# 5. Build & Migrate
 echo "🏗️ Building application and migrating database..."
+# Optional: Disable telemetry and source maps for lighter build
+export NEXT_TELEMETRY_DISABLED=1
+export GENERATE_SOURCEMAP=false
 pnpm run build
 
-# 5. Start/Restart via PM2
+# 6. Start/Restart via PM2
 echo "🔄 Managing PM2 process..."
 
 # Check if pm2 is installed
