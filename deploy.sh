@@ -5,7 +5,11 @@ APP_NAME="ai-chatbot"
 
 echo "🚀 Starting deployment..."
 
-# 0. Ensure pnpm is installed
+# 0. Pull latest changes
+echo "📥 Pulling latest changes from git..."
+git pull
+
+# 0.1 Ensure pnpm is installed
 if ! command -v pnpm &> /dev/null; then
     echo "⚠️ pnpm not found. Installing globally..."
     npm install -g pnpm
