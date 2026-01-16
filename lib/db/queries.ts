@@ -88,6 +88,32 @@ export async function linkGoogleAccount(email: string, googleId: string) {
   }
 }
 
+export async function createYandexUser(email: string, yandexId: string) {
+  try {
+    return await db.insert(user).values({ email, yandexId }).returning();
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create yandex user"
+    );
+  }
+}
+
+export async function linkYandexAccount(email: string, yandexId: string) {
+  try {
+    return await db
+      .update(user)
+      .set({ yandexId })
+      .where(eq(user.email, email))
+      .returning();
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to link yandex account"
+    );
+  }
+}
+
 export async function createTelegramUser(telegramId: string, email?: string) {
   try {
     const finalEmail = email || `telegram-${telegramId}@telegram.bot`;
