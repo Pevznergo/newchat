@@ -78,8 +78,15 @@ export const {
       id: "guest",
       credentials: {},
       async authorize() {
-        const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: "guest" };
+        try {
+          console.log("Creating guest user...");
+          const [guestUser] = await createGuestUser();
+          console.log("Guest user created:", guestUser);
+          return { ...guestUser, type: "guest" };
+        } catch (error) {
+          console.error("Error creating guest user:", error);
+          return null;
+        }
       },
     }),
     Credentials({
