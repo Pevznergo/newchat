@@ -24,21 +24,30 @@ if (!token) {
 const bot = new Bot(token);
 
 bot.command("start", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
+  console.log("Received /start command");
+  try {
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) {
+      console.warn("No Telegram ID found in context");
+      return;
+    }
 
-  const firstName = ctx.from?.first_name || "";
-  const username = ctx.from?.username || "";
-  const displayName = firstName || username || "Friend";
+    const firstName = ctx.from?.first_name || "";
+    const username = ctx.from?.username || "";
+    const displayName = firstName || username || "Friend";
 
-  let [user] = await getUserByTelegramId(telegramId);
-  if (!user) {
-    [user] = await createTelegramUser(telegramId);
-  }
+    console.log(`Processing user: ${telegramId} (${displayName})`);
 
-  const welcomeMessage = `Привет, ${displayName}!
+    let [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      console.log("Creating new Telegram user...");
+      [user] = await createTelegramUser(telegramId);
+      console.log("User created:", user.id);
+    } else {
+      console.log("User found:", user.id);
+    }
+
+    const welcomeMessage = `Привет, ${displayName}!
 
 Я — Апорто! Готов стать твоим AI-напарником.
 
@@ -58,7 +67,12 @@ P.S. Я могу обращаться к тебе так, как ты захоч
 
 Давай творить! 🚀`;
 
-  await ctx.reply(welcomeMessage);
+    await ctx.reply(welcomeMessage);
+    console.log("Welcome message sent");
+  } catch (error) {
+    console.error("Error in /start command:", error);
+    await ctx.reply("Sorry, I encountered an error. Please try again later.");
+  }
 });
 
 bot.on("message:text", async (ctx) => {
