@@ -17,10 +17,10 @@ export function TelegramLoginButton({ botName }: { botName: string }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!wrapperRef.current || !botName) { return; }
+    if (!wrapperRef.current || !botName) return;
     
     // Check if script already exists to avoid duplicates
-    if (wrapperRef.current.querySelector("script")) { return; }
+    if (wrapperRef.current.querySelector("script")) return;
 
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";

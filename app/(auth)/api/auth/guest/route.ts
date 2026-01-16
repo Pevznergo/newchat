@@ -4,7 +4,7 @@ import { signIn } from "@/app/(auth)/auth";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export async function GET(request: Request) {
-  // const { searchParams } = new URL(request.url); // Removed unused variable
+  const { searchParams } = new URL(request.url);
   const redirectUrl = "/"; // Force redirect to root to avoid localhost issues
 
   const token = await getToken({
