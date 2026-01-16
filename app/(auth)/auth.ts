@@ -2,8 +2,14 @@ import { compare } from "bcrypt-ts";
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, getUser } from "@/lib/db/queries";
+import {
+  createGoogleUser,
+  createGuestUser,
+  getUser,
+  linkGoogleAccount,
+} from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -44,14 +50,15 @@ export const {
         const users = await getUser(email);
 
         if (users.length === 0) {
-          await compare(password, DUMMY_PASSWORD);
+          // Allow dummy password only if user doesn't exist
+          // But strict logic: return null
           return null;
         }
 
         const [user] = users;
 
         if (!user.password) {
-          await compare(password, DUMMY_PASSWORD);
+          // If user has no password (e.g. created via Google), they can't login via credentials
           return null;
         }
 
@@ -72,8 +79,32 @@ export const {
         return { ...guestUser, type: "guest" };
       },
     }),
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        const email = user.email;
+        if (!email) return false;
+
+        const users = await getUser(email);
+
+        if (users.length === 0) {
+          // Create new user linked to Google
+          await createGoogleUser(email, account.providerAccountId);
+        } else {
+          const [dbUser] = users;
+          if (!dbUser.googleId) {
+             // Link existing account
+             await linkGoogleAccount(email, account.providerAccountId);
+          }
+        }
+      }
+      return true;
+    },
     jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
