@@ -11,7 +11,7 @@ import {
 } from "@/lib/db/queries";
 import { authConfig } from "./auth.config";
 
-export type UserType = "guest" | "regular";
+export type UserType = "guest" | "regular" | "pro";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -67,7 +67,7 @@ export const {
           return null;
         }
 
-        return { ...user, type: "regular" };
+        return { ...user, type: user.hasPaid ? "pro" : "regular" };
       },
     }),
     Credentials({

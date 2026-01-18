@@ -10,8 +10,10 @@ import {
   getUserByTelegramId,
   saveChat,
   saveMessages,
+  getMessageCountByUserId,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
+import { entitlementsByUserType } from "@/lib/ai/entitlements";
 
 export const maxDuration = 60;
 
@@ -94,6 +96,39 @@ bot.on("message:text", async (ctx) => {
     if (!user) {
       [user] = await createTelegramUser(telegramId);
     }
+    
+    // --- ENFORCEMENT START ---
+    const userType: "pro" | "regular" = user.hasPaid ? "pro" : "regular"; // Telegram users are minimally regular if created via bot, but logic handles guests separate in Auth. 
+    // Here we treat non-paid Telegram users as "regular" (15 msgs) to align with request, OR strictly follow Auth.ts logic?
+    // User schema has email nullable. If created via Telegram code:
+    // createTelegramUser makes new user.
+    // Let's assume standard Telegram user = "regular" (15 messages), paid = "pro".
+    // "Guest" concept in Auth.ts was for incognito web users. Telegram users are identifiable => Registered.
+    
+    // Check Limits
+    const entitlements = entitlementsByUserType[userType];
+
+    // A. Character Limit
+    if (text.length > entitlements.charLimit) {
+        await ctx.reply(`⚠️ Сообщение слишком длинное. Ваш лимит: ${entitlements.charLimit} символов.`);
+        return;
+    }
+
+    // B. Message Count Limit
+    const messageCount = await getMessageCountByUserId({
+        id: user.id,
+        differenceInHours: 24,
+    });
+
+    if (messageCount >= entitlements.maxMessagesPerDay) {
+         if (userType !== 'pro') {
+             // Telegram users are considered "Registered" (Regular) for now
+             await ctx.reply(`Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!`);
+             return;
+         }
+         // Pro users have Infinity
+    }
+    // --- ENFORCEMENT END ---
 
     // 2. Find active chat or create new one
     // We fetch the most recent chat for the user

@@ -35,6 +35,7 @@ import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
+import { chatModels } from "@/lib/ai/models";
 
 export const maxDuration = 60;
 
@@ -70,13 +71,52 @@ export async function POST(request: Request) {
 
     const userType: UserType = session.user.type;
 
+    // 1. Check Message Count Limit
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,
       differenceInHours: 24,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-      return new ChatSDKError("rate_limit:chat").toResponse();
+    if (messageCount >= entitlementsByUserType[userType].maxMessagesPerDay) {
+       // Return a chat message notification instead of an error
+       const stream = createUIMessageStream({
+         execute: async ({ writer }) => {
+           let content = "";
+           if (userType === 'guest') {
+             content = `Упс! 🚦 Лимит гостевых сообщений исчерпан.\n\nНе теряйте мысль! **Зарегистрируйтесь** прямо сейчас, чтобы получить больше бесплатных сообщений в день и продолжить общение. Это займет всего пару секунд!`;
+           } else {
+             content = `Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!`;
+           }
+           
+           writer.write({ type: 'text-delta', delta: content, id: generateUUID() });
+           // Stream closes automatically when execute function finishes
+         },
+         generateId: generateUUID,
+       });
+
+       return createUIMessageStreamResponse({ stream });
+    }
+
+    // 2. Check Model Access
+    const selectedModel = chatModels.find((m) => m.id === selectedChatModel);
+    if (!selectedModel) {
+      return new ChatSDKError("bad_request:api").toResponse(); // Invalid model
+    }
+
+    if (
+      userType !== "pro" &&
+      selectedModel.tier === "advanced"
+    ) {
+        // Upgrade required for advanced models
+        return new ChatSDKError("forbidden:chat").toResponse();
+    }
+
+    // 3. Check Input Character Limit
+    const charLimit = entitlementsByUserType[userType].charLimit;
+    const inputLength = message?.parts.reduce((acc: number, part: any) => acc + (part.text?.length || 0), 0) || 0;
+    
+    if (inputLength > charLimit) {
+        return new Response("Message too long for your plan.", { status: 400 });
     }
 
     const isToolApprovalFlow = Boolean(messages);
