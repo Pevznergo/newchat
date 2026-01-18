@@ -1,5 +1,5 @@
 // Curated list of top models from Vercel AI Gateway
-export const DEFAULT_CHAT_MODEL = "openai/gpt-4o-mini-2024-07-18";
+export const DEFAULT_CHAT_MODEL = "openai/gpt-5-nano-2025-08-07";
 
 export type ChatModel = {
   id: string;
@@ -34,6 +34,12 @@ export const chatModels: ChatModel[] = [
     name: "GPT-4o Mini",
     provider: "openai",
     description: "Fast and cost-effective for simple tasks",
+  },
+  {
+    id: "openai/gpt-5-nano-2025-08-07",
+    name: "GPT-5 Nano",
+    provider: "openai",
+    description: "Latest OpenAI model - ultra fast and efficient",
   },
   // Google
   {
