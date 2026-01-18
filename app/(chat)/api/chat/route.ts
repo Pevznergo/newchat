@@ -78,20 +78,36 @@ export async function POST(request: Request) {
     });
 
     if (messageCount >= entitlementsByUserType[userType].maxMessagesPerDay) {
-       // Return a chat message notification instead of an error
+       const notificationContent = userType === 'guest'
+         ? `Упс! 🚦 Лимит гостевых сообщений исчерпан.\n\nНе теряйте мысль! **Зарегистрируйтесь** прямо сейчас, чтобы получить больше бесплатных сообщений в день и продолжить общение. Это займет всего пару секунд!`
+         : `Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!`;
+
+       // Use streamText with a basic model to ensure correct stream protocol and message saving
        const stream = createUIMessageStream({
-         execute: ({ writer }) => {
-           let content = "";
-           if (userType === 'guest') {
-             content = `Упс! 🚦 Лимит гостевых сообщений исчерпан.\n\nНе теряйте мысль! **Зарегистрируйтесь** прямо сейчас, чтобы получить больше бесплатных сообщений в день и продолжить общение. Это займет всего пару секунд!`;
-           } else {
-             content = `Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!`;
-           }
-           
-           writer.write({ type: 'text-delta', delta: content, id: generateUUID() });
-           // Stream closes automatically when execute function finishes
+         execute: async ({ writer: dataStream }) => {
+            const result = streamText({
+                model: getLanguageModel("openai/gpt-4o-mini-2024-07-18"),
+                system: "You are a specific system notification bot. Output the exact text provided in the prompt, nothing else.",
+                prompt: notificationContent,
+            });
+            dataStream.merge(result.toUIMessageStream());
          },
          generateId: generateUUID,
+         onFinish: async ({ messages: finishedMessages }) => {
+            // Save the notification message to the database
+            if (finishedMessages.length > 0) {
+               await saveMessages({
+                 messages: finishedMessages.map((msg) => ({
+                   id: msg.id,
+                   chatId: id,
+                   role: "assistant",
+                   parts: msg.parts,
+                   createdAt: new Date(),
+                   attachments: [],
+                 })),
+               });
+            }
+         }
        });
 
        return createUIMessageStreamResponse({ stream });
