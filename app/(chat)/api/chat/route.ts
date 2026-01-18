@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
        // Use streamText with a basic model to ensure correct stream protocol and message saving
        const stream = createUIMessageStream({
-         execute: async ({ writer: dataStream }) => {
+         execute: ({ writer: dataStream }) => {
             const result = streamText({
                 model: getLanguageModel("openai/gpt-4o-mini-2024-07-18"),
                 system: "You are a specific system notification bot. Output the exact text provided in the prompt, nothing else.",
