@@ -88,12 +88,20 @@ export async function linkGoogleAccount(email: string, googleId: string) {
   }
 }
 
-export async function createTelegramUser(telegramId: string, email?: string) {
+export async function createTelegramUser(
+  telegramId: string,
+  email?: string,
+  startParam?: string
+) {
   try {
     const finalEmail = email || `telegram-${telegramId}@telegram.bot`;
     return await db
       .insert(user)
-      .values({ email: finalEmail, telegramId })
+      .values({ 
+        email: finalEmail, 
+        telegramId,
+        startParam: startParam || null, // Save QR code source
+      })
       .returning();
   } catch (_error) {
     throw new ChatSDKError(

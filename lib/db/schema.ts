@@ -13,10 +13,34 @@ import {
 
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
+  email: varchar("email", { length: 64 }), // nullable for Telegram users
   password: varchar("password", { length: 64 }),
-  googleId: varchar("googleId", { length: 255 }), // Using varchar for external IDs is safer
-  telegramId: varchar("telegramId", { length: 255 }), // Telegram IDs are numbers but storing as string avoids overflow/precision issues
+  googleId: varchar("googleId", { length: 255 }),
+  telegramId: varchar("telegramId", { length: 255 }),
+  
+  // Tracking fields for QR codes and UTM
+  startParam: varchar("start_param", { length: 50 }), // QR code source tracking
+  utmSource: varchar("utm_source", { length: 255 }),
+  utmMedium: varchar("utm_medium", { length: 255 }),
+  utmCampaign: varchar("utm_campaign", { length: 255 }),
+  utmContent: varchar("utm_content", { length: 255 }),
+  
+  // Telegram-specific fields
+  balance: varchar("balance", { length: 255 }).default("0"), // Token balance for AI requests
+  points: varchar("points", { length: 255 }).default("0"),
+  spinsCount: varchar("spins_count", { length: 255 }).default("0"),
+  dailyStreak: varchar("daily_streak", { length: 255 }).default("0"),
+  lastDailyClaim: timestamp("last_daily_claim"),
+  lastVisit: timestamp("last_visit").defaultNow(),
+  
+  // User status fields
+  isActive: boolean("is_active").default(false),
+  hasPaid: boolean("has_paid").default(false),
+  phone: varchar("phone", { length: 50 }),
+  
+  // Standard fields
+  name: varchar("name", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export type User = InferSelectModel<typeof user>;

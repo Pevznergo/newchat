@@ -32,6 +32,14 @@ bot.command("start", async (ctx) => {
       return;
     }
 
+    // Extract payload from /start command (QR code source)
+    const payload = ctx.match;
+    const startParam = payload && typeof payload === "string" ? payload.trim() : undefined;
+    
+    if (startParam) {
+      console.log(`User ${telegramId} came from QR source: ${startParam}`);
+    }
+
     const firstName = ctx.from?.first_name || "";
     const username = ctx.from?.username || "";
     const displayName = firstName || username || "Friend";
@@ -41,12 +49,15 @@ bot.command("start", async (ctx) => {
     let [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       console.log("Creating new Telegram user...");
-      [user] = await createTelegramUser(telegramId);
-      console.log("User created:", user.id);
+      // Save QR code source on registration (silent tracking)
+      [user] = await createTelegramUser(telegramId, undefined, startParam);
+      console.log(`User created: ${user.id}${startParam ? ` from QR: ${startParam}` : " (direct)"}`);
     } else {
       console.log("User found:", user.id);
+      // User already exists - keep first attribution, no update
     }
 
+    // Standard welcome message (no mention of QR source)
     const welcomeMessage = `Привет, ${displayName}!
 
 Я — Апорто! Готов стать твоим AI-напарником.
@@ -60,8 +71,6 @@ bot.command("start", async (ctx) => {
 📄 Читать: Скидывай мне любой документ – я быстро вникну в суть.
 
 🎬 Смотреть: Отправь видео или ссылку на него, а я сделаю всю грязную работу – перескажу, найду главное, проверю факты.
-
-🔥 Для быстрых задач есть бесплатные модели, а для чего-то серьезного – целый арсенал платных AI-мозгов. Жми /select_model, чтобы выбрать!
 
 P.S. Я могу обращаться к тебе так, как ты захочешь! Просто скажи мне. 💬
 
