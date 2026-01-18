@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     if (messageCount >= entitlementsByUserType[userType].maxMessagesPerDay) {
        // Return a chat message notification instead of an error
        const stream = createUIMessageStream({
-         execute: async ({ writer }) => {
+         execute: ({ writer }) => {
            let content = "";
            if (userType === 'guest') {
              content = `Упс! 🚦 Лимит гостевых сообщений исчерпан.\n\nНе теряйте мысль! **Зарегистрируйтесь** прямо сейчас, чтобы получить больше бесплатных сообщений в день и продолжить общение. Это займет всего пару секунд!`;
