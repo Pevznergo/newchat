@@ -41,6 +41,13 @@ export const chatModels: ChatModel[] = [
     tier: "basic",
   },
   {
+    id: "openai/gpt-4.1-nano-2025-04-14",
+    name: "GPT-4.1 Nano",
+    provider: "openai",
+    description: "New ultra-efficient experimental model",
+    tier: "basic",
+  },
+  {
     id: "openai/gpt-5-nano-2025-08-07",
     name: "GPT-5 Nano",
     provider: "openai",

@@ -216,8 +216,9 @@ bot.on("message:text", async (ctx) => {
     }));
 
     // 5. Generate Response with Timeout
-    // Use GPT-4o Mini for Telegram to ensure maximum speed, lowest latency, and avoid timeouts.
-    const modelId = "openai/gpt-4o-mini-2024-07-18";
+    // 5. Generate Response
+    // Use GPT-4.1 Nano for Telegram to ensure maximum speed, lowest latency.
+    const modelId = "openai/gpt-4.1-nano-2025-04-14";
 
     await ctx.replyWithChatAction("typing");
 
