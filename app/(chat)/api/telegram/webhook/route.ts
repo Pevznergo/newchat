@@ -221,7 +221,7 @@ bot.on("message:text", async (ctx) => {
         setTimeout(() => reject(new Error("GENERATION_TIMEOUT")), TIMEOUT_MS)
     );
 
-    let response;
+    let response: any;
     try {
         response = await Promise.race([generationPromise, timeoutPromise]);
     } catch (e: any) {
