@@ -89,7 +89,9 @@ P.S. Я могу обращаться к тебе так, как ты захоч
 
 bot.command("clear", async (ctx) => {
   const telegramId = ctx.from?.id.toString();
-  if (!telegramId) return;
+  if (!telegramId) {
+    return;
+  }
 
   try {
     const [user] = await getUserByTelegramId(telegramId);
