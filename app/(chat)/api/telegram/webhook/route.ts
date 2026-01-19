@@ -91,6 +91,16 @@ bot.on("message:text", async (ctx) => {
   const text = ctx.message.text;
 
   try {
+    // 0. Drop Stale Updates (Force Clear Queue)
+    // Telegram timestamps are in seconds. Date.now() is ms.
+    const messageDate = ctx.message.date; // UNIX timestamp in seconds
+    const now = Math.floor(Date.now() / 1000);
+    
+    if (now - messageDate > 60) {
+        console.warn(`Dropping stale update from user ${telegramId} (delay: ${now - messageDate}s)`);
+        return;
+    }
+
     // 1. Get or Create User
     let [user] = await getUserByTelegramId(telegramId);
     if (!user) {
