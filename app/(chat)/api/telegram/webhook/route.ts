@@ -213,10 +213,17 @@ bot.on("message:text", async (ctx) => {
         },
       }),
       messages: aiMessages,
+      maxTokens: 2000, // Limit generation to avoid timeouts
     });
 
     // 6. Send Response
-    const responseText = response.text;
+    let responseText = response.text;
+    
+    // Safety truncate to avoid endless loop if somehow huge
+    if (responseText.length > 20000) {
+        responseText = responseText.substring(0, 20000) + "\n\n[Message truncated due to length]";
+    }
+
     const MAX_LENGTH = 4000;
 
     for (let i = 0; i < responseText.length; i += MAX_LENGTH) {
