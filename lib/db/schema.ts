@@ -37,6 +37,7 @@ export const user = pgTable("User", {
   isActive: boolean("is_active").default(false),
   hasPaid: boolean("has_paid").default(false),
   phone: varchar("phone", { length: 50 }),
+  lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
   
   // Standard fields
   name: varchar("name", { length: 255 }),

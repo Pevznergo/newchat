@@ -11,6 +11,7 @@ import {
   saveChat,
   saveMessages,
   getMessageCountByUserId,
+  setLastMessageId,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -105,6 +106,14 @@ bot.on("message:text", async (ctx) => {
     let [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       [user] = await createTelegramUser(telegramId);
+    }
+
+    // 1.1 Idempotency Check (Race Condition Fix)
+    // Attempt to set this message ID. If we fail, it means another worker beat us to it.
+    const isNew = await setLastMessageId(user.id, ctx.message.message_id.toString());
+    if (!isNew) {
+        console.warn(`Dropping duplicate/concurrent processing for message ${ctx.message.message_id}`);
+        return; // Silent return, let the other worker invoke response
     }
     
     // --- ENFORCEMENT START ---

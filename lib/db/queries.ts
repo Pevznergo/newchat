@@ -9,7 +9,10 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
   lt,
+  or,
+  sql,
   type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -119,6 +122,34 @@ export async function getUserByTelegramId(telegramId: string) {
       "bad_request:database",
       "Failed to get user by telegram id"
     );
+  }
+}
+
+
+export async function setLastMessageId(userId: string, messageId: string) {
+  // ATOMIC UPDATE: Only update if the new ID is strictly greater (or if null)
+  // Converting to integer for comparison is safer for Telegram IDs
+  try {
+      const result = await db
+        .update(user)
+        .set({ lastMessageId: messageId })
+        .where(
+            and(
+                eq(user.id, userId),
+                or(
+                    isNull(user.lastMessageId),
+                    sql`${user.lastMessageId}::bigint < ${messageId}::bigint`
+                )
+            )
+        )
+        .returning({ id: user.id });
+
+      return result.length > 0; // True if we updated (we won the race), False if duplicate
+  } catch (error) {
+      // If casting fails (e.g. non-numeric ID somehow), default to true to allow processing
+      // But Telegram IDs are numeric.
+      console.error("Failed to set last message id", error);
+      return true; 
   }
 }
 

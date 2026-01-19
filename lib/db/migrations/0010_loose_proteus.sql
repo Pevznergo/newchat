@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "last_message_id" varchar(50);
