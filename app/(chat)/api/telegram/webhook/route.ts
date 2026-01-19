@@ -216,7 +216,12 @@ bot.on("message:text", async (ctx) => {
     });
 
     // 6. Send Response
-    await ctx.reply(response.text);
+    const responseText = response.text;
+    const MAX_LENGTH = 4000;
+
+    for (let i = 0; i < responseText.length; i += MAX_LENGTH) {
+        await ctx.reply(responseText.substring(i, i + MAX_LENGTH));
+    }
 
     // 7. Save Assistant Message
     const botMessageId = generateUUID();
