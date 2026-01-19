@@ -87,6 +87,34 @@ P.S. Я могу обращаться к тебе так, как ты захоч
   }
 });
 
+bot.command("clear", async (ctx) => {
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) return;
+
+  try {
+    const [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+        await ctx.reply("Сначала нужно начать диалог командой /start");
+        return;
+    }
+
+    // Create a new chat to "clear" history context
+    const chatId = generateUUID();
+    await saveChat({
+        id: chatId,
+        userId: user.id,
+        title: "Telegram Chat (Cleared)",
+        visibility: "private",
+    });
+
+    await ctx.reply("🧹 История очищена! Я забыл всё, о чём мы говорили ранее.\nГотов к новому диалогу! 🚀");
+
+  } catch (error) {
+      console.error("Error in /clear command:", error);
+      await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
+  }
+});
+
 bot.on("message:text", async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const text = ctx.message.text;

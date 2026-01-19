@@ -1,0 +1,8 @@
+# General Behavior
+- Do NOT run `npm run build` or any build commands automatically.
+- Only run build commands if strictly and explicitly requested by the user.
+- The application is deployed on a server; local builds are often unnecessary or resource-intensive.
+
+# Tech Stack & Style
+- Use TypeScript for all code.
+- Prefer efficient, scalable solutions.
