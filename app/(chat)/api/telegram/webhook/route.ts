@@ -196,12 +196,14 @@ bot.on("message:text", async (ctx) => {
       content: (m.parts as any[]).map((p) => p.text).join("\n"),
     }));
 
-    // 5. Generate Response
+    // 5. Generate Response with Timeout
     const modelId = DEFAULT_CHAT_MODEL;
 
     await ctx.replyWithChatAction("typing");
 
-    const response = await generateText({
+    const TIMEOUT_MS = 50000; // 50s timeout to beat Telegram's 60s retry
+
+    const generationPromise = generateText({
       model: getLanguageModel(modelId),
       system: systemPrompt({
         selectedChatModel: modelId,
@@ -213,8 +215,23 @@ bot.on("message:text", async (ctx) => {
         },
       }),
       messages: aiMessages,
-      // maxTokens: 2000, 
     });
+
+    const timeoutPromise = new Promise<any>((_, reject) => 
+        setTimeout(() => reject(new Error("GENERATION_TIMEOUT")), TIMEOUT_MS)
+    );
+
+    let response;
+    try {
+        response = await Promise.race([generationPromise, timeoutPromise]);
+    } catch (e: any) {
+        if (e.message === "GENERATION_TIMEOUT") {
+            console.warn(`Generation timed out for user ${telegramId}`);
+            await ctx.reply("⏳ Ответ занимает больше времени, чем обычно. Пожалуйста, попробуйте упростить запрос или спросите позже.");
+            return; // Exit successfully (200 OK) to stop Telegram retries
+        }
+        throw e; // Rethrow other errors
+    }
 
     // 6. Send Response
     let responseText = response.text;
