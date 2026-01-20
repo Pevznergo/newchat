@@ -109,23 +109,23 @@ export const {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id as string;
-        
+
         if (account?.provider === "credentials" && (user as any).type) {
-             token.type = (user as any).type;
+          token.type = (user as any).type;
         } else if (user.email) {
-             // For Google (or other providers), fetch user from DB to get hasPaid/type
-             const users = await getUser(user.email);
-             if (users.length > 0) {
-                 const dbUser = users[0];
-                 token.type = dbUser.hasPaid ? "pro" : "regular";
-                 // Also ensure ID matches DB ID if needed, but next-auth usually handles ID.
-                 token.id = dbUser.id.toString(); 
-             } else {
-                 // Should not happen as signIn creates the user
-                 token.type = "regular";
-             }
+          // For Google (or other providers), fetch user from DB to get hasPaid/type
+          const users = await getUser(user.email);
+          if (users.length > 0) {
+            const dbUser = users[0];
+            token.type = dbUser.hasPaid ? "pro" : "regular";
+            // Also ensure ID matches DB ID if needed, but next-auth usually handles ID.
+            token.id = dbUser.id.toString();
+          } else {
+            // Should not happen as signIn creates the user
+            token.type = "regular";
+          }
         } else {
-             token.type = "guest";
+          token.type = "guest";
         }
       }
 

@@ -29,7 +29,7 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    * Limit: Unlimited, 20000 chars, All models
    */
   pro: {
-    maxMessagesPerDay: Infinity,
-    charLimit: 20000,
+    maxMessagesPerDay: Number.POSITIVE_INFINITY,
+    charLimit: 20_000,
   },
 };

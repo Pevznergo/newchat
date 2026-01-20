@@ -12,8 +12,8 @@ import {
   isNull,
   lt,
   or,
-  sql,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -100,8 +100,8 @@ export async function createTelegramUser(
     const finalEmail = email || `telegram-${telegramId}@telegram.bot`;
     return await db
       .insert(user)
-      .values({ 
-        email: finalEmail, 
+      .values({
+        email: finalEmail,
         telegramId,
         startParam: startParam || null, // Save QR code source
       })
@@ -125,31 +125,30 @@ export async function getUserByTelegramId(telegramId: string) {
   }
 }
 
-
 export async function setLastMessageId(userId: string, messageId: string) {
   // ATOMIC UPDATE: Only update if the new ID is strictly greater (or if null)
   // Converting to integer for comparison is safer for Telegram IDs
   try {
-      const result = await db
-        .update(user)
-        .set({ lastMessageId: messageId })
-        .where(
-            and(
-                eq(user.id, userId),
-                or(
-                    isNull(user.lastMessageId),
-                    sql`${user.lastMessageId}::bigint < ${messageId}::bigint`
-                )
-            )
+    const result = await db
+      .update(user)
+      .set({ lastMessageId: messageId })
+      .where(
+        and(
+          eq(user.id, userId),
+          or(
+            isNull(user.lastMessageId),
+            sql`${user.lastMessageId}::bigint < ${messageId}::bigint`
+          )
         )
-        .returning({ id: user.id });
+      )
+      .returning({ id: user.id });
 
-      return result.length > 0; // True if we updated (we won the race), False if duplicate
+    return result.length > 0; // True if we updated (we won the race), False if duplicate
   } catch (error) {
-      // If casting fails (e.g. non-numeric ID somehow), default to true to allow processing
-      // But Telegram IDs are numeric.
-      console.error("Failed to set last message id", error);
-      return true; 
+    // If casting fails (e.g. non-numeric ID somehow), default to true to allow processing
+    // But Telegram IDs are numeric.
+    console.error("Failed to set last message id", error);
+    return true;
   }
 }
 

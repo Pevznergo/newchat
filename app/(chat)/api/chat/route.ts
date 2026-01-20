@@ -11,11 +11,12 @@ import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import { chatModels } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
-import { getWeather } from "@/lib/ai/tools/get-weather";
 import { generateImage } from "@/lib/ai/tools/generate-image";
+import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
@@ -25,11 +26,11 @@ import {
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
+  incrementUserRequestCount,
   saveChat,
   saveMessages,
   updateChatTitleById,
   updateMessage,
-  incrementUserRequestCount,
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
@@ -37,7 +38,6 @@ import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
-import { chatModels } from "@/lib/ai/models";
 
 export const maxDuration = 60;
 
@@ -80,39 +80,41 @@ export async function POST(request: Request) {
     });
 
     if (messageCount >= entitlementsByUserType[userType].maxMessagesPerDay) {
-       const notificationContent = userType === 'guest'
-         ? `Упс! 🚦 Лимит гостевых сообщений исчерпан.\n\nНе теряйте мысль! **[Зарегистрироваться](/login)** прямо сейчас, чтобы получить больше бесплатных сообщений в день и продолжить общение. Это займет всего пару секунд!`
-         : `Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!`;
+      const notificationContent =
+        userType === "guest"
+          ? "Упс! 🚦 Лимит гостевых сообщений исчерпан.\n\nНе теряйте мысль! **[Зарегистрироваться](/login)** прямо сейчас, чтобы получить больше бесплатных сообщений в день и продолжить общение. Это займет всего пару секунд!"
+          : "Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!";
 
-       // Use streamText with a basic model to ensure correct stream protocol and message saving
-       const stream = createUIMessageStream({
-         execute: ({ writer: dataStream }) => {
-            const result = streamText({
-                model: getLanguageModel("openai/gpt-4o-mini-2024-07-18"),
-                system: "You are a specific system notification bot. Output the exact text provided in the prompt, nothing else.",
-                prompt: notificationContent,
+      // Use streamText with a basic model to ensure correct stream protocol and message saving
+      const stream = createUIMessageStream({
+        execute: ({ writer: dataStream }) => {
+          const result = streamText({
+            model: getLanguageModel("openai/gpt-4o-mini-2024-07-18"),
+            system:
+              "You are a specific system notification bot. Output the exact text provided in the prompt, nothing else.",
+            prompt: notificationContent,
+          });
+          dataStream.merge(result.toUIMessageStream());
+        },
+        generateId: generateUUID,
+        onFinish: async ({ messages: finishedMessages }) => {
+          // Save the notification message to the database
+          if (finishedMessages.length > 0) {
+            await saveMessages({
+              messages: finishedMessages.map((msg) => ({
+                id: msg.id,
+                chatId: id,
+                role: "assistant",
+                parts: msg.parts,
+                createdAt: new Date(),
+                attachments: [],
+              })),
             });
-            dataStream.merge(result.toUIMessageStream());
-         },
-         generateId: generateUUID,
-         onFinish: async ({ messages: finishedMessages }) => {
-            // Save the notification message to the database
-            if (finishedMessages.length > 0) {
-               await saveMessages({
-                 messages: finishedMessages.map((msg) => ({
-                   id: msg.id,
-                   chatId: id,
-                   role: "assistant",
-                   parts: msg.parts,
-                   createdAt: new Date(),
-                   attachments: [],
-                 })),
-               });
-            }
-         }
-       });
+          }
+        },
+      });
 
-       return createUIMessageStreamResponse({ stream });
+      return createUIMessageStreamResponse({ stream });
     }
 
     // 2. Check Model Access
@@ -121,20 +123,21 @@ export async function POST(request: Request) {
       return new ChatSDKError("bad_request:api").toResponse(); // Invalid model
     }
 
-    if (
-      userType !== "pro" &&
-      selectedModel.tier === "advanced"
-    ) {
-        // Upgrade required for advanced models
-        return new ChatSDKError("forbidden:chat").toResponse();
+    if (userType !== "pro" && selectedModel.tier === "advanced") {
+      // Upgrade required for advanced models
+      return new ChatSDKError("forbidden:chat").toResponse();
     }
 
     // 3. Check Input Character Limit
     const charLimit = entitlementsByUserType[userType].charLimit;
-    const inputLength = message?.parts.reduce((acc: number, part: any) => acc + (part.text?.length || 0), 0) || 0;
-    
+    const inputLength =
+      message?.parts.reduce(
+        (acc: number, part: any) => acc + (part.text?.length || 0),
+        0
+      ) || 0;
+
     if (inputLength > charLimit) {
-        return new Response("Message too long for your plan.", { status: 400 });
+      return new Response("Message too long for your plan.", { status: 400 });
     }
 
     const isToolApprovalFlow = Boolean(messages);

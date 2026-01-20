@@ -13,7 +13,10 @@ export async function proxy(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
-  if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/telegram")) {
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/telegram")
+  ) {
     return NextResponse.next();
   }
 

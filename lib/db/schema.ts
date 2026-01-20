@@ -18,14 +18,14 @@ export const user = pgTable("User", {
   password: varchar("password", { length: 64 }),
   googleId: varchar("googleId", { length: 255 }),
   telegramId: varchar("telegramId", { length: 255 }),
-  
+
   // Tracking fields for QR codes and UTM
   startParam: varchar("start_param", { length: 50 }), // QR code source tracking
   utmSource: varchar("utm_source", { length: 255 }),
   utmMedium: varchar("utm_medium", { length: 255 }),
   utmCampaign: varchar("utm_campaign", { length: 255 }),
   utmContent: varchar("utm_content", { length: 255 }),
-  
+
   // Telegram-specific fields
   balance: varchar("balance", { length: 255 }).default("0"), // Token balance for AI requests
   points: varchar("points", { length: 255 }).default("0"),
@@ -33,14 +33,14 @@ export const user = pgTable("User", {
   dailyStreak: varchar("daily_streak", { length: 255 }).default("0"),
   lastDailyClaim: timestamp("last_daily_claim"),
   lastVisit: timestamp("last_visit").defaultNow(),
-  
+
   // User status fields
   isActive: boolean("is_active").default(false),
   hasPaid: boolean("has_paid").default(false),
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
   requestCount: integer("request_count").default(0),
-  
+
   // Standard fields
   name: varchar("name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),

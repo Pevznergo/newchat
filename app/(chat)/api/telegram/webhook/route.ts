@@ -1,21 +1,20 @@
 import { generateText } from "ai";
 import { Bot, webhookCallback } from "grammy";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import {
   createTelegramUser,
   getChatsByUserId,
+  getMessageCountByUserId,
   getMessagesByChatId,
   getUserByTelegramId,
+  incrementUserRequestCount,
   saveChat,
   saveMessages,
-  getMessageCountByUserId,
   setLastMessageId,
-  incrementUserRequestCount,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
 
 export const maxDuration = 60;
 
@@ -38,8 +37,9 @@ bot.command("start", async (ctx) => {
 
     // Extract payload from /start command (QR code source)
     const payload = ctx.match;
-    const startParam = payload && typeof payload === "string" ? payload.trim() : undefined;
-    
+    const startParam =
+      payload && typeof payload === "string" ? payload.trim() : undefined;
+
     if (startParam) {
       console.log(`User ${telegramId} came from QR source: ${startParam}`);
     }
@@ -51,14 +51,16 @@ bot.command("start", async (ctx) => {
     console.log(`Processing user: ${telegramId} (${displayName})`);
 
     let [user] = await getUserByTelegramId(telegramId);
-    if (!user) {
+    if (user) {
+      console.log("User found:", user.id);
+      // User already exists - keep first attribution, no update
+    } else {
       console.log("Creating new Telegram user...");
       // Save QR code source on registration (silent tracking)
       [user] = await createTelegramUser(telegramId, undefined, startParam);
-      console.log(`User created: ${user.id}${startParam ? ` from QR: ${startParam}` : " (direct)"}`);
-    } else {
-      console.log("User found:", user.id);
-      // User already exists - keep first attribution, no update
+      console.log(
+        `User created: ${user.id}${startParam ? ` from QR: ${startParam}` : " (direct)"}`
+      );
     }
 
     // Standard welcome message (no mention of QR source)
@@ -97,24 +99,25 @@ bot.command("clear", async (ctx) => {
   try {
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
-        await ctx.reply("Сначала нужно начать диалог командой /start");
-        return;
+      await ctx.reply("Сначала нужно начать диалог командой /start");
+      return;
     }
 
     // Create a new chat to "clear" history context
     const chatId = generateUUID();
     await saveChat({
-        id: chatId,
-        userId: user.id,
-        title: "Telegram Chat (Cleared)",
-        visibility: "private",
+      id: chatId,
+      userId: user.id,
+      title: "Telegram Chat (Cleared)",
+      visibility: "private",
     });
 
-    await ctx.reply("🧹 История очищена! Я забыл всё, о чём мы говорили ранее.\nГотов к новому диалогу! 🚀");
-
+    await ctx.reply(
+      "🧹 История очищена! Я забыл всё, о чём мы говорили ранее.\nГотов к новому диалогу! 🚀"
+    );
   } catch (error) {
-      console.error("Error in /clear command:", error);
-      await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
+    console.error("Error in /clear command:", error);
+    await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
   }
 });
 
@@ -127,10 +130,12 @@ bot.on("message:text", async (ctx) => {
     // Telegram timestamps are in seconds. Date.now() is ms.
     const messageDate = ctx.message.date; // UNIX timestamp in seconds
     const now = Math.floor(Date.now() / 1000);
-    
+
     if (now - messageDate > 60) {
-        console.warn(`Dropping stale update from user ${telegramId} (delay: ${now - messageDate}s)`);
-        return;
+      console.warn(
+        `Dropping stale update from user ${telegramId} (delay: ${now - messageDate}s)`
+      );
+      return;
     }
 
     // 1. Get or Create User
@@ -141,39 +146,48 @@ bot.on("message:text", async (ctx) => {
 
     // 1.1 Idempotency Check (Race Condition Fix)
     // Attempt to set this message ID. If we fail, it means another worker beat us to it.
-    const isNew = await setLastMessageId(user.id, ctx.message.message_id.toString());
+    const isNew = await setLastMessageId(
+      user.id,
+      ctx.message.message_id.toString()
+    );
     if (!isNew) {
-        console.warn(`Dropping duplicate/concurrent processing for message ${ctx.message.message_id}`);
-        return; // Silent return, let the other worker invoke response
+      console.warn(
+        `Dropping duplicate/concurrent processing for message ${ctx.message.message_id}`
+      );
+      return; // Silent return, let the other worker invoke response
     }
-    
+
     // --- ENFORCEMENT START ---
-    const userType: "pro" | "regular" = user.hasPaid ? "pro" : "regular"; // Telegram users are minimally regular if created via bot, but logic handles guests separate in Auth. 
+    const userType: "pro" | "regular" = user.hasPaid ? "pro" : "regular"; // Telegram users are minimally regular if created via bot, but logic handles guests separate in Auth.
     // Here we treat non-paid Telegram users as "regular" (15 msgs) to align with request, OR strictly follow Auth.ts logic?
     // User schema has email nullable. If created via Telegram code:
     // createTelegramUser makes new user.
     // Let's assume standard Telegram user = "regular" (15 messages), paid = "pro".
     // "Guest" concept in Auth.ts was for incognito web users. Telegram users are identifiable => Registered.
-    
+
     // Check Limits
     const entitlements = entitlementsByUserType[userType];
 
     // A. Character Limit
     if (text.length > entitlements.charLimit) {
-        await ctx.reply(`⚠️ Сообщение слишком длинное. Ваш лимит: ${entitlements.charLimit} символов.`);
-        return;
+      await ctx.reply(
+        `⚠️ Сообщение слишком длинное. Ваш лимит: ${entitlements.charLimit} символов.`
+      );
+      return;
     }
 
     // B. Message Count Limit
     const messageCount = await getMessageCountByUserId({
-        id: user.id,
-        differenceInHours: 24,
+      id: user.id,
+      differenceInHours: 24,
     });
 
-    if (messageCount >= entitlements.maxMessagesPerDay && userType !== 'pro') {
-         // Telegram users are considered "Registered" (Regular) for now
-         await ctx.reply(`Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!`);
-         return;
+    if (messageCount >= entitlements.maxMessagesPerDay && userType !== "pro") {
+      // Telegram users are considered "Registered" (Regular) for now
+      await ctx.reply(
+        "Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!"
+      );
+      return;
     }
     // --- ENFORCEMENT END ---
 
@@ -272,16 +286,16 @@ bot.on("message:text", async (ctx) => {
 
     // 6. Send Response
     let responseText = response.text;
-    
+
     // Safety truncate to avoid endless loop if somehow huge
-    if (responseText.length > 20000) {
-        responseText = `${responseText.substring(0, 20000)}\n\n[Message truncated due to length]`;
+    if (responseText.length > 20_000) {
+      responseText = `${responseText.substring(0, 20_000)}\n\n[Message truncated due to length]`;
     }
 
     const MAX_LENGTH = 4000;
 
     for (let i = 0; i < responseText.length; i += MAX_LENGTH) {
-        await ctx.reply(responseText.substring(i, i + MAX_LENGTH));
+      await ctx.reply(responseText.substring(i, i + MAX_LENGTH));
     }
 
     // 7. Save Assistant Message
