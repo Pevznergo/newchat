@@ -1,4 +1,5 @@
-import { generateText } from "ai";
+import { generateText, tool } from "ai";
+import { z } from "zod";
 import { Bot, webhookCallback } from "grammy";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { systemPrompt } from "@/lib/ai/prompts";
@@ -64,25 +65,36 @@ bot.command("start", async (ctx) => {
     }
 
     // Standard welcome message (no mention of QR source)
-    const welcomeMessage = `Привет, ${displayName}!
+    const welcomeMessage = `Привет! ИИ-бот №1 открывает вам доступ к лучшим нейросетям для создания текста, изображений, видео и песен.
 
-Я — Апорто! Готов стать твоим AI-напарником.
+БЕСПЛАТНО – 100 вопросов в неделю: ChatGPT, DeepSeek, Perplexity, Gemini, ИИ-фотошоп Nano Banana Pro и GPT Image 1.5.
 
-Забудь о рутине, я могу почти всё! 💪
+В /PREMIUM доступны GPT-5.2, Gemini Pro, Claude, картинки /Midjourney и Flux 2, видео Veo 3.1, Sora 2, Hailuo, Kling, музыка /Suno.
 
-🗣️ Болтать: Принимаю текст и голосовые.
+Как пользоваться ботом?
 
-🎨 Рисовать: Создам любую картинку по твоему описанию.
+📝 ТЕКСТ: просто напишите вопрос или отправьте изображение в чат (выбор нейросети в разделе /model).
 
-📄 Читать: Скидывай мне любой документ – я быстро вникну в суть.
+🔎 ПОИСК: нажмите /s и задайте вопрос – здесь модели с доступом в Интернет.
 
-🎬 Смотреть: Отправь видео или ссылку на него, а я сделаю всю грязную работу – перескажу, найду главное, проверю факты.
+🌅 ИЗОБРАЖЕНИЯ: нажмите /photo, чтобы создать или редактировать картинку.
 
-P.S. Я могу обращаться к тебе так, как ты захочешь! Просто скажи мне. 💬
+🎬 ВИДЕО: нажмите /video, чтобы начать создание ролика.
 
-Давай творить! 🚀`;
+🎸 МУЗЫКА: введите /chirp, выберите жанр и добавьте текст песни.`;
 
-    await ctx.reply(welcomeMessage);
+    await ctx.reply(welcomeMessage, {
+      reply_markup: {
+        keyboard: [
+          [{ text: "📝 Выбрать модель" }, { text: "🎨 Создать картинку" }],
+          [{ text: "🔎 Интернет-поиск" }, { text: "🎬 Создать видео" }],
+          [{ text: "📄 Документ" }, { text: "🎸 Создать песню" }],
+          [{ text: "🚀 Премиум" }, { text: "👤 Мой профиль" }],
+        ],
+        resize_keyboard: true,
+        is_persistent: true,
+      },
+    });
     console.log("Welcome message sent");
   } catch (error) {
     console.error("Error in /start command:", error);
@@ -282,7 +294,44 @@ bot.on("message:text", async (ctx) => {
         },
       }),
       messages: aiMessages,
+      tools: {
+        generateImage: tool({
+          description: "Generate an image, picture, or drawing. Use this tool when the user asks to 'draw', 'create', 'generate' or 'make' an image/picture (keywords: нарисуй, создай, сгенерируй, сделай картинку/изображение).",
+          inputSchema: z.object({
+             prompt: z.string().describe("The description of the image to generate"),
+          }),
+        }),
+      },
+      // maxSteps: 1, // Stop after tool call so we can handle it manually
     });
+
+    // Handle Tool Calls (specifically Image Generation)
+    if (response.toolCalls && response.toolCalls.length > 0) {
+        const imageToolCall = response.toolCalls.find(tc => tc.toolName === 'generateImage');
+        
+        if (imageToolCall) {
+            if (userType !== 'pro') {
+                 // Refusal with Inline Buttons
+                 await ctx.reply("Для генерации изображений необходима PRO-подписка. 🔒\nВы можете купить её или попробовать выиграть в Колесе Фортуны!", {
+                     reply_markup: {
+                         inline_keyboard: [
+                             [
+                                 { text: "Купить PRO", callback_data: "/pro" } // Assuming /pro handler exists or will catch this
+                             ],
+                             [
+                                 { text: "Колесо Фортуны", web_app: { url: "https://t.me/aporto_bot/app" } }
+                             ]
+                         ]
+                     }
+                 });
+                 return;
+            } else {
+                 // Success (Stub)
+                 await ctx.reply("Генерация изображений скоро будет доступна! 🎨");
+                 return;
+            }
+        }
+    }
 
     // 6. Send Response
     let responseText = response.text;
