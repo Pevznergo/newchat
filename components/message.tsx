@@ -342,6 +342,66 @@ const PurePreviewMessage = ({
               );
             }
 
+            // Cast type to any to support new tool until types are updated
+            if ((type as any) === "tool-generateImage") {
+              const { toolCallId, state } = part as any;
+              const widthClass = "w-[min(100%,450px)]";
+
+              if (state === "result") {
+                  const result = (part as any).result;
+                  if (result?.status === 'denied') {
+                      return (
+                          <div className={widthClass} key={toolCallId}>
+                              <Tool className="w-full" defaultOpen={true}>
+                                  <ToolHeader state="output-available" type="tool-generateImage" />
+                                  <ToolContent>
+                                      <div className="p-4 space-y-3">
+                                          <div className="flex items-center gap-2 text-amber-500 font-medium">
+                                              <SparklesIcon size={16} />
+                                              <span>Pro Feature Locked</span>
+                                          </div>
+                                          <p className="text-sm text-muted-foreground">
+                                              Image generation requires a Pro subscription. Upgrade to unlock this and other advanced features.
+                                          </p>
+                                          <a 
+                                            href="/pricing"
+                                            className="block w-full text-center bg-primary text-primary-foreground text-sm font-medium py-2 rounded-md hover:bg-primary/90 transition-colors"
+                                          >
+                                              Upgrade to Pro
+                                          </a>
+                                      </div>
+                                  </ToolContent>
+                              </Tool>
+                          </div>
+                      );
+                  }
+
+                  return (
+                      <div className={widthClass} key={toolCallId}>
+                           <Tool className="w-full" defaultOpen={true}>
+                                  <ToolHeader state="output-available" type="tool-generateImage" />
+                                  <ToolContent>
+                                      <div className="p-4 text-sm text-muted-foreground">
+                                          {result?.message || "Image generation is coming soon!"}
+                                      </div>
+                                  </ToolContent>
+                            </Tool>
+                      </div>
+                  )
+              }
+               
+               return (
+                <div className={widthClass} key={toolCallId}>
+                  <Tool className="w-full" defaultOpen={true}>
+                    <ToolHeader state="output-available" type="tool-generateImage" />
+                    <ToolContent>
+                        {state === 'call' && <div className="p-4 text-sm text-muted-foreground animate-pulse">Checking permissions...</div>}
+                    </ToolContent>
+                  </Tool>
+                </div>
+              );
+            }
+
             return null;
           })}
 
