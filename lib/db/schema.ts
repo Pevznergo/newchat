@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -38,6 +39,7 @@ export const user = pgTable("User", {
   hasPaid: boolean("has_paid").default(false),
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
+  requestCount: integer("request_count").default(0),
   
   // Standard fields
   name: varchar("name", { length: 255 }),

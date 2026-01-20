@@ -12,6 +12,7 @@ import {
   saveMessages,
   getMessageCountByUserId,
   setLastMessageId,
+  incrementUserRequestCount,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -215,6 +216,9 @@ bot.on("message:text", async (ctx) => {
         },
       ],
     });
+
+    // Increment request count
+    await incrementUserRequestCount(user.id);
 
     // 4. Fetch History
     const history = await getMessagesByChatId({ id: chatId });

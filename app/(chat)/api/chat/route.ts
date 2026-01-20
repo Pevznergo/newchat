@@ -28,6 +28,7 @@ import {
   saveMessages,
   updateChatTitleById,
   updateMessage,
+  incrementUserRequestCount,
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
@@ -275,6 +276,10 @@ export async function POST(request: Request) {
       },
       onError: () => "Oops, an error occurred!",
     });
+
+    // Increment request count for the user (fire and forget)
+    // We do this after setting up the stream to not block response
+    incrementUserRequestCount(session.user.id);
 
     return createUIMessageStreamResponse({
       stream,

@@ -694,3 +694,14 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     );
   }
 }
+
+export async function incrementUserRequestCount(userId: string) {
+  try {
+    await db
+      .update(user)
+      .set({ requestCount: sql`${user.requestCount} + 1` })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to increment request count", error);
+  }
+}
