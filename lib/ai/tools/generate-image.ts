@@ -10,7 +10,8 @@ type GenerateImageProps = {
 
 export const generateImage = ({ session }: GenerateImageProps) =>
   tool({
-    description: "Generate an image based on a prompt.",
+    description:
+      "Generate an image, picture, or drawing. Use this tool when the user asks to 'draw', 'create', 'generate' or 'make' an image/picture (keywords: нарисуй, создай, сгенерируй, сделай картинку/изображение).",
     inputSchema: z.object({
       prompt: z.string().describe("The description of the image to generate"),
     }),
