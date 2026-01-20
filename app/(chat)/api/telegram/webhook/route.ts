@@ -83,7 +83,18 @@ bot.command("start", async (ctx) => {
 
 🎸 МУЗЫКА: введите /chirp, выберите жанр и добавьте текст песни.`;
 
-    await ctx.reply(welcomeMessage);
+    await ctx.reply(welcomeMessage, {
+      reply_markup: {
+        keyboard: [
+          [{ text: "📝 Выбрать модель" }, { text: "🎨 Создать картинку" }],
+          [{ text: "🔎 Интернет-поиск" }, { text: "🎬 Создать видео" }],
+          [{ text: "📄 Документ" }, { text: "🎸 Создать песню" }],
+          [{ text: "🚀 Премиум" }, { text: "👤 Мой профиль" }],
+        ],
+        resize_keyboard: true,
+        is_persistent: true,
+      },
+    });
     console.log("Welcome message sent");
   } catch (error) {
     console.error("Error in /start command:", error);
