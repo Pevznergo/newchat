@@ -364,17 +364,15 @@ const PurePreviewMessage = ({
                               <span>Pro Feature Locked</span>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              Image generation requires a Pro subscription. Use the
-                              app to upgrade or win a subscription in the Wheel of
-                              Fortune!
+                              Image generation requires a Pro subscription.
+                              Upgrade to unlock this and other advanced
+                              features.
                             </p>
                             <a
                               className="block w-full text-center bg-primary text-primary-foreground text-sm font-medium py-2 rounded-md hover:bg-primary/90 transition-colors"
-                              href="https://aporto.tech/app"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              href="/pricing"
                             >
-                              Open Aporto App
+                              Upgrade to Pro
                             </a>
                           </div>
                         </ToolContent>
