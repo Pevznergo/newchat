@@ -1043,7 +1043,7 @@ bot.on("message:successful_payment", async (ctx) => {
         }
 
         const parts = tariffSlug.split("_");
-        const months = parseInt(parts.at(-1)!, 10);
+        const months = parseInt(parts.at(-1) ?? "1", 10);
         const durationDays = months * 30;
 
         await createStarSubscription(user.id, tariffSlug, durationDays);
