@@ -22,20 +22,30 @@ export async function createTributePayment(params: CreateOrderParams) {
   }
 
   try {
-    const body = {
+    // Determine if this is a subscription (has duration) or one-time payment
+    const isSubscription = params.tariffSlug.includes('premium');
+    
+    const body: Record<string, any> = {
       amount: params.amount,
       currency: params.currency.toLowerCase(),
-      order_name: params.orderName,
+      title: params.orderName,
       description: params.description,
-      customer_id: params.telegramId,
-      return_url: params.returnUrl || "https://t.me/GoPevznerBot",
-      fail_url: params.failUrl || "https://t.me/GoPevznerBot",
-      require_shipping: false,
-      recurrent: false,
+      comment: `tariff_slug:${params.tariffSlug}`,
+      successUrl: params.returnUrl || "https://t.me/GoPevznerBot",
+      failUrl: params.failUrl || "https://t.me/GoPevznerBot",
     };
 
-    // Try /orders endpoint instead of /shop/orders
-    const response = await fetch(`${TRIBUTE_API_URL}/orders`, {
+    // Add period for subscriptions
+    if (isSubscription) {
+      body.period = "monthly"; // Tribute will handle monthly billing
+    }
+
+    // Add telegram_user_id if available
+    if (params.telegramId) {
+      body.telegram_user_id = params.telegramId;
+    }
+
+    const response = await fetch(`${TRIBUTE_API_URL}/shop/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -52,7 +62,12 @@ export async function createTributePayment(params: CreateOrderParams) {
 
     const data = await response.json();
     console.log("Tribute payment created:", data);
-    return data;
+    
+    // Return payment URL from response
+    return {
+      link: data.paymentUrl || data.link || data.url,
+      ...data
+    };
   } catch (error) {
     console.error("Tribute Create Order Error:", error);
     return null;
