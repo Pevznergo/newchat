@@ -797,10 +797,57 @@ export async function updateUserPreferences(
       .set({ preferences: updatedPrefs })
       .where(eq(user.id, userId));
   } catch (error) {
-    console.error("Failed to update user preferences", error);
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to update user preferences"
     );
   }
 }
+
+// Subscription Queries
+
+import { subscription } from "./schema";
+
+export async function getUserSubscription(userId: string) {
+  try {
+    const [sub] = await db
+      .select()
+      .from(subscription)
+      .where(
+        and(
+          eq(subscription.userId, userId),
+          eq(subscription.status, "active"),
+          gt(subscription.endDate, new Date())
+        )
+      )
+      .orderBy(desc(subscription.createdAt))
+      .limit(1);
+    
+    return sub;
+  } catch (error) {
+    console.error("Failed to get user subscription", error);
+    return null;
+  }
+}
+
+export async function cancelUserSubscription(userId: string) {
+  try {
+    await db
+      .update(subscription)
+      .set({ 
+        autoRenew: false,
+        status: "cancelled" 
+      })
+      .where(
+        and(
+          eq(subscription.userId, userId),
+          eq(subscription.status, "active")
+        )
+      );
+    return true;
+  } catch (error) {
+    console.error("Failed to cancel subscription", error);
+    return false;
+  }
+}
+

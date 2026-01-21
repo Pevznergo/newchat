@@ -232,3 +232,20 @@ export const tariff = pgTable("Tariff", {
 });
 
 export type Tariff = InferSelectModel<typeof tariff>;
+
+export const subscription = pgTable("Subscription", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  tariffSlug: varchar("tariff_slug", { length: 100 }).notNull(),
+  paymentMethodId: varchar("payment_method_id", { length: 255 }), // Saved card ID from YooKassa
+  status: varchar("status", { length: 50 }).default("active"), // active, cancelled, expired
+  autoRenew: boolean("auto_renew").default(true),
+  startDate: timestamp("start_date").defaultNow().notNull(),
+  endDate: timestamp("end_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Subscription = InferSelectModel<typeof subscription>;

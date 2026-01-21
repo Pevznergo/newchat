@@ -92,6 +92,13 @@
       "when": 1768987239516,
       "tag": "0012_last_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1768989183850,
+      "tag": "0013_condemned_gladiator",
+      "breakpoints": true
     }
   ]
 }

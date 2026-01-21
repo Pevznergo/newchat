@@ -18,6 +18,8 @@ import {
   setLastMessageId,
   updateUserPreferences,
   updateUserSelectedModel,
+  getUserSubscription,
+  cancelUserSubscription,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
 
@@ -255,7 +257,7 @@ const PRICING_PLANS = {
   },
 };
 
-async function createYookassaPayment(amount: number, description: string, telegramId: string) {
+async function createYookassaPayment(amount: number, description: string, telegramId: string, tariffSlug: string) {
   const shopId = process.env.YOOKASSA_SHOP_ID;
   const secretKey = process.env.YOOKASSA_SECRET_KEY;
 
@@ -288,6 +290,7 @@ async function createYookassaPayment(amount: number, description: string, telegr
         description: description,
         metadata: {
           telegram_id: telegramId,
+          tariff_slug: tariffSlug,
         },
         save_payment_method: true,
       }),
@@ -678,6 +681,36 @@ bot.command("premium", async (ctx) => {
     await showPremiumMenu(ctx);
 });
 
+bot.command("unsubscribe", async (ctx) => {
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) return;
+
+  try {
+    const [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      await ctx.reply("❌ Пользователь не найден. Нажмите /start");
+      return;
+    }
+
+    const sub = await getUserSubscription(user.id);
+    if (!sub) {
+      await ctx.reply("⚠️ У вас нет активной подписки.");
+      return;
+    }
+
+    const success = await cancelUserSubscription(user.id);
+    if (success) {
+      const date = sub.endDate.toLocaleDateString("ru-RU");
+      await ctx.reply(`✅ Автопродление подписки отключено.\nПодписка действует до ${date}.`);
+    } else {
+      await ctx.reply("❌ Ошибка при отмене. Свяжитесь с поддержкой @GoPevzner.");
+    }
+  } catch (error) {
+    console.error("Error in /unsubscribe:", error);
+    await ctx.reply("Произошла ошибка. Попробуйте позже.");
+  }
+});
+
 bot.command("deletecontext", async (ctx) => {
     const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
@@ -888,7 +921,8 @@ bot.on("callback_query:data", async (ctx) => {
     await ctx.answerCallbackQuery("Создаю счет...");
 
     const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
-    const payment = await createYookassaPayment(price, description, telegramId);
+    const tariffSlug = `${planKey}_${months}`;
+    const payment = await createYookassaPayment(price, description, telegramId, tariffSlug);
 
     if (payment?.confirmation?.confirmation_url) {
         const payUrl = payment.confirmation.confirmation_url;
