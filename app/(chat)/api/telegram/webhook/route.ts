@@ -546,7 +546,7 @@ bot.command("clear", async (ctx) => {
 
 bot.command("account", async (ctx) => {
     const telegramId = ctx.from?.id.toString();
-    if (!telegramId) return;
+    if (!telegramId) { return; }
     const [user] = await getUserByTelegramId(telegramId);
     await showAccountInfo(ctx, user);
 });
@@ -586,16 +586,16 @@ bot.command("deletecontext", async (ctx) => {
 
 bot.command("photo", async (ctx) => {
     const telegramId = ctx.from?.id.toString();
-    if (!telegramId) return;
+    if (!telegramId) { return; }
     const [user] = await getUserByTelegramId(telegramId);
-    if (user) await showImageMenu(ctx, user);
+    if (user) { await showImageMenu(ctx, user); }
 });
 
 bot.command("video", async (ctx) => {
     const telegramId = ctx.from?.id.toString();
-    if (!telegramId) return;
+    if (!telegramId) { return; }
     const [user] = await getUserByTelegramId(telegramId);
-    if (user) await showVideoMenu(ctx, user);
+    if (user) { await showVideoMenu(ctx, user); }
 });
 
 bot.command("suno", async (ctx) => {
@@ -604,16 +604,16 @@ bot.command("suno", async (ctx) => {
 
 bot.command("s", async (ctx) => {
     const telegramId = ctx.from?.id.toString();
-    if (!telegramId) return;
+    if (!telegramId) { return; }
     const [user] = await getUserByTelegramId(telegramId);
-    if (user) await showSearchMenu(ctx, user);
+    if (user) { await showSearchMenu(ctx, user); }
 });
 
 bot.command("model", async (ctx) => {
     const telegramId = ctx.from?.id.toString();
-    if (!telegramId) return;
+    if (!telegramId) { return; }
     const [user] = await getUserByTelegramId(telegramId);
-    if (user) await showModelMenu(ctx, user);
+    if (user) { await showModelMenu(ctx, user); }
 });
 
 bot.command("settings", async (ctx) => {
@@ -737,9 +737,13 @@ bot.on("message:text", async (ctx) => {
 
   // Helper for button handling
   const handleButton = async (action: (user: any) => Promise<void>) => {
-      try { await ctx.deleteMessage(); } catch (_e) {}
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        // ignore
+      }
       const [user] = await getUserByTelegramId(telegramId);
-      if (user) await action(user);
+      if (user) { await action(user); }
   };
 
   if (text === "📝 Выбрать модель") {
@@ -763,13 +767,21 @@ bot.on("message:text", async (ctx) => {
   }
 
   if (text === "🎸 Создать песню") {
-      try { await ctx.deleteMessage(); } catch (_e) {}
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        // ignore
+      }
       await showMusicMenu(ctx);
       return;
   }
 
   if (text === "🚀 Премиум" || text === "/premium") {
-      try { await ctx.deleteMessage(); } catch (_e) {}
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+         // ignore
+      }
       await showPremiumMenu(ctx);
       return;
   }
