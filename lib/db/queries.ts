@@ -181,7 +181,7 @@ export async function setLastMessageId(userId: string, messageId: string) {
 export async function updateUserPreferences(userId: string, preferences: Record<string, any>) {
   try {
     const [existingUser] = await db.select().from(user).where(eq(user.id, userId));
-    if (!existingUser) return;
+    if (!existingUser) { return; }
     
     // Merge existing preferences
     const newPreferences = {
