@@ -1,5 +1,6 @@
 
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { config } from 'dotenv';
 import { tariff } from './schema';
@@ -106,12 +107,12 @@ const seed = async () => {
     await db.insert(tariff).values(tariffs).onConflictDoUpdate({
         target: tariff.slug,
         set: {
-            name:  postgres.sql`excluded.name`,
-            priceRub: postgres.sql`excluded.price_rub`,
-            priceStars: postgres.sql`excluded.price_stars`,
-            durationDays: postgres.sql`excluded.duration_days`,
-            requestLimit: postgres.sql`excluded.request_limit`,
-            description: postgres.sql`excluded.description`
+            name: sql`excluded.name`,
+            priceRub: sql`excluded.price_rub`,
+            priceStars: sql`excluded.price_stars`,
+            durationDays: sql`excluded.duration_days`,
+            requestLimit: sql`excluded.request_limit`,
+            description: sql`excluded.description`
         }
     });
 
