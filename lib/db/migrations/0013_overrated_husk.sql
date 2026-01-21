@@ -1,1 +1,0 @@
-ALTER TABLE "User" ADD COLUMN "preferences" json DEFAULT '{}'::json;

@@ -78,27 +78,6 @@
       "when": 1768844259502,
       "tag": "0010_loose_proteus",
       "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1768937813561,
-      "tag": "0011_narrow_malice",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1768968163758,
-      "tag": "0012_icy_centennial",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1768968470503,
-      "tag": "0013_overrated_husk",
-      "breakpoints": true
     }
   ]
 }
