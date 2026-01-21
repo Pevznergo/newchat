@@ -1,6 +1,6 @@
+import { unstable_noStore as noStore } from "next/cache";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 import type { ReactNode } from "react";
 import { auth } from "@/app/(auth)/auth";
 
