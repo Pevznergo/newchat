@@ -414,7 +414,7 @@ bot.on("callback_query:data", async (ctx) => {
 
     // Determine which keyboard to use based on model type
     try {
-      let keyboard;
+      let keyboard: { inline_keyboard: any[][] };
       if (data.startsWith("model_image_")) {
         keyboard = getImageModelKeyboard(data);
       } else if (data.startsWith("model_video_")) {
