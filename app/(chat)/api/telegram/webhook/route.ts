@@ -1154,6 +1154,18 @@ bot.on("message:photo", async (ctx) => {
     [user] = await createTelegramUser(telegramId);
   }
 
+  // Idempotency Check
+  const isNew = await setLastMessageId(
+    user.id,
+    ctx.message.message_id.toString()
+  );
+  if (!isNew) {
+    console.warn(
+      `Dropping duplicate/concurrent processing for photo message ${ctx.message.message_id}`
+    );
+    return;
+  }
+
   // Enforcement Checks (similar to text) checks
   const _userType: "pro" | "regular" = user.hasPaid ? "pro" : "regular";
 
