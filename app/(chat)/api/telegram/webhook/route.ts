@@ -267,6 +267,161 @@ function getMusicGenerationKeyboard() {
   };
 }
 
+// --- Menu Helpers ---
+
+async function showModelMenu(ctx: any, user: any) {
+  const currentModel = user?.selectedModel || "model_gpt4omini";
+
+  const modelInfo = `В боте доступны ведущие модели ChatGPT, Claude, Gemini и DeepSeek:
+
+⭐️ GPT-5.2 — новая топ-модель OpenAI
+🔥 GPT-4.1 — универсальная модель
+✔️ GPT-5 mini — быстрая модель
+🍓 OpenAI o3 — рассуждающая модель
+
+🚀 Claude 4.5 Sonnet — для кодинга
+💬 Claude 4.5 Thinking — рассуждающий режим
+
+🐼 DeepSeek-V3.2 — текстовая модель
+🐳 DeepSeek-V3.2 Thinking — для сложных задач
+
+🤖 Gemini 3 Pro — топ-модель Google
+⚡️ Gemini 3 Flash — быстрая модель
+
+GPT-5 mini, Gemini 3 Flash и DeepSeek доступны бесплатно`;
+
+  await ctx.reply(modelInfo, {
+    reply_markup: getModelKeyboard(currentModel),
+  });
+}
+
+async function showImageMenu(ctx: any, user: any) {
+  const hasConsented = await hasUserConsented(user.id, "image_generation");
+
+  if (!hasConsented) {
+    const termsText = `Вы переходите в раздел редактирования изображений.
+
+Запрещается:
+• загружать обнаженные фото
+• использовать для провокации, обмана, шантажа
+
+Продолжая, вы соглашаетесь с условиями использования сервиса.`;
+
+    await ctx.reply(termsText, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Соглашаюсь с условиями",
+              callback_data: "confirm_terms_image",
+            },
+          ],
+        ],
+      },
+    });
+    return;
+  }
+
+  const currentModel = user.selectedModel?.startsWith("model_image_")
+    ? user.selectedModel
+    : "model_image_gpt";
+
+  await ctx.reply("Выберите модель для создания изображений:", {
+    reply_markup: getImageModelKeyboard(currentModel),
+  });
+}
+
+async function showSearchMenu(ctx: any, user: any) {
+  const currentModel = user?.selectedModel || "model_gemini3pro";
+
+  const searchText = `Выберите модель поиска:
+
+ℹ️ Режим Deep Research готовит детально проработанные ответы
+
+Отправьте ваш запрос в чат 👇`;
+
+  await ctx.reply(searchText, {
+    reply_markup: getSearchModelKeyboard(currentModel),
+  });
+}
+
+async function showVideoMenu(ctx: any, user: any) {
+  const currentModel = user?.selectedModel?.startsWith("model_video_")
+    ? user.selectedModel
+    : "model_video_veo";
+
+  const videoMenuText = `Выберите сервис для создания ролика:
+
+🎬 Veo 3.1, Sora 2, Kling, Pika и Hailuo создают видео по описанию или изображению`;
+
+  await ctx.reply(videoMenuText, {
+    reply_markup: getVideoModelKeyboard(currentModel),
+  });
+}
+
+async function showMusicMenu(ctx: any) {
+  const musicMenuText = `Выберите режим генерации песни:
+
+🥁 Простой режим — опишите о чем песня
+🎸 Расширенный — свой текст и жанр`;
+
+  await ctx.reply(musicMenuText, {
+    reply_markup: getMusicGenerationKeyboard(),
+  });
+}
+
+async function showPremiumMenu(ctx: any) {
+  const premiumMenuText = `Доступ к лучшим ИИ-сервисам:
+
+<b>БЕСПЛАТНО | ЕЖЕНЕДЕЛЬНО</b>
+50 запросов: GPT-5 mini, Gemini 3 Flash, DeepSeek
+
+<b>PREMIUM | ЕЖЕМЕСЯЧНО</b>
+100 запросов в день
+GPT-5.2, Claude 4.5, Gemini 3 Pro
+Цена: 750 ₽
+
+Есть вопросы? @support`;
+
+  await ctx.reply(premiumMenuText, {
+    parse_mode: "HTML",
+    reply_markup: getPremiumKeyboard(),
+  });
+}
+
+async function showAccountInfo(ctx: any, user: any) {
+  const text = `👤 Мой профиль:
+ID: ${user?.id || "N/A"}
+Telegram: ${user?.telegramId || "N/A"}
+Модель: ${user?.selectedModel || "model_gpt4omini"}
+Статус: ${user?.hasPaid ? "Premium 🚀" : "Free ✨"}`;
+  await ctx.reply(text);
+}
+
+async function showSettingsMenu(ctx: any) {
+    await ctx.reply("⚙️ Настройки:\n\nЗдесь можно будет настроить параметры генерации.");
+}
+
+async function showHelp(ctx: any) {
+    await ctx.reply(`🎱 Список команд:
+
+/start - Перезапустить бота
+/model - Выбрать нейросеть
+/photo - Создать изображение
+/video - Создать видео
+/suno - Создать музыку
+/s - Поиск в интернете
+/account - Профиль
+/premium - Премиум
+/clear - Очистить контекст
+/settings - Настройки
+/privacy - Условия использования`);
+}
+
+async function showPrivacy(ctx: any) {
+    await ctx.reply("📄 Условия использования:\n\nИспользуя бота, вы соглашаетесь с правилами обработки данных и условиями сервиса.");
+}
+
 // --- Commands ---
 
 
@@ -279,35 +434,42 @@ bot.command("start", async (ctx) => {
       return;
     }
 
+    // Update Commands Menu
+    await ctx.api.setMyCommands([
+        { command: "start", description: "👋 About the bot" },
+        { command: "account", description: "👤 My account" },
+        { command: "premium", description: "🚀 Go Premium" },
+        { command: "deletecontext", description: "💬 Clear chat" },
+        { command: "photo", description: "🌅 Create image" },
+        { command: "video", description: "🎬 Create video" },
+        { command: "suno", description: "🎸 Create song" },
+        { command: "s", description: "🔎 Web search" },
+        { command: "model", description: "📝 Select AI model" },
+        { command: "settings", description: "⚙️ Settings" },
+        { command: "help", description: "🎱 List of commands" },
+        { command: "privacy", description: "📄 Terms of service" },
+    ]);
+
     // Extract payload from /start command (QR code source)
     const payload = ctx.match;
     const startParam =
       payload && typeof payload === "string" ? payload.trim() : undefined;
 
-    if (startParam) {
-      console.log(`User ${telegramId} came from QR source: ${startParam}`);
-    }
-
-    const firstName = ctx.from?.first_name || "";
-    const username = ctx.from?.username || "";
-    const displayName = firstName || username || "Friend";
-
-    console.log(`Processing user: ${telegramId} (${displayName})`);
+    // Create user in DB (queries.ts uses ON CONFLICT DO NOTHING usually, or we should check)
+    // Actually queries.ts createTelegramUser uses INSERT which might throw if exists, need check
+    // Checked createTelegramUser: it uses .insert().values().returning(). It does NOT have ON CONFLICT.
+    // So we should check existence first or wrap in try/catch (which it is in queries.ts, but throws ChatSDKError)
+    // Current usage in code checks if user exists?
+    // In original code: `const [user] = await createTelegramUser(...)`. If user exists, this throws unique constraint error probably.
+    // Let's check `createTelegramUser` implementation again if possible or trust existing logic.
+    // Existing logic in `message:text` does `getUser` then `createUser`.
+    // Here we should do the same.
 
     let [user] = await getUserByTelegramId(telegramId);
-    if (user) {
-      console.log("User found:", user.id);
-      // User already exists - keep first attribution, no update
-    } else {
-      console.log("Creating new Telegram user...");
-      // Save QR code source on registration (silent tracking)
+    if (!user) {
       [user] = await createTelegramUser(telegramId, undefined, startParam);
-      console.log(
-        `User created: ${user.id}${startParam ? ` from QR: ${startParam}` : " (direct)"}`
-      );
     }
 
-    // Standard welcome message (no mention of QR source)
     const welcomeMessage = `Привет! ИИ-бот №1 открывает вам доступ к лучшим нейросетям для создания текста, изображений, видео и песен.
 
 БЕСПЛАТНО – 100 вопросов в неделю: ChatGPT, DeepSeek, Perplexity, Gemini, ИИ-фотошоп Nano Banana Pro и GPT Image 1.5.
@@ -324,15 +486,21 @@ bot.command("start", async (ctx) => {
 
 🎬 ВИДЕО: нажмите /video, чтобы начать создание ролика.
 
-🎸 МУЗЫКА: введите /chirp, выберите жанр и добавьте текст песни.`;
+🎸 МУЗЫКА: введите /suno, выберите жанр и добавьте текст песни.`;
 
     await ctx.reply(welcomeMessage, {
       reply_markup: {
         keyboard: [
-          [{ text: "📝 Выбрать модель" }, { text: "🎨 Создать картинку" }],
-          [{ text: "🔎 Интернет-поиск" }, { text: "🎬 Создать видео" }],
-          [{ text: "📄 Документ" }, { text: "🎸 Создать песню" }],
-          [{ text: "🚀 Премиум" }, { text: "👤 Мой профиль" }],
+          ["📝 Выбрать модель", "🎨 Создать картинку"],
+          ["🔎 Интернет-поиск", "🎬 Создать видео"],
+          [
+            {
+              text: "🎁 Колесо Фортуны",
+              web_app: { url: "https://t.me/aporto_bot/app" },
+            },
+            "🎸 Создать песню",
+          ],
+          ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
         is_persistent: true,
@@ -374,6 +542,90 @@ bot.command("clear", async (ctx) => {
     console.error("Error in /clear command:", error);
     await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
   }
+});
+
+bot.command("account", async (ctx) => {
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) return;
+    const [user] = await getUserByTelegramId(telegramId);
+    await showAccountInfo(ctx, user);
+});
+
+bot.command("premium", async (ctx) => {
+    await showPremiumMenu(ctx);
+});
+
+bot.command("deletecontext", async (ctx) => {
+    const telegramId = ctx.from?.id.toString();
+  if (!telegramId) {
+    return;
+  }
+
+  try {
+    const [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      await ctx.reply("Сначала нужно начать диалог командой /start");
+      return;
+    }
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: user.id,
+      title: "Telegram Chat (Cleared)",
+      visibility: "private",
+    });
+
+    await ctx.reply(
+      "🧹 История очищена! Я забыл всё, о чём мы говорили ранее.\nГотов к новому диалогу! 🚀"
+    );
+  } catch (error) {
+    console.error("Error in /deletecontext command:", error);
+    await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
+  }
+});
+
+bot.command("photo", async (ctx) => {
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) return;
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) await showImageMenu(ctx, user);
+});
+
+bot.command("video", async (ctx) => {
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) return;
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) await showVideoMenu(ctx, user);
+});
+
+bot.command("suno", async (ctx) => {
+    await showMusicMenu(ctx);
+});
+
+bot.command("s", async (ctx) => {
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) return;
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) await showSearchMenu(ctx, user);
+});
+
+bot.command("model", async (ctx) => {
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) return;
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) await showModelMenu(ctx, user);
+});
+
+bot.command("settings", async (ctx) => {
+    await showSettingsMenu(ctx);
+});
+
+bot.command("help", async (ctx) => {
+    await showHelp(ctx);
+});
+
+bot.command("privacy", async (ctx) => {
+    await showPrivacy(ctx);
 });
 
 // --- Callback Query Handler ---
@@ -483,182 +735,48 @@ bot.on("message:text", async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const text = ctx.message.text;
 
-  // Handle "📝 Выбрать модель" button
+  // Helper for button handling
+  const handleButton = async (action: (user: any) => Promise<void>) => {
+      try { await ctx.deleteMessage(); } catch (_e) {}
+      const [user] = await getUserByTelegramId(telegramId);
+      if (user) await action(user);
+  };
+
   if (text === "📝 Выбрать модель") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      /* Intentionally empty */
-    }
-
-    const [user] = await getUserByTelegramId(telegramId);
-    const currentModel = user?.selectedModel || "model_gpt4omini";
-
-    const modelInfo = `В боте доступны ведущие модели ChatGPT, Claude, Gemini и DeepSeek:
-
-⭐️ GPT-5.2 — новая топ-модель OpenAI
-🔥 GPT-4.1 — универсальная модель
-✔️ GPT-5 mini — быстрая модель
-🍓 OpenAI o3 — рассуждающая модель
-
-🚀 Claude 4.5 Sonnet — для кодинга
-💬 Claude 4.5 Thinking — рассуждающий режим
-
-🐼 DeepSeek-V3.2 — текстовая модель
-🐳 DeepSeek-V3.2 Thinking — для сложных задач
-
-🤖 Gemini 3 Pro — топ-модель Google
-⚡️ Gemini 3 Flash — быстрая модель
-
-GPT-5 mini, Gemini 3 Flash и DeepSeek доступны бесплатно`;
-
-    await ctx.reply(modelInfo, {
-      reply_markup: getModelKeyboard(currentModel),
-    });
-    return;
+      await handleButton((user) => showModelMenu(ctx, user));
+      return;
   }
 
-  // Handle "🎨 Создать картинку" button
   if (text === "🎨 Создать картинку") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      /* Intentionally empty */
-    }
-
-    const [user] = await getUserByTelegramId(telegramId);
-    if (!user) {
+      await handleButton((user) => showImageMenu(ctx, user));
       return;
-    }
-
-    // Check consent
-    const hasConsented = await hasUserConsented(user.id, "image_generation");
-
-    if (!hasConsented) {
-      const termsText = `Вы переходите в раздел редактирования изображений.
-
-Запрещается:
-• загружать обнаженные фото
-• использовать для провокации, обмана, шантажа
-
-Продолжая, вы соглашаетесь с условиями использования сервиса.`;
-
-      await ctx.reply(termsText, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "Соглашаюсь с условиями",
-                callback_data: "confirm_terms_image",
-              },
-            ],
-          ],
-        },
-      });
-      return;
-    }
-
-    // Show menu directly if already consented
-    const currentModel = user.selectedModel?.startsWith("model_image_")
-      ? user.selectedModel
-      : "model_image_gpt";
-
-    await ctx.reply("Выберите модель для создания изображений:", {
-      reply_markup: getImageModelKeyboard(currentModel),
-    });
-    return;
   }
 
-  // Handle "🔎 Интернет-поиск" button
   if (text === "🔎 Интернет-поиск") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      /* Intentionally empty */
-    }
-
-    const [user] = await getUserByTelegramId(telegramId);
-    const currentModel = user?.selectedModel || "model_gemini3pro";
-
-    const searchText = `Выберите модель поиска:
-
-ℹ️ Режим Deep Research готовит детально проработанные ответы
-
-Отправьте ваш запрос в чат 👇`;
-
-    await ctx.reply(searchText, {
-      reply_markup: getSearchModelKeyboard(currentModel),
-    });
-    return;
+      await handleButton((user) => showSearchMenu(ctx, user));
+      return;
   }
 
-  // Handle "🎬 Создать видео" button
   if (text === "🎬 Создать видео") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      /* Intentionally empty */
-    }
-
-    const [user] = await getUserByTelegramId(telegramId);
-    const currentModel = user?.selectedModel?.startsWith("model_video_")
-      ? user.selectedModel
-      : "model_video_veo";
-
-    const videoMenuText = `Выберите сервис для создания ролика:
-
-🎬 Veo 3.1, Sora 2, Kling, Pika и Hailuo создают видео по описанию или изображению`;
-
-    await ctx.reply(videoMenuText, {
-      reply_markup: getVideoModelKeyboard(currentModel),
-    });
-    return;
+      await handleButton((user) => showVideoMenu(ctx, user));
+      return;
   }
 
-  // Handle "🎸 Создать песню" button
   if (text === "🎸 Создать песню") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      /* Intentionally empty */
-    }
-
-    const musicMenuText = `Выберите режим генерации песни:
-
-🥁 Простой режим — опишите о чем песня
-🎸 Расширенный — свой текст и жанр`;
-
-    await ctx.reply(musicMenuText, {
-      reply_markup: getMusicGenerationKeyboard(),
-    });
-    return;
+      try { await ctx.deleteMessage(); } catch (_e) {}
+      await showMusicMenu(ctx);
+      return;
   }
 
-  // Handle "🚀 Премиум" button
   if (text === "🚀 Премиум" || text === "/premium") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      /* Intentionally empty */
-    }
+      try { await ctx.deleteMessage(); } catch (_e) {}
+      await showPremiumMenu(ctx);
+      return;
+  }
 
-    const premiumMenuText = `Доступ к лучшим ИИ-сервисам:
-
-<b>БЕСПЛАТНО | ЕЖЕНЕДЕЛЬНО</b>
-50 запросов: GPT-5 mini, Gemini 3 Flash, DeepSeek
-
-<b>PREMIUM | ЕЖЕМЕСЯЧНО</b>
-100 запросов в день
-GPT-5.2, Claude 4.5, Gemini 3 Pro
-Цена: 750 ₽
-
-Есть вопросы? @support`;
-
-    await ctx.reply(premiumMenuText, {
-      parse_mode: "HTML",
-      reply_markup: getPremiumKeyboard(),
-    });
-    return;
+  if (text === "👤 Мой профиль") {
+       await handleButton((user) => showAccountInfo(ctx, user));
+       return;
   }
 
   // Regular message processing
