@@ -1235,6 +1235,47 @@ bot.on("message:text", async (ctx) => {
     const selectedModelId = user.selectedModel || "model_gpt4omini";
     const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
 
+    // --- GPT Images Limit Check (Free Users) ---
+    if (selectedModelId === "model_image_gpt" && userType !== "pro") {
+      const redis = (await import("@/lib/redis")).default;
+      const usageKey = `usage:gpt_image:${user.id}`;
+      
+      try {
+        const usage = await redis.get(usageKey);
+        const count = usage ? parseInt(usage, 10) : 0;
+
+        if (count >= 5) {
+           await ctx.reply(
+            "🛑 Лимит генераций исчерпан!\n\nНа бесплатном тарифе доступно 5 изображений в месяц.\nЧтобы снять ограничения и творить без границ, переходите на Premium! 🚀",
+            {
+              reply_markup: {
+                inline_keyboard: [
+                    [{ text: "💎 Купить Premium", callback_data: "buy_premium" }],
+                    [{ text: "🎡 Испытать удачу", web_app: { url: "https://app.aporto.tech/app" } }]
+                ]
+              }
+            }
+           );
+           return;
+        }
+
+        // Increment usage
+        // usage key expires in 30 days (approx month)
+        const multi = redis.multi();
+        multi.incr(usageKey);
+        if (count === 0) {
+            multi.expire(usageKey, 30 * 24 * 60 * 60);
+        }
+        await multi.exec();
+
+      } catch (e) {
+        console.error("Redis usage check failed", e);
+        // Fail open or closed? Fail open to not block users on error is safer for UX, 
+        // but let's log.
+      }
+    }
+    // ----------------------------------------
+
     await ctx.replyWithChatAction("typing");
 
     const response = await generateText({
