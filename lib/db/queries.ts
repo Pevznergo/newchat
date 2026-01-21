@@ -851,3 +851,32 @@ export async function cancelUserSubscription(userId: string) {
   }
 }
 
+export async function createStarSubscription(userId: string, tariffSlug: string, durationDays: number) {
+  try {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + durationDays);
+
+    await db
+      .insert(subscription)
+      .values({
+        userId,
+        tariffSlug,
+        paymentMethodId: "telegram_stars",
+        status: "active",
+        autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
+        startDate: new Date(),
+        endDate,
+      });
+      
+    // Set has_paid to true for user
+    await db
+        .update(user)
+        .set({ hasPaid: true })
+        .where(eq(user.id, userId));
+        
+    return true;
+  } catch (error) {
+    console.error("Failed to create star subscription", error);
+    return false;
+  }
+}

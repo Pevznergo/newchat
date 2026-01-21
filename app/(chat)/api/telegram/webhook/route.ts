@@ -20,6 +20,7 @@ import {
   updateUserSelectedModel,
   getUserSubscription,
   cancelUserSubscription,
+  createStarSubscription,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
 
@@ -254,6 +255,21 @@ const PRICING_PLANS = {
     months_3: 3000,
     months_6: 4875,
     months_12: 7500,
+  },
+};
+
+const STAR_PRICING = {
+  premium: {
+    months_1: 500,
+    months_3: 1200,
+    months_6: 2000,
+    months_12: 3000,
+  },
+  premium_x2: {
+    months_1: 850,
+    months_3: 2000,
+    months_6: 3250,
+    months_12: 5000,
   },
 };
 
@@ -899,18 +915,49 @@ bot.on("callback_query:data", async (ctx) => {
   // Handle payment creation
   if (data.startsWith("pay_")) {
     const rawArgs = data.replace("pay_", "");
+    
+    // Detect Stars Payment
+    const isStars = rawArgs.startsWith("stars_");
+    const cleanArgs = isStars ? rawArgs.replace("stars_", "") : rawArgs;
+
     let planKey: "premium" | "premium_x2" = "premium";
     let months = 1;
 
-    if (rawArgs.startsWith("premium_x2_")) {
+    if (cleanArgs.startsWith("premium_x2_")) {
         planKey = "premium_x2";
-        months = parseInt(rawArgs.replace("premium_x2_", ""), 10);
+        months = parseInt(cleanArgs.replace("premium_x2_", ""), 10);
     } else {
         planKey = "premium";
-        months = parseInt(rawArgs.replace("premium_", ""), 10);
+        months = parseInt(cleanArgs.replace("premium_", ""), 10);
     }
 
     const durationKey = `months_${months}` as keyof typeof PRICING_PLANS.premium;
+    const tariffSlug = `${planKey}_${months}`;
+    const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
+
+    if (isStars) {
+        // Safe cast or check
+        const starPlan = STAR_PRICING[planKey] as Record<string, number>;
+        const starsPrice = starPlan[durationKey];
+
+        if (!starsPrice) {
+            await ctx.answerCallbackQuery("Error: Price not found");
+            return;
+        }
+
+        await ctx.answerCallbackQuery("Создаю инвойс...");
+        // sendInvoice(chat_id, title, description, payload, provider_token, currency, prices)
+        await ctx.replyWithInvoice(
+            description, // title
+            `Оплата подписки ${description}`, // description
+            tariffSlug, // payload
+            "XTR", // currency
+            [{ label: description, amount: starsPrice }] // prices
+        );
+        return;
+    }
+
+    // Existing YooKassa Logic
     const price = PRICING_PLANS[planKey][durationKey]; // e.g. 750
 
     if (!price) {
@@ -920,8 +967,6 @@ bot.on("callback_query:data", async (ctx) => {
 
     await ctx.answerCallbackQuery("Создаю счет...");
 
-    const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
-    const tariffSlug = `${planKey}_${months}`;
     const payment = await createYookassaPayment(price, description, telegramId, tariffSlug);
 
     if (payment?.confirmation?.confirmation_url) {
@@ -957,6 +1002,9 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
+
+
+
   // Handle other "buy_" buttons (placeholders for Packs)
   if (
     data === "/premium" ||
@@ -972,6 +1020,39 @@ bot.on("callback_query:data", async (ctx) => {
   }
 
   await ctx.answerCallbackQuery();
+});
+
+// Checkout Handlers for Stars
+bot.on("pre_checkout_query", async (ctx) => {
+    await ctx.answerPreCheckoutQuery(true);
+});
+
+bot.on("message:successful_payment", async (ctx) => {
+    const payment = ctx.message.successful_payment;
+    const tariffSlug = payment.invoice_payload;
+    const telegramId = ctx.from.id.toString();
+    const totalAmount = payment.total_amount;
+
+    console.log(`Successful Stars payment: ${totalAmount} XTR for ${tariffSlug} from user ${telegramId}`);
+
+    try {
+        const [user] = await getUserByTelegramId(telegramId);
+        if (!user) {
+            console.error(`User not found for payment: ${telegramId}`);
+            return;
+        }
+
+        const parts = tariffSlug.split("_");
+        const months = parseInt(parts[parts.length - 1], 10);
+        const durationDays = months * 30;
+
+        await createStarSubscription(user.id, tariffSlug, durationDays);
+        
+        await ctx.reply(`✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`);
+    } catch (error) {
+        console.error("Error processing successful_payment:", error);
+        await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");
+    }
 });
 
 // --- Message Handlers ---
