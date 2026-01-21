@@ -93,7 +93,7 @@ bot.on("callback_query:data", async (ctx) => {
     // GPT Images Menu Logic
     if (data === "model_image_gpt") {
         const [user] = await getUserByTelegramId(telegramId);
-        if (!user) { return; }
+        if (!user) return;
 
         // 1. Update selection
         await updateUserSelectedModel(user.id, "model_image_gpt");
@@ -132,7 +132,7 @@ bot.on("callback_query:data", async (ctx) => {
     if (data.startsWith("set_ratio_")) {
         const ratio = data.replace("set_ratio_", "");
         const [user] = await getUserByTelegramId(telegramId);
-        if (!user) { return; }
+        if (!user) return;
 
         await updateUserPreferences(user.id, { aspect_ratio: ratio });
         
@@ -424,7 +424,7 @@ bot.on("callback_query:data", async (ctx) => {
     if (data === "menu_image_models") {
         // Go back to Image Models List
         const [user] = await getUserByTelegramId(telegramId);
-        if (!user) { return; }
+        if(!user) return;
         
          const imageMenuText = `🌠 GPT Image 1.5 от OpenAI – генерация и редактирование изображений.
 
@@ -455,7 +455,7 @@ bot.on("callback_query:data", async (ctx) => {
     // Handle "Terms Agreement"
      if (data === "confirm_terms_image") {
         const [user] = await getUserByTelegramId(telegramId);
-        if (!user) { return; } 
+        if (!user) return; 
 
         await createUserConsent(user.id, "image_generation");
         
@@ -481,10 +481,13 @@ bot.on("callback_query:data", async (ctx) => {
          await ctx.answerCallbackQuery("Условия приняты!");
          return;
     }
+
+    }
+
     // Handle Video Model Selection
     if (data.startsWith("model_video_")) {
          const [user] = await getUserByTelegramId(telegramId);
-         if (!user) { return; }
+         if (!user) return;
          
          // Permission Check (All video models likely Premium?)
          // Assuming all video models are premium for now
@@ -514,7 +517,7 @@ bot.on("callback_query:data", async (ctx) => {
     // Handle Image Model Selection
     if (data.startsWith("model_image_")) {
          const [user] = await getUserByTelegramId(telegramId);
-         if (!user) { return; }
+         if (!user) return;
          
          // Update selection (reusing shared field)
          await updateUserSelectedModel(user.id, data);
@@ -549,7 +552,7 @@ bot.on("callback_query:data", async (ctx) => {
     
     if (isSearchMenu && (SEARCH_MODELS.includes(data) || data.startsWith("model_"))) {
         const [user] = await getUserByTelegramId(telegramId);
-        if(!user) { return; }
+        if(!user) return;
 
          // Permission Check (for Premium models in search)
          // Assuming Perplexity/DeepResearch/Grok are PRO only.
@@ -585,7 +588,7 @@ bot.on("callback_query:data", async (ctx) => {
         // If we reached here, it means it wasn't caught by Search Menu logic (or message text didn't match).
         // Standard Model Selection Logic
         const [user] = await getUserByTelegramId(telegramId);
-        if (!user) { return; } 
+        if (!user) return; 
 
         const isFreeModel = FREE_MODELS.includes(data);
 
@@ -714,7 +717,7 @@ async function processTelegramMessage(
   
   // Construct parts for DB and AI
   const messageParts: any[] = [];
-  if (text) { messageParts.push({ type: "text", text }); }
+  if (text) messageParts.push({ type: "text", text });
   
   // Add attachments to parts
   for (const att of attachments) {
@@ -751,8 +754,8 @@ async function processTelegramMessage(
       
       // Map parts to valid AI SDK CoreMessage parts
       const content = parts.map(p => {
-          if (p.type === 'text') { return { type: 'text', text: p.text }; }
-          if (p.type === 'image') { return { type: 'image', image: p.image }; } // URL
+          if (p.type === 'text') return { type: 'text', text: p.text };
+          if (p.type === 'image') return { type: 'image', image: p.image }; // URL
           return null;
       }).filter(Boolean);
 
@@ -885,7 +888,7 @@ bot.on("message:text", async (ctx) => {
 
   // Handle "🎨 Создать картинку" button click
   if (text === "🎨 Создать картинку") {
-    try { await ctx.deleteMessage(); } catch { /* ignore */ }
+    try { await ctx.deleteMessage(); } catch {}
 
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
@@ -933,11 +936,12 @@ bot.on("message:text", async (ctx) => {
          reply_markup: getImageModelKeyboard(currentModel)
      });
     return;
+    return;
   }
 
   // Handle "🔎 Интернет-поиск" button click
   if (text === "🔎 Интернет-поиск") {
-      try { await ctx.deleteMessage(); } catch { /* ignore */ }
+      try { await ctx.deleteMessage(); } catch {}
       
       const [user] = await getUserByTelegramId(telegramId);
       const currentModel = user?.selectedModel || "model_gemini3pro"; // Default to a search-capable model?
@@ -956,7 +960,7 @@ bot.on("message:text", async (ctx) => {
 
   // Handle "🎬 Создать видео" button click
   if (text === "🎬 Создать видео") {
-      try { await ctx.deleteMessage(); } catch { /* ignore */ }
+      try { await ctx.deleteMessage(); } catch {}
 
       const [user] = await getUserByTelegramId(telegramId);
       // Default to first video model if none selected, or keep existing if it is a video model.
@@ -978,7 +982,7 @@ bot.on("message:text", async (ctx) => {
 
   // Handle "🎸 Создать песню" button click
   if (text === "🎸 Создать песню") {
-      try { await ctx.deleteMessage(); } catch { /* ignore */ }
+      try { await ctx.deleteMessage(); } catch {}
 
       const musicMenuText = `Выберите режим генерации песни:
 🥁 В простом режиме достаточно описать, о чем будет песня и в каком жанре
@@ -992,7 +996,7 @@ bot.on("message:text", async (ctx) => {
 
   // Handle "🚀 Премиум" button click
   if (text === "🚀 Премиум" || text === "/premium") {
-      try { await ctx.deleteMessage(); } catch { /* ignore */ }
+      try { await ctx.deleteMessage(); } catch {}
 
       const premiumMenuText = `Бот предоставляет доступ к лучшим ИИ-сервисам на одной платформе:
 
