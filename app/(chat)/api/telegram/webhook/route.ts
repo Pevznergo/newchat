@@ -467,6 +467,10 @@ bot.command("start", async (ctx) => {
     console.log("Welcome message sent");
   } catch (error) {
     console.error("Error in /start command:", error);
+    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    if (error instanceof Error) {
+      console.error("Stack trace:", error.stack);
+    }
     await ctx.reply("Sorry, I encountered an error. Please try again later.");
   }
 });
