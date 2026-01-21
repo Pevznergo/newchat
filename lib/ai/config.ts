@@ -24,8 +24,8 @@ export async function getProviderMap(): Promise<Record<string, string>> {
     if (cached) {
       return JSON.parse(cached);
     }
-  } catch (e) {
-    console.warn("Redis fetch failed", e);
+  } catch (_e) {
+    console.warn("Redis fetch failed", _e);
   }
 
   // Fallback / Fetch from DB
@@ -33,14 +33,14 @@ export async function getProviderMap(): Promise<Record<string, string>> {
     const models = await db.select().from(aiModel).where(eq(aiModel.isActive, true));
     
     const map: Record<string, string> = {};
-    models.forEach((m) => {
+    for (const m of models) {
       map[m.modelId] = m.providerId;
-    });
+    }
 
     // Cache it
     try {
         await redis.set(PROVIDER_MAP_KEY, JSON.stringify(map), { EX: CONFIG_TTL });
-    } catch (e) {
+    } catch (_e) {
         // ignore
     }
 
@@ -57,8 +57,8 @@ export async function getActiveModels(): Promise<ModelConfig[]> {
     if (cached) {
       return JSON.parse(cached);
     }
-  } catch (e) {
-    console.warn("Redis fetch failed", e);
+  } catch (_e) {
+    console.warn("Redis fetch failed", _e);
   }
 
   try {
@@ -73,7 +73,7 @@ export async function getActiveModels(): Promise<ModelConfig[]> {
 
     try {
         await redis.set(ACTIVE_MODELS_KEY, JSON.stringify(config), { EX: CONFIG_TTL });
-    } catch (e) {
+    } catch (_e) {
         // ignore
     }
     return config;
@@ -94,7 +94,7 @@ export async function getModelLimit(modelId: string, userRole: string) {
         if (cached) {
             return JSON.parse(cached);
         }
-    } catch (e) {
+    } catch (_e) {
         // ignore
     }
 
@@ -105,7 +105,7 @@ export async function getModelLimit(modelId: string, userRole: string) {
         // Let's first get model UUID
         const [model] = await db.select({ id: aiModel.id }).from(aiModel).where(eq(aiModel.modelId, modelId));
         
-        if (!model) return null;
+        if (!model) { return null; }
 
         const [limit] = await db.select()
             .from(modelLimit)
@@ -118,7 +118,7 @@ export async function getModelLimit(modelId: string, userRole: string) {
         if (limit) {
             try {
                 await redis.set(key, JSON.stringify(limit), { EX: CONFIG_TTL });
-            } catch (e) {
+            } catch (_e) {
                 // ignore
             }
             return limit;
