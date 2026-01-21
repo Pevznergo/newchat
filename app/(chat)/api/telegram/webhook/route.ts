@@ -331,8 +331,14 @@ bot.command("start", async (ctx) => {
         keyboard: [
           [{ text: "📝 Выбрать модель" }, { text: "🎨 Создать картинку" }],
           [{ text: "🔎 Интернет-поиск" }, { text: "🎬 Создать видео" }],
-          [{ text: "📄 Документ" }, { text: "🎸 Создать песню" }],
-          [{ text: "🚀 Премиум" }, { text: "👤 Мой профиль" }],
+          [
+            {
+              text: "🎡 Колесо Фортуны",
+              web_app: { url: "https://t.me/aporto_bot/app" },
+            },
+            { text: "🎸 Создать песню" },
+          ],
+          [{ text: "🚀 Премиум" }, { text: "📋 Меню команд" }],
         ],
         resize_keyboard: true,
         is_persistent: true,
@@ -657,6 +663,35 @@ GPT-5.2, Claude 4.5, Gemini 3 Pro
     await ctx.reply(premiumMenuText, {
       parse_mode: "HTML",
       reply_markup: getPremiumKeyboard(),
+    });
+    return;
+  }
+
+  // Handle "📋 Меню команд" button
+  if (text === "📋 Меню команд" || text === "/help") {
+    try {
+      await ctx.deleteMessage();
+    } catch (_e) {
+      /* Intentionally empty */
+    }
+
+    const commandsText = `<b>📋 Список команд бота:</b>
+
+/start - О боте
+/account - Мой аккаунт
+/premium - Перейти в Премиум
+/clear - Очистить чат
+/photo - Создать изображение
+/video - Создать видео
+/suno - Создать песню
+/s - Поиск в интернете
+/model - Выбрать AI модель
+/settings - Настройки
+/help - Список команд
+/privacy - Условия использования`;
+
+    await ctx.reply(commandsText, {
+      parse_mode: "HTML",
     });
     return;
   }
