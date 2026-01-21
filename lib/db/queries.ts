@@ -796,7 +796,7 @@ export async function updateUserPreferences(
       .update(user)
       .set({ preferences: updatedPrefs })
       .where(eq(user.id, userId));
-  } catch (error) {
+  } catch (_error) {
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to update user preferences"
