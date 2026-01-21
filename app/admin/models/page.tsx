@@ -2,8 +2,6 @@ import Link from "next/link";
 import { getAllModels } from "@/lib/ai/config";
 import { toggleModelStatus } from "../actions";
 
-export const dynamic = "force-dynamic";
-
 export default async function ModelsPage() {
   const models = await getAllModels();
 

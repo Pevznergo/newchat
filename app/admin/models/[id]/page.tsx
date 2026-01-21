@@ -3,8 +3,6 @@ import { getModelById, getModelLimits } from "@/lib/ai/config";
 import type { AiModel, ModelLimit } from "@/lib/db/schema";
 import { deleteLimit, saveLimit, saveModel } from "../../actions";
 
-export const dynamic = "force-dynamic";
-
 export default async function EditModelPage({
   params,
 }: {
