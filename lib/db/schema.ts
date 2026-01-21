@@ -208,7 +208,11 @@ export const userConsent = pgTable("UserConsent", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   consentType: varchar("consent_type", { length: 100 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  telegramId: varchar("telegram_id", { length: 32 }),
+  email: varchar("email", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type UserConsent = InferSelectModel<typeof userConsent>;

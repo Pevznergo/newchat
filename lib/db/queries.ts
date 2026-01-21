@@ -741,11 +741,24 @@ export async function hasUserConsented(userId: string, consentType: string) {
   }
 }
 
-export async function createUserConsent(userId: string, consentType: string) {
+export async function createUserConsent(
+  userId: string,
+  consentType: string,
+  metadata?: {
+    telegramId?: string;
+    email?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }
+) {
   try {
     await db.insert(userConsent).values({
       userId,
       consentType,
+      telegramId: metadata?.telegramId,
+      email: metadata?.email,
+      ipAddress: metadata?.ipAddress,
+      userAgent: metadata?.userAgent,
     });
   } catch (error) {
     console.error("Failed to create user consent", error);

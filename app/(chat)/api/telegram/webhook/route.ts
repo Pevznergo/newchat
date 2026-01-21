@@ -436,18 +436,18 @@ bot.command("start", async (ctx) => {
 
     // Update Commands Menu
     await ctx.api.setMyCommands([
-        { command: "start", description: "👋 About the bot" },
-        { command: "account", description: "👤 My account" },
-        { command: "premium", description: "🚀 Go Premium" },
-        { command: "deletecontext", description: "💬 Clear chat" },
-        { command: "photo", description: "🌅 Create image" },
-        { command: "video", description: "🎬 Create video" },
-        { command: "suno", description: "🎸 Create song" },
-        { command: "s", description: "🔎 Web search" },
-        { command: "model", description: "📝 Select AI model" },
-        { command: "settings", description: "⚙️ Settings" },
-        { command: "help", description: "🎱 List of commands" },
-        { command: "privacy", description: "📄 Terms of service" },
+        { command: "start", description: "👋 О нас" },
+        { command: "account", description: "👤 Профиль" },
+        { command: "premium", description: "🚀 Премиум" },
+        { command: "deletecontext", description: "💬 Очистить контекст" },
+        { command: "photo", description: "🌅 Создать изображение" },
+        { command: "video", description: "🎬 Создать видео" },
+        { command: "suno", description: "🎸 Создать песню" },
+        { command: "s", description: "🔎 Поиск в интернете" },
+        { command: "model", description: "📝 Выбрать модель" },
+        { command: "settings", description: "⚙️ Настройки" },
+        { command: "help", description: "🎱 Список команд" },
+        { command: "privacy", description: "📄 Условия использования" },
     ]);
 
     // Extract payload from /start command (QR code source)
@@ -698,17 +698,28 @@ bot.on("callback_query:data", async (ctx) => {
       return;
     }
 
-    await createUserConsent(user.id, "image_generation");
-    await ctx.deleteMessage();
+    try {
+        await createUserConsent(user.id, "image_generation", {
+            telegramId: telegramId,
+        });
 
-    const currentModel = user.selectedModel?.startsWith("model_image_")
-      ? user.selectedModel
-      : "model_image_gpt";
+        await ctx.deleteMessage();
 
-    await ctx.reply("Выберите модель для создания изображений:", {
-      reply_markup: getImageModelKeyboard(currentModel),
-    });
-    await ctx.answerCallbackQuery("Условия приняты!");
+        const currentModel = user.selectedModel?.startsWith("model_image_")
+        ? user.selectedModel
+        : "model_image_gpt";
+
+        await ctx.reply("Выберите модель для создания изображений:", {
+        reply_markup: getImageModelKeyboard(currentModel),
+        });
+        await ctx.answerCallbackQuery("Условия приняты!");
+    } catch (e) {
+        console.error("Consent error:", e);
+        await ctx.answerCallbackQuery({
+            text: "Ошибка сохранения согласия. Попробуйте позже.",
+            show_alert: true
+        });
+    }
     return;
   }
 
