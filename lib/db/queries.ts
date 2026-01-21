@@ -119,11 +119,10 @@ export async function createTelegramUser(
 export async function getUserByTelegramId(telegramId: string) {
   try {
     return await db.select().from(user).where(eq(user.telegramId, telegramId));
-  } catch (error) {
-    console.error("getUserByTelegramId Failed:", error); // Log the actual error
+  } catch (_error) {
     throw new ChatSDKError(
       "bad_request:database",
-      `Failed to get user by telegram id: ${error instanceof Error ? error.message : String(error)}`
+      "Failed to get user by telegram id"
     );
   }
 }
