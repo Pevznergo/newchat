@@ -65,20 +65,30 @@ const MODEL_NAMES: Record<string, string> = {
 };
 
 const PROVIDER_MAP: Record<string, string> = {
-  model_gpt52: "openai/gpt-4-turbo",
-  model_o3: "openai/gpt-4o",
-  model_gpt41: "openai/gpt-4-turbo",
-  model_gpt5mini: "openai/gpt-4o-mini",
+  model_gpt52: "openai/gpt-4o", // Fallback until GPT-5.2 is available
+  model_o3: "openai/gpt-4o", // Fallback until o3 is available
+  model_gpt41: "openai/gpt-4o", // Fallback until GPT-4.1 is available
+  model_gpt5mini: "openai/gpt-4o-mini", // Fallback
   model_gpt4omini: "openai/gpt-4o-mini",
   model_claude45sonnet: "anthropic/claude-3-5-sonnet-20240620",
-  model_claude45thinking: "anthropic/claude-3-5-sonnet-20240620",
-  model_deepseek32: "openai/gpt-4o",
-  model_deepseek32thinking: "openai/gpt-4o",
+  model_claude45thinking: "anthropic/claude-3-5-sonnet-20240620", // Thinking not yet separate model ID
+  model_deepseek32: "deepseek/deepseek-chat",
+  model_deepseek32thinking: "deepseek/deepseek-reasoner",
   model_gemini3pro: "google/gemini-1.5-pro-latest",
   model_gemini3flash: "google/gemini-1.5-flash-latest",
-  model_perplexity: "openai/gpt-4o",
-  model_grok41: "openai/gpt-4o",
-  model_deepresearch: "openai/gpt-4o",
+  model_perplexity: "openrouter/perplexity/llama-3.1-sonar-large-128k-online",
+  model_grok41: "xai/grok-beta", // Using grok-beta or grok-2-latest
+  model_deepresearch: "openai/gpt-4o", // Placeholder
+  // Image/Video models use default text model for chat context, tool calls handle generation
+  model_video_veo: "openai/gpt-4o", 
+  model_video_sora: "openai/gpt-4o",
+  model_video_kling: "openai/gpt-4o",
+  model_video_pika: "openai/gpt-4o",
+  model_video_hailuo: "openai/gpt-4o",
+  model_image_gpt: "openai/chatgpt-image-latest",
+  model_image_banana: "openai/gpt-4o",
+  model_image_midjourney: "openai/gpt-4o",
+  model_image_flux: "openai/gpt-4o",
 };
 
 function getModelKeyboard(selectedModel: string) {

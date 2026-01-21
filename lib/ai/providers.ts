@@ -1,6 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI, openai } from "@ai-sdk/openai";
 import { customProvider, type LanguageModel } from "ai";
 import { isTestEnvironment } from "../constants";
 
@@ -23,6 +23,21 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
+const deepseek = createOpenAI({
+  baseURL: "https://api.deepseek.com",
+  apiKey: process.env.DEEPSEEK_API_KEY,
+});
+
+const xai = createOpenAI({
+  baseURL: "https://api.x.ai/v1",
+  apiKey: process.env.XAI_API_KEY,
+});
+
+const openrouter = createOpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
+
 export function getLanguageModel(modelId: string): LanguageModel {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
@@ -44,6 +59,25 @@ export function getLanguageModel(modelId: string): LanguageModel {
   if (modelId.startsWith("google/")) {
     const modelName = modelId.split("/")[1];
     return google(modelName);
+  }
+
+  // Handle DeepSeek
+  if (modelId.startsWith("deepseek/")) {
+    const modelName = modelId.split("/")[1];
+    return deepseek(modelName);
+  }
+
+  // Handle XAI (Grok)
+  if (modelId.startsWith("xai/")) {
+    const modelName = modelId.split("/")[1];
+    return xai(modelName);
+  }
+
+   // Handle OpenRouter
+   if (modelId.startsWith("openrouter/")) {
+    // OpenRouter model IDs often contain slashes, so we join the rest
+    const modelName = modelId.split("/").slice(1).join("/");
+    return openrouter(modelName);
   }
 
   // Fallback or legacy gateway support if needed, but per request we use connected providers directly
