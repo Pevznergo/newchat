@@ -22,25 +22,28 @@ export async function createTributePayment(params: CreateOrderParams) {
   }
 
   try {
-    // Determine if this is a subscription or one-time payment
+    // Determine if this is a subscription (has duration) or one-time payment
     const isSubscription = params.tariffSlug.includes('premium');
     
-    // Build request according to official Tribute Shop API docs
     const body: Record<string, any> = {
-      amount: params.amount,  // in kopecks (RUB) or cents (EUR)
-      currency: params.currency.toLowerCase(),  // "rub" or "eur" or "xtr"
-      title: params.orderName,  // max 100 chars UTF-16
-      description: params.description,  // max 300 chars UTF-16
-      comment: `tariff_slug:${params.tariffSlug}`,  // for webhook tracking
+      amount: params.amount,
+      currency: params.currency.toLowerCase(),
+      title: params.orderName,
+      description: params.description,
+      comment: `tariff_slug:${params.tariffSlug}`,
       successUrl: params.returnUrl || "https://t.me/GoPevznerBot",
       failUrl: params.failUrl || "https://t.me/GoPevznerBot",
-      customerId: params.telegramId,  // unique customer ID
     };
 
-    // Set period: "monthly" for subscriptions, "onetime" for packets
-    body.period = isSubscription ? "monthly" : "onetime";
+    // Add period for subscriptions
+    if (isSubscription) {
+      body.period = "monthly"; // Tribute will handle monthly billing
+    }
 
-    console.log("Creating Tribute order:", { ...body, apiKey: "***" });
+    // Add telegram_user_id if available
+    if (params.telegramId) {
+      body.telegram_user_id = params.telegramId;
+    }
 
     const response = await fetch(`${TRIBUTE_API_URL}/shop/orders`, {
       method: "POST",
@@ -58,7 +61,7 @@ export async function createTributePayment(params: CreateOrderParams) {
     }
 
     const data = await response.json();
-    console.log("Tribute order created successfully:", data);
+    console.log("Tribute payment created:", data);
     
     // Return payment URL from response
     return {
