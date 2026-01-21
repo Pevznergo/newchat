@@ -273,7 +273,7 @@ async function createYookassaPayment(amount: number, description: string, telegr
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Basic ${auth}`,
-        "Idempotency-Key": idempotencyKey,
+        "Idempotence-Key": idempotencyKey,
       },
       body: JSON.stringify({
         amount: {
