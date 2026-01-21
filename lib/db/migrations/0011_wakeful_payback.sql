@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS "UserConsent" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "request_count" integer DEFAULT 0;--> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "selected_model" varchar(100) DEFAULT 'model_gpt4omini';--> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "preferences" json;--> statement-breakpoint
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "request_count" integer DEFAULT 0;--> statement-breakpoint
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "selected_model" varchar(100) DEFAULT 'model_gpt4omini';--> statement-breakpoint
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "preferences" json;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "UserConsent" ADD CONSTRAINT "UserConsent_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
