@@ -216,3 +216,19 @@ export const userConsent = pgTable("UserConsent", {
 });
 
 export type UserConsent = InferSelectModel<typeof userConsent>;
+
+export const tariff = pgTable("Tariff", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  slug: varchar("slug", { length: 100 }).unique().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // subscription, packet
+  priceRub: integer("price_rub").notNull(),
+  priceStars: integer("price_stars").notNull(),
+  durationDays: integer("duration_days"),
+  requestLimit: integer("request_limit"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Tariff = InferSelectModel<typeof tariff>;

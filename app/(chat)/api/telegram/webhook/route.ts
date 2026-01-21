@@ -325,7 +325,7 @@ function getPremiumKeyboard() {
 
 function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
   const prices = PRICING_PLANS[plan];
-  const label = plan === "premium" ? "Premium" : "Premium X2";
+  // const _label = plan === "premium" ? "Premium" : "Premium X2";
   
   return {
     inline_keyboard: [
@@ -337,6 +337,8 @@ function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
     ],
   };
 }
+
+
 
 function getMusicGenerationKeyboard() {
   return {
@@ -888,7 +890,7 @@ bot.on("callback_query:data", async (ctx) => {
     const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
     const payment = await createYookassaPayment(price, description, telegramId);
 
-    if (payment && payment.confirmation && payment.confirmation.confirmation_url) {
+    if (payment?.confirmation?.confirmation_url) {
         const payUrl = payment.confirmation.confirmation_url;
         const days = months * 30;
         const requestLimit = planKey === "premium_x2" ? 200 : 100;
