@@ -43,10 +43,6 @@ echo "🏗️ Building application and migrating database..."
 # Optional: Disable telemetry and source maps for lighter build
 export NEXT_TELEMETRY_DISABLED=1
 export GENERATE_SOURCEMAP=false
-
-echo "🗄️ Pushing database schema components..."
-pnpm run db:push
-
 pnpm run build
 
 # 6. Start/Restart via PM2
