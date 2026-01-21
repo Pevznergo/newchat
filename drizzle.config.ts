@@ -12,5 +12,6 @@ export default defineConfig({
   dbCredentials: {
     // biome-ignore lint: Forbidden non-null assertion.
     url: process.env.POSTGRES_URL!,
+    ssl: true,
   },
 });
