@@ -28,6 +28,7 @@ export const user = pgTable("User", {
 
   // Telegram-specific fields
   balance: varchar("balance", { length: 255 }).default("0"), // Token balance for AI requests
+  imageGenerationBalance: integer("image_generation_balance").default(0), // Midjourney generations balance
   points: varchar("points", { length: 255 }).default("0"),
   spinsCount: varchar("spins_count", { length: 255 }).default("0"),
   dailyStreak: varchar("daily_streak", { length: 255 }).default("0"),
@@ -40,9 +41,11 @@ export const user = pgTable("User", {
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
   requestCount: integer("request_count").default(0),
-  
+
   // Bot preferences
-  selectedModel: varchar("selected_model", { length: 100 }).default("model_gpt4omini"),
+  selectedModel: varchar("selected_model", { length: 100 }).default(
+    "model_gpt4omini"
+  ),
   preferences: json("preferences"), // For storing user preferences like aspect_ratio
 
   // Standard fields

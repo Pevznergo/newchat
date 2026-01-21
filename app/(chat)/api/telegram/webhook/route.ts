@@ -1,27 +1,30 @@
 import { generateText, tool } from "ai";
-import { z } from "zod";
 import { Bot, webhookCallback } from "grammy";
+import { z } from "zod";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import {
-  createTelegramUser,
-  createUserConsent,
-  getChatsByUserId,
-  getMessageCountByUserId,
-  getMessagesByChatId,
   getUserByTelegramId,
-  hasUserConsented,
-  incrementUserRequestCount,
+  createTelegramUser,
+  setLastMessageId,
   saveChat,
   saveMessages,
-  setLastMessageId,
+  getMessagesByChatId,
+  getMessageCountByUserId,
+  incrementUserRequestCount,
+  createUserConsent,
+  hasUserConsented,
+  getTariffsByType,
+  getTariffBySlug,
   updateUserPreferences,
   updateUserSelectedModel,
   getUserSubscription,
   cancelUserSubscription,
   createStarSubscription,
+  getChatsByUserId
 } from "@/lib/db/queries";
+import { createTributePayment } from "@/lib/tribute";
 import { generateUUID } from "@/lib/utils";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -273,7 +276,12 @@ const STAR_PRICING = {
   },
 };
 
-async function createYookassaPayment(amount: number, description: string, telegramId: string, tariffSlug: string) {
+async function createYookassaPayment(
+  amount: number,
+  description: string,
+  telegramId: string,
+  tariffSlug: string
+) {
   const shopId = process.env.YOOKASSA_SHOP_ID;
   const secretKey = process.env.YOOKASSA_SECRET_KEY;
 
@@ -290,7 +298,7 @@ async function createYookassaPayment(amount: number, description: string, telegr
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         "Idempotence-Key": idempotencyKey,
       },
       body: JSON.stringify({
@@ -303,7 +311,7 @@ async function createYookassaPayment(amount: number, description: string, telegr
           type: "redirect",
           return_url: "https://aporto.tech/api/payment/return",
         },
-        description: description,
+        description,
         metadata: {
           telegram_id: telegramId,
           tariff_slug: tariffSlug,
@@ -345,19 +353,37 @@ function getPremiumKeyboard() {
 function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
   const prices = PRICING_PLANS[plan];
   // const _label = plan === "premium" ? "Premium" : "Premium X2";
-  
+
   return {
     inline_keyboard: [
-      [{ text: `1 месяц – ${prices.months_1}₽`, callback_data: `pay_${plan}_1` }],
-      [{ text: `3 месяца – ${prices.months_3}₽ (-20%)`, callback_data: `pay_${plan}_3` }],
-      [{ text: `6 месяцев – ${prices.months_6}₽ (-35%)`, callback_data: `pay_${plan}_6` }],
-      [{ text: `12 месяцев – ${prices.months_12}₽ (-50%)`, callback_data: `pay_${plan}_12` }],
+      [
+        {
+          text: `1 месяц – ${prices.months_1}₽`,
+          callback_data: `pay_${plan}_1`,
+        },
+      ],
+      [
+        {
+          text: `3 месяца – ${prices.months_3}₽ (-20%)`,
+          callback_data: `pay_${plan}_3`,
+        },
+      ],
+      [
+        {
+          text: `6 месяцев – ${prices.months_6}₽ (-35%)`,
+          callback_data: `pay_${plan}_6`,
+        },
+      ],
+      [
+        {
+          text: `12 месяцев – ${prices.months_12}₽ (-50%)`,
+          callback_data: `pay_${plan}_12`,
+        },
+      ],
       [{ text: "🔙 Назад", callback_data: "premium_back" }],
     ],
   };
 }
-
-
 
 function getMusicGenerationKeyboard() {
   return {
@@ -541,11 +567,13 @@ Telegram: ${user?.telegramId || "N/A"}
 }
 
 async function showSettingsMenu(ctx: any) {
-    await ctx.reply("⚙️ Настройки:\n\nЗдесь можно будет настроить параметры генерации.");
+  await ctx.reply(
+    "⚙️ Настройки:\n\nЗдесь можно будет настроить параметры генерации."
+  );
 }
 
 async function showHelp(ctx: any) {
-    await ctx.reply(`🎱 Список команд:
+  await ctx.reply(`🎱 Список команд:
 
 /start - Перезапустить бота
 /model - Выбрать нейросеть
@@ -561,11 +589,12 @@ async function showHelp(ctx: any) {
 }
 
 async function showPrivacy(ctx: any) {
-    await ctx.reply("📄 Условия использования:\n\nИспользуя бота, вы соглашаетесь с правилами обработки данных и условиями сервиса.");
+  await ctx.reply(
+    "📄 Условия использования:\n\nИспользуя бота, вы соглашаетесь с правилами обработки данных и условиями сервиса."
+  );
 }
 
 // --- Commands ---
-
 
 bot.command("start", async (ctx) => {
   console.log("Received /start command");
@@ -578,18 +607,18 @@ bot.command("start", async (ctx) => {
 
     // Update Commands Menu
     await ctx.api.setMyCommands([
-        { command: "start", description: "👋 О нас" },
-        { command: "account", description: "👤 Профиль" },
-        { command: "premium", description: "🚀 Премиум" },
-        { command: "deletecontext", description: "💬 Очистить контекст" },
-        { command: "photo", description: "🌅 Создать изображение" },
-        { command: "video", description: "🎬 Создать видео" },
-        { command: "suno", description: "🎸 Создать песню" },
-        { command: "s", description: "🔎 Поиск в интернете" },
-        { command: "model", description: "📝 Выбрать модель" },
-        { command: "settings", description: "⚙️ Настройки" },
-        { command: "help", description: "🎱 Список команд" },
-        { command: "privacy", description: "📄 Условия использования" },
+      { command: "start", description: "👋 О нас" },
+      { command: "account", description: "👤 Профиль" },
+      { command: "premium", description: "🚀 Премиум" },
+      { command: "deletecontext", description: "💬 Очистить контекст" },
+      { command: "photo", description: "🌅 Создать изображение" },
+      { command: "video", description: "🎬 Создать видео" },
+      { command: "suno", description: "🎸 Создать песню" },
+      { command: "s", description: "🔎 Поиск в интернете" },
+      { command: "model", description: "📝 Выбрать модель" },
+      { command: "settings", description: "⚙️ Настройки" },
+      { command: "help", description: "🎱 Список команд" },
+      { command: "privacy", description: "📄 Условия использования" },
     ]);
 
     // Extract payload from /start command (QR code source)
@@ -687,14 +716,16 @@ bot.command("clear", async (ctx) => {
 });
 
 bot.command("account", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
-    if (!telegramId) { return; }
-    const [user] = await getUserByTelegramId(telegramId);
-    await showAccountInfo(ctx, user);
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) {
+    return;
+  }
+  const [user] = await getUserByTelegramId(telegramId);
+  await showAccountInfo(ctx, user);
 });
 
 bot.command("premium", async (ctx) => {
-    await showPremiumMenu(ctx);
+  await showPremiumMenu(ctx);
 });
 
 bot.command("unsubscribe", async (ctx) => {
@@ -717,9 +748,13 @@ bot.command("unsubscribe", async (ctx) => {
     const success = await cancelUserSubscription(user.id);
     if (success) {
       const date = sub.endDate.toLocaleDateString("ru-RU");
-      await ctx.reply(`✅ Автопродление подписки отключено.\nПодписка действует до ${date}.`);
+      await ctx.reply(
+        `✅ Автопродление подписки отключено.\nПодписка действует до ${date}.`
+      );
     } else {
-      await ctx.reply("❌ Ошибка при отмене. Свяжитесь с поддержкой @GoPevzner.");
+      await ctx.reply(
+        "❌ Ошибка при отмене. Свяжитесь с поддержкой @GoPevzner."
+      );
     }
   } catch (error) {
     console.error("Error in /unsubscribe:", error);
@@ -728,7 +763,7 @@ bot.command("unsubscribe", async (ctx) => {
 });
 
 bot.command("deletecontext", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
+  const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
   }
@@ -757,47 +792,63 @@ bot.command("deletecontext", async (ctx) => {
 });
 
 bot.command("photo", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
-    if (!telegramId) { return; }
-    const [user] = await getUserByTelegramId(telegramId);
-    if (user) { await showImageMenu(ctx, user); }
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) {
+    return;
+  }
+  const [user] = await getUserByTelegramId(telegramId);
+  if (user) {
+    await showImageMenu(ctx, user);
+  }
 });
 
 bot.command("video", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
-    if (!telegramId) { return; }
-    const [user] = await getUserByTelegramId(telegramId);
-    if (user) { await showVideoMenu(ctx, user); }
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) {
+    return;
+  }
+  const [user] = await getUserByTelegramId(telegramId);
+  if (user) {
+    await showVideoMenu(ctx, user);
+  }
 });
 
 bot.command("suno", async (ctx) => {
-    await showMusicMenu(ctx);
+  await showMusicMenu(ctx);
 });
 
 bot.command("s", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
-    if (!telegramId) { return; }
-    const [user] = await getUserByTelegramId(telegramId);
-    if (user) { await showSearchMenu(ctx, user); }
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) {
+    return;
+  }
+  const [user] = await getUserByTelegramId(telegramId);
+  if (user) {
+    await showSearchMenu(ctx, user);
+  }
 });
 
 bot.command("model", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
-    if (!telegramId) { return; }
-    const [user] = await getUserByTelegramId(telegramId);
-    if (user) { await showModelMenu(ctx, user); }
+  const telegramId = ctx.from?.id.toString();
+  if (!telegramId) {
+    return;
+  }
+  const [user] = await getUserByTelegramId(telegramId);
+  if (user) {
+    await showModelMenu(ctx, user);
+  }
 });
 
 bot.command("settings", async (ctx) => {
-    await showSettingsMenu(ctx);
+  await showSettingsMenu(ctx);
 });
 
 bot.command("help", async (ctx) => {
-    await showHelp(ctx);
+  await showHelp(ctx);
 });
 
 bot.command("privacy", async (ctx) => {
-    await showPrivacy(ctx);
+  await showPrivacy(ctx);
 });
 
 // --- Callback Query Handler ---
@@ -871,38 +922,42 @@ bot.on("callback_query:data", async (ctx) => {
     }
 
     try {
-        await createUserConsent(user.id, "image_generation", {
-            telegramId: telegramId,
-        });
+      await createUserConsent(user.id, "image_generation", {
+        telegramId,
+      });
 
-        await ctx.deleteMessage();
+      await ctx.deleteMessage();
 
-        const currentModel = user.selectedModel?.startsWith("model_image_")
+      const currentModel = user.selectedModel?.startsWith("model_image_")
         ? user.selectedModel
         : "model_image_gpt";
 
-        await ctx.reply("Выберите модель для создания изображений:", {
+      await ctx.reply("Выберите модель для создания изображений:", {
         reply_markup: getImageModelKeyboard(currentModel),
-        });
-        await ctx.answerCallbackQuery("Условия приняты!");
+      });
+      await ctx.answerCallbackQuery("Условия приняты!");
     } catch (e) {
-        console.error("Consent error:", e);
-        await ctx.answerCallbackQuery({
-            text: "Ошибка сохранения согласия. Попробуйте позже.",
-            show_alert: true
-        });
+      console.error("Consent error:", e);
+      await ctx.answerCallbackQuery({
+        text: "Ошибка сохранения согласия. Попробуйте позже.",
+        show_alert: true,
+      });
     }
     return;
   }
 
   // Handle premium menu navigation
   if (data === "buy_premium") {
-    await ctx.editMessageReplyMarkup({ reply_markup: getSubscriptionKeyboard("premium") });
+    await ctx.editMessageReplyMarkup({
+      reply_markup: getSubscriptionKeyboard("premium"),
+    });
     await ctx.answerCallbackQuery();
     return;
   }
   if (data === "buy_premium_x2") {
-    await ctx.editMessageReplyMarkup({ reply_markup: getSubscriptionKeyboard("premium_x2") });
+    await ctx.editMessageReplyMarkup({
+      reply_markup: getSubscriptionKeyboard("premium_x2"),
+    });
     await ctx.answerCallbackQuery();
     return;
   }
@@ -913,97 +968,78 @@ bot.on("callback_query:data", async (ctx) => {
   }
 
   // Handle payment creation
+
   if (data.startsWith("pay_")) {
     const rawArgs = data.replace("pay_", "");
     
-    // Detect Stars Payment
+    // Detect Stars Payment selection
     const isStars = rawArgs.startsWith("stars_");
-    const cleanArgs = isStars ? rawArgs.replace("stars_", "") : rawArgs;
+    const tariffSlug = isStars ? rawArgs.replace("stars_", "") : rawArgs;
 
-    let planKey: "premium" | "premium_x2" = "premium";
-    let months = 1;
-
-    if (cleanArgs.startsWith("premium_x2_")) {
-        planKey = "premium_x2";
-        months = parseInt(cleanArgs.replace("premium_x2_", ""), 10);
-    } else {
-        planKey = "premium";
-        months = parseInt(cleanArgs.replace("premium_", ""), 10);
+    // Fetch Tariff from DB
+    const tariff = await getTariffBySlug(tariffSlug);
+    if (!tariff) {
+        await ctx.answerCallbackQuery("Error: Tariff not found");
+        return;
     }
 
-    const durationKey = `months_${months}` as keyof typeof PRICING_PLANS.premium;
-    const tariffSlug = `${planKey}_${months}`;
-    const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
+    const description = `${tariff.name} (tariff_slug:${tariff.slug})`;
+    
+    // Determine Currency and Amount
+    // Tribute uses different currencies. 
+    // If Stars -> 'XTR'
+    // If Rubles -> 'RUB' (amount in kopecks)
+
+    let currency = "RUB";
+    let amount = tariff.priceRub * 100; // to kopecks
 
     if (isStars) {
-        // Safe cast or check
-        const starPlan = STAR_PRICING[planKey] as Record<string, number>;
-        const starsPrice = starPlan[durationKey];
-
-        if (!starsPrice) {
-            await ctx.answerCallbackQuery("Error: Price not found");
-            return;
+        if (!tariff.priceStars) {
+             await ctx.answerCallbackQuery("Error: Stars price not available");
+             return;
         }
-
-        await ctx.answerCallbackQuery("Создаю инвойс...");
-        // sendInvoice(chat_id, title, description, payload, provider_token, currency, prices)
-        await ctx.replyWithInvoice(
-            description, // title
-            `Оплата подписки ${description}`, // description
-            tariffSlug, // payload
-            "XTR", // currency
-            [{ label: description, amount: starsPrice }] // prices
-        );
-        return;
+        currency = "XTR";
+        amount = tariff.priceStars; // XTR usually integer amount
     }
 
-    // Existing YooKassa Logic
-    const price = PRICING_PLANS[planKey][durationKey]; // e.g. 750
+    await ctx.answerCallbackQuery("Создаю ссылку на оплату...");
 
-    if (!price) {
-        await ctx.answerCallbackQuery("Error: Invalid plan");
-        return;
-    }
+    const payment = await createTributePayment({
+        amount,
+        currency,
+        orderName: tariff.name,
+        description,
+        telegramId,
+        tariffSlug: tariff.slug
+    });
 
-    await ctx.answerCallbackQuery("Создаю счет...");
+    if (payment && payment.link) {
+         let messageText = `Вы оформляете заказ: ${tariff.name}.`;
+         if (currency === "RUB") {
+             messageText += `\nСтоимость: ${tariff.priceRub} ₽.`;
+         } else {
+             messageText += `\nСтоимость: ${tariff.priceStars} ⭐️.`;
+         }
 
-    const payment = await createYookassaPayment(price, description, telegramId, tariffSlug);
+         messageText += `\n\nНажмите кнопку ниже для оплаты через Tribute.`;
+         
+         const buttonText = currency === "RUB" ? "Оплатить (RUB)" : "Оплатить (Stars)";
 
-    if (payment?.confirmation?.confirmation_url) {
-        const payUrl = payment.confirmation.confirmation_url;
-        const days = months * 30;
-        const requestLimit = planKey === "premium_x2" ? 200 : 100;
-        const title = planKey === "premium_x2" ? "Premium X2" : "Premium";
-
-        const messageText = `Вы оформляете подписку ${title} с регулярным списанием раз в ${days} календарных дней.
-Вам будет доступно ${requestLimit} запросов в день.
-Стоимость - ${price} ₽.
-
-Отменить можно по команде /unsubscribe.
-
-Оформляя оплату Вы даете согласие на условия оферты рекуррентных платежей, политики обработки персональных данных и тарифа.
-
-Если у вас есть вопросы по подписке или оплате, напишите нам @GoPevzner .`;
-
-        await ctx.reply(messageText, {
+         await ctx.reply(messageText, {
              parse_mode: "HTML",
              link_preview_options: { is_disabled: true },
              reply_markup: {
                  inline_keyboard: [
-                     [{ text: "Карта 💳", url: payUrl }],
-                     [{ text: "СБП 🏛", url: payUrl }],
-                     [{ text: "Оплатить Telegram Stars", callback_data: `pay_stars_${planKey}_${months}` }]
+                     [{ text: buttonText, url: payment.link }],
+                     ...(!isStars ? [[{ text: "Оплатить Telegram Stars", callback_data: `pay_stars_${tariff.slug}` }]] : [])
                  ]
              }
-        });
+         });
     } else {
-        await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже или свяжитесь с поддержкой.");
+        await ctx.reply("❌ Ошибка создания платежа в Tribute. Попробуйте позже.");
     }
     return;
   }
-
-
-
 
   // Handle other "buy_" buttons (placeholders for Packs)
   if (
@@ -1022,38 +1058,7 @@ bot.on("callback_query:data", async (ctx) => {
   await ctx.answerCallbackQuery();
 });
 
-// Checkout Handlers for Stars
-bot.on("pre_checkout_query", async (ctx) => {
-    await ctx.answerPreCheckoutQuery(true);
-});
 
-bot.on("message:successful_payment", async (ctx) => {
-    const payment = ctx.message.successful_payment;
-    const tariffSlug = payment.invoice_payload;
-    const telegramId = ctx.from.id.toString();
-    const totalAmount = payment.total_amount;
-
-    console.log(`Successful Stars payment: ${totalAmount} XTR for ${tariffSlug} from user ${telegramId}`);
-
-    try {
-        const [user] = await getUserByTelegramId(telegramId);
-        if (!user) {
-            console.error(`User not found for payment: ${telegramId}`);
-            return;
-        }
-
-        const parts = tariffSlug.split("_");
-        const months = parseInt(parts[parts.length - 1], 10);
-        const durationDays = months * 30;
-
-        await createStarSubscription(user.id, tariffSlug, durationDays);
-        
-        await ctx.reply(`✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`);
-    } catch (error) {
-        console.error("Error processing successful_payment:", error);
-        await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");
-    }
-});
 
 // --- Message Handlers ---
 
@@ -1063,58 +1068,60 @@ bot.on("message:text", async (ctx) => {
 
   // Helper for button handling
   const handleButton = async (action: (user: any) => Promise<void>) => {
-      try {
-        await ctx.deleteMessage();
-      } catch (_e) {
-        // ignore
-      }
-      const [user] = await getUserByTelegramId(telegramId);
-      if (user) { await action(user); }
+    try {
+      await ctx.deleteMessage();
+    } catch (_e) {
+      // ignore
+    }
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) {
+      await action(user);
+    }
   };
 
   if (text === "📝 Выбрать модель") {
-      await handleButton((user) => showModelMenu(ctx, user));
-      return;
+    await handleButton((user) => showModelMenu(ctx, user));
+    return;
   }
 
   if (text === "🎨 Создать картинку") {
-      await handleButton((user) => showImageMenu(ctx, user));
-      return;
+    await handleButton((user) => showImageMenu(ctx, user));
+    return;
   }
 
   if (text === "🔎 Интернет-поиск") {
-      await handleButton((user) => showSearchMenu(ctx, user));
-      return;
+    await handleButton((user) => showSearchMenu(ctx, user));
+    return;
   }
 
   if (text === "🎬 Создать видео") {
-      await handleButton((user) => showVideoMenu(ctx, user));
-      return;
+    await handleButton((user) => showVideoMenu(ctx, user));
+    return;
   }
 
   if (text === "🎸 Создать песню") {
-      try {
-        await ctx.deleteMessage();
-      } catch (_e) {
-        // ignore
-      }
-      await showMusicMenu(ctx);
-      return;
+    try {
+      await ctx.deleteMessage();
+    } catch (_e) {
+      // ignore
+    }
+    await showMusicMenu(ctx);
+    return;
   }
 
   if (text === "🚀 Премиум" || text === "/premium") {
-      try {
-        await ctx.deleteMessage();
-      } catch (_e) {
-         // ignore
-      }
-      await showPremiumMenu(ctx);
-      return;
+    try {
+      await ctx.deleteMessage();
+    } catch (_e) {
+      // ignore
+    }
+    await showPremiumMenu(ctx);
+    return;
   }
 
   if (text === "👤 Мой профиль") {
-       await handleButton((user) => showAccountInfo(ctx, user));
-       return;
+    await handleButton((user) => showAccountInfo(ctx, user));
+    return;
   }
 
   // Regular message processing
