@@ -22,6 +22,12 @@ import {
   cancelUserSubscription,
   createStarSubscription,
 } from "@/lib/db/queries";
+import {
+  getProviderMap,
+  getModelLimit,
+  getActiveModels,
+  type ModelConfig,
+} from "@/lib/ai/config";
 import { generateUUID } from "@/lib/utils";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -64,7 +70,7 @@ const MODEL_NAMES: Record<string, string> = {
   model_image_flux: "FLUX 2",
 };
 
-const PROVIDER_MAP: Record<string, string> = {
+const FALLBACK_PROVIDER_MAP: Record<string, string> = {
   model_gpt52: "openai/gpt-4o", // Fallback until GPT-5.2 is available
   model_o3: "openai/gpt-4o", // Fallback until o3 is available
   model_gpt41: "openai/gpt-4o", // Fallback until GPT-4.1 is available
@@ -1233,48 +1239,63 @@ bot.on("message:text", async (ctx) => {
 
     // 5. Generate Response using selected model
     const selectedModelId = user.selectedModel || "model_gpt4omini";
-    const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
 
-    // --- GPT Images Limit Check (Free Users) ---
-    if (selectedModelId === "model_image_gpt" && userType !== "pro") {
-      const redis = (await import("@/lib/redis")).default;
-      const usageKey = `usage:gpt_image:${user.id}`;
-      
-      try {
-        const usage = await redis.get(usageKey);
-        const count = usage ? parseInt(usage, 10) : 0;
+    // Dynamic Provider Map
+    const providerMap = await getProviderMap();
+    const realModelId = providerMap[selectedModelId] || FALLBACK_PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
 
-        if (count >= 5) {
-           await ctx.reply(
-            "🛑 Лимит генераций исчерпан!\n\nНа бесплатном тарифе доступно 5 изображений в месяц.\nЧтобы снять ограничения и творить без границ, переходите на Premium! 🚀",
-            {
-              reply_markup: {
-                inline_keyboard: [
-                    [{ text: "💎 Купить Premium", callback_data: "buy_premium" }],
-                    [{ text: "🎡 Испытать удачу", web_app: { url: "https://app.aporto.tech/app" } }]
-                ]
-              }
+    // --- Dynamic Limit Check ---
+    const userRole = user.hasPaid ? "premium" : "free"; // Simplified role logic, refine as needed
+    const modelLimit = await getModelLimit(selectedModelId, userRole);
+
+    if (modelLimit) {
+        const redis = (await import("@/lib/redis")).default;
+        // Limit Key: usage:limit:{limitId}:{userId} or usage:model:{modelId}:{userId}
+        // Let's use generic key structure
+        const usageKey = `usage:limit:${modelLimit.id}:${user.id}`;
+        
+        try {
+            const usageStr = await redis.get(usageKey);
+            const currentUsage = usageStr ? parseInt(usageStr, 10) : 0;
+            
+            if (currentUsage >= modelLimit.limitCount) {
+                // Formatting period for message
+                const periodMap: Record<string, string> = { daily: "день", monthly: "месяц", total: "все время" };
+                const periodName = periodMap[modelLimit.limitPeriod] || modelLimit.limitPeriod;
+                
+                 await ctx.reply(
+                    `🛑 Лимит исчерпан!\n\nДля модели ${selectedModelId} установлен лимит: ${modelLimit.limitCount} запросов в ${periodName}.\nОбновите подписку или дождитесь сброса лимита.`,
+                    {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "💎 Купить Premium", callback_data: "buy_premium" }],
+                            ]
+                        }
+                    }
+                );
+                return;
             }
-           );
-           return;
-        }
+            
+            // Increment
+             const multi = redis.multi();
+             multi.incr(usageKey);
+             
+             // Set TTL based on period
+             let ttl = 60 * 60 * 24 * 30; // Default 30 days
+             if (modelLimit.limitPeriod === 'daily') ttl = 60 * 60 * 24;
+             if (modelLimit.limitPeriod === 'monthly') ttl = 60 * 60 * 24 * 30;
+             // strict ttl alignment to calendar not implemented here, using rolling window or simple expiry
+             
+             if (currentUsage === 0) {
+                 multi.expire(usageKey, ttl);
+             }
+             await multi.exec();
 
-        // Increment usage
-        // usage key expires in 30 days (approx month)
-        const multi = redis.multi();
-        multi.incr(usageKey);
-        if (count === 0) {
-            multi.expire(usageKey, 30 * 24 * 60 * 60);
+        } catch (e) {
+            console.error("Limit check failed", e);
         }
-        await multi.exec();
-
-      } catch (e) {
-        console.error("Redis usage check failed", e);
-        // Fail open or closed? Fail open to not block users on error is safer for UX, 
-        // but let's log.
-      }
     }
-    // ----------------------------------------
+
 
     await ctx.replyWithChatAction("typing");
 

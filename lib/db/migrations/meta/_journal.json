@@ -99,6 +99,13 @@
       "when": 1768989183850,
       "tag": "0013_condemned_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1769014064138,
+      "tag": "0014_red_spyke",
+      "breakpoints": true
     }
   ]
 }

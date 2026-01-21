@@ -249,3 +249,34 @@ export const subscription = pgTable("Subscription", {
 });
 
 export type Subscription = InferSelectModel<typeof subscription>;
+
+export const aiModel = pgTable("AiModel", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  modelId: varchar("model_id", { length: 100 }).unique().notNull(), // e.g. model_gpt4omini
+  name: varchar("name", { length: 255 }).notNull(), // e.g. GPT-4o Mini
+  providerId: varchar("provider_id", { length: 255 }).notNull(), // e.g. openai/gpt-4o-mini
+  type: varchar("type", { length: 50 }).notNull().default("text"), // text, image, video, audio
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  isPremium: boolean("is_premium").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type AiModel = InferSelectModel<typeof aiModel>;
+
+export const modelLimit = pgTable("ModelLimit", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  modelId: uuid("model_id")
+    .notNull()
+    .references(() => aiModel.id, { onDelete: "cascade" }),
+  userRole: varchar("user_role", { length: 50 }).notNull(), // free, premium, premium_x2, regular
+  limitCount: integer("limit_count").notNull(),
+  limitPeriod: varchar("limit_period", { length: 50 }).notNull(), // daily, monthly, total
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ModelLimit = InferSelectModel<typeof modelLimit>;
+
