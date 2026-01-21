@@ -1,6 +1,6 @@
 {
-  "id": "a8ac18b5-63ad-4a30-9a9d-42049f1a4a26",
-  "prevId": "fada33cc-e22d-4d05-b100-c952e5fa8a3c",
+  "id": "fada33cc-e22d-4d05-b100-c952e5fa8a3c",
+  "prevId": "bfeb68c4-149d-4c59-ac06-068efc10201c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -606,20 +606,6 @@
         },
         "image_generation_balance": {
           "name": "image_generation_balance",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "video_generation_balance": {
-          "name": "video_generation_balance",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "music_generation_balance": {
-          "name": "music_generation_balance",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

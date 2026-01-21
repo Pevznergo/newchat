@@ -99,13 +99,6 @@
       "when": 1768989183850,
       "tag": "0013_condemned_gladiator",
       "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1768996939836,
-      "tag": "0014_fantastic_madame_web",
-      "breakpoints": true
     }
   ]
 }

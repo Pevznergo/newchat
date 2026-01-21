@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac } from "crypto";
 
 const TRIBUTE_API_URL = "https://tribute.tg/api/v1";
 
@@ -76,9 +76,7 @@ export async function createTributePayment(params: CreateOrderParams) {
 
 export function verifyTributeWebhook(signature: string, body: string): boolean {
   const apiKey = process.env.TRIBUTE_API_KEY;
-  if (!apiKey) {
-    return false;
-  }
+  if (!apiKey) return false;
 
   // Check docs for signature algorithm. Usually HMAC-SHA256.
   // "Api-Key передаётся в заголовке...".

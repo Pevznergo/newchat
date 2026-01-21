@@ -30,11 +30,11 @@ import {
   type Suggestion,
   stream,
   suggestion,
-  tariff,
   type User,
   user,
   userConsent,
   vote,
+  tariff,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
@@ -799,7 +799,7 @@ export async function updateUserPreferences(
       .update(user)
       .set({ preferences: updatedPrefs })
       .where(eq(user.id, userId));
-  } catch (_error) {
+  } catch (error) {
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to update user preferences"
@@ -896,10 +896,10 @@ export async function getTariffsByType(type: "subscription" | "packet") {
 export async function getTariffBySlug(slug: string) {
   try {
     const [foundTariff] = await db
-      .select()
-      .from(tariff)
-      .where(eq(tariff.slug, slug))
-      .limit(1);
+        .select()
+        .from(tariff)
+        .where(eq(tariff.slug, slug))
+        .limit(1);
     return foundTariff;
   } catch (error) {
     console.error("Failed to get tariff by slug", error);
@@ -907,56 +907,15 @@ export async function getTariffBySlug(slug: string) {
   }
 }
 
-export async function incrementImageGenerationBalance(
-  userId: string,
-  amount: number
-) {
-  try {
-    await db
-      .update(user)
-      .set({
-        imageGenerationBalance: sql`${user.imageGenerationBalance} + ${amount}`,
-      })
-      .where(eq(user.id, userId));
-    return true;
-  } catch (error) {
-    console.error("Failed to increment image generation balance", error);
-    return false;
-  }
-}
-
-export async function incrementVideoGenerationBalance(
-  userId: string,
-  amount: number
-) {
-  try {
-    await db
-      .update(user)
-      .set({
-        videoGenerationBalance: sql`${user.videoGenerationBalance} + ${amount}`,
-      })
-      .where(eq(user.id, userId));
-    return true;
-  } catch (error) {
-    console.error("Failed to increment video generation balance", error);
-    return false;
-  }
-}
-
-export async function incrementMusicGenerationBalance(
-  userId: string,
-  amount: number
-) {
-  try {
-    await db
-      .update(user)
-      .set({
-        musicGenerationBalance: sql`${user.musicGenerationBalance} + ${amount}`,
-      })
-      .where(eq(user.id, userId));
-    return true;
-  } catch (error) {
-    console.error("Failed to increment music generation balance", error);
-    return false;
-  }
+export async function incrementImageGenerationBalance(userId: string, amount: number) {
+    try {
+        await db
+            .update(user)
+            .set({ imageGenerationBalance: sql`${user.imageGenerationBalance} + ${amount}` })
+            .where(eq(user.id, userId));
+        return true;
+    } catch (error) {
+        console.error("Failed to increment image generation balance", error);
+        return false;
+    }
 }
