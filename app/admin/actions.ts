@@ -10,7 +10,7 @@ import redis from "@/lib/redis";
 // Cache Keys to invalidate
 const PROVIDER_MAP_KEY = "config:provider_map";
 const ACTIVE_MODELS_KEY = "config:active_models";
-const LIMITS_KEY_PREFIX = "config:limits:";
+const _LIMITS_KEY_PREFIX = "config:limits:";
 
 async function invalidateConfig() {
     try {
@@ -19,7 +19,7 @@ async function invalidateConfig() {
         // We can't easily wildcard delete in standard Redis without KEYS/SCAN, 
         // but typically we let limits expire or use a version key.
         // For now, let's accept 5 min stale limits or we can implement specific key deletion if we know the modelId.
-    } catch (e) {
+    } catch (_e) {
         // ignore
     }
 }
@@ -51,7 +51,7 @@ export async function saveModel(data: FormData) {
     
     await invalidateConfig();
     revalidatePath("/admin/models");
-    if (!id) redirect("/admin/models");
+    if (!id) { redirect("/admin/models"); }
 }
 
 export async function saveLimit(data: FormData) {

@@ -51,6 +51,7 @@ export default async function ModelsPage() {
                 <td className="px-6 py-4">
                   <form action={toggleModelStatus.bind(null, model.id, !model.isActive)}>
                     <button
+                        type="submit"
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         model.isActive
                             ? "bg-green-100 text-green-800"
