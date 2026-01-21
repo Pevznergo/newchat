@@ -238,6 +238,74 @@ function getSearchModelKeyboard(selectedModel: string) {
   };
 }
 
+const PRICING_PLANS = {
+  premium: {
+    base: 750,
+    months_1: 750,
+    months_3: 1800, // 750 * 3 * 0.8
+    months_6: 2925, // 750 * 6 * 0.65
+    months_12: 4500, // 750 * 12 * 0.5
+  },
+  premium_x2: {
+    base: 1250,
+    months_1: 1250,
+    months_3: 3000,
+    months_6: 4875,
+    months_12: 7500,
+  },
+};
+
+async function createYookassaPayment(amount: number, description: string, telegramId: string) {
+  const shopId = process.env.YOOKASSA_SHOP_ID;
+  const secretKey = process.env.YOOKASSA_SECRET_KEY;
+
+  if (!shopId || !secretKey) {
+    console.error("Missing YooKassa credentials");
+    return null;
+  }
+
+  const auth = Buffer.from(`${shopId}:${secretKey}`).toString("base64");
+  const idempotencyKey = generateUUID();
+
+  try {
+    const response = await fetch("https://api.yookassa.ru/v3/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${auth}`,
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify({
+        amount: {
+          value: amount.toFixed(2),
+          currency: "RUB",
+        },
+        capture: true,
+        confirmation: {
+          type: "redirect",
+          return_url: "https://t.me/aporto_bot",
+        },
+        description: description,
+        metadata: {
+          telegram_id: telegramId,
+        },
+        save_payment_method: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("YooKassa Error:", errorText);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("YooKassa Fetch Error:", error);
+    return null;
+  }
+}
+
 function getPremiumKeyboard() {
   return {
     inline_keyboard: [
@@ -251,6 +319,21 @@ function getPremiumKeyboard() {
         { text: "Suno", callback_data: "buy_suno" },
       ],
       [{ text: "Закрыть", callback_data: "menu_close" }],
+    ],
+  };
+}
+
+function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
+  const prices = PRICING_PLANS[plan];
+  const label = plan === "premium" ? "Premium" : "Premium X2";
+  
+  return {
+    inline_keyboard: [
+      [{ text: `1 месяц – ${prices.months_1}₽`, callback_data: `pay_${plan}_1` }],
+      [{ text: `3 месяца – ${prices.months_3}₽ (-20%)`, callback_data: `pay_${plan}_3` }],
+      [{ text: `6 месяцев – ${prices.months_6}₽ (-35%)`, callback_data: `pay_${plan}_6` }],
+      [{ text: `12 месяцев – ${prices.months_12}₽ (-50%)`, callback_data: `pay_${plan}_12` }],
+      [{ text: "🔙 Назад", callback_data: "premium_back" }],
     ],
   };
 }
@@ -371,20 +454,58 @@ async function showMusicMenu(ctx: any) {
 }
 
 async function showPremiumMenu(ctx: any) {
-  const premiumMenuText = `Доступ к лучшим ИИ-сервисам:
+  const premiumMenuText = `Бот открывает доступ к лучшим AI-сервисам на одной платформе:
 
-<b>БЕСПЛАТНО | ЕЖЕНЕДЕЛЬНО</b>
-50 запросов: GPT-5 mini, Gemini 3 Flash, DeepSeek
+<b>Бесплатно | ЕЖЕНЕДЕЛЬНО</b>
+100 любых запросов
+✅ GPT-5 mini | GPT-4o mini
+✅ DeepSeek-V3.2 | Gemini 3 Flash
+✅ Интернет-поиск Perplexity
+✅ Распознавание изображений
+25 генераций изображений
+🌅 Nano Banana | GPT Image 1.5
 
-<b>PREMIUM | ЕЖЕМЕСЯЧНО</b>
-100 запросов в день
-GPT-5.2, Claude 4.5, Gemini 3 Pro
-Цена: 750 ₽
+<b>ПРЕМИУМ | МЕСЯЦ</b>
+🔼 Лимит запросов – 100 в день
+✅ Все опции выше
+🌅 Nano Banana Pro | GPT Image 1.5
+✅ GPT-5.2 | GPT-4.1 | OpenAI o3
+✅ Gemini 3 Pro | Claude 4.5
+✅ Работа с документами
+✅ Голосовые ответы
+✅ Без рекламы
+Стоимость: 750 ₽ *
 
-Есть вопросы? @support`;
+<b>ПРЕМИУМ X2 | МЕСЯЦ</b>
+⏫ Лимит запросов – 200 в день
+✅ Те же опции, что в «Премиум»
+Стоимость: 1250 ₽
+
+<b>MIDJOURNEY И FLUX | ПАКЕТ</b>
+От 50 до 500 генераций (на выбор)
+🌅 /Midjourney V7 и Flux 2
+✅ Midjourney Video
+✅ Замена лиц на фото
+Стоимость: от 350 ₽
+
+<b>ВИДЕО | ПАКЕТ</b>
+От 2 до 50 генераций (на выбор)
+🎬 Veo 3.1 | Sora 2 | Kling | Hailuo | Pika
+✅ Видео на основе изображений
+✅ Креативные видео-эффекты
+Стоимость: от 225 ₽
+
+<b>ПЕСНИ SUNO | ПАКЕТ</b>
+От 20 до 100 генераций (на выбор)
+🎸 Нейросеть /Suno V5
+✅ Свои стихи или генерация с AI
+Стоимость: от 350 ₽
+
+💬 По вопросам оплаты: @GoPevzner`;
 
   await ctx.reply(premiumMenuText, {
     parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
     reply_markup: getPremiumKeyboard(),
   });
 }
@@ -723,16 +844,93 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
-  // Handle premium/purchase buttons (placeholders)
+  // Handle premium menu navigation
+  if (data === "buy_premium") {
+    await ctx.editMessageReplyMarkup({ reply_markup: getSubscriptionKeyboard("premium") });
+    await ctx.answerCallbackQuery();
+    return;
+  }
+  if (data === "buy_premium_x2") {
+    await ctx.editMessageReplyMarkup({ reply_markup: getSubscriptionKeyboard("premium_x2") });
+    await ctx.answerCallbackQuery();
+    return;
+  }
+  if (data === "premium_back") {
+    await ctx.editMessageReplyMarkup({ reply_markup: getPremiumKeyboard() });
+    await ctx.answerCallbackQuery();
+    return;
+  }
+
+  // Handle payment creation
+  if (data.startsWith("pay_")) {
+    const rawArgs = data.replace("pay_", "");
+    let planKey: "premium" | "premium_x2" = "premium";
+    let months = 1;
+
+    if (rawArgs.startsWith("premium_x2_")) {
+        planKey = "premium_x2";
+        months = parseInt(rawArgs.replace("premium_x2_", ""), 10);
+    } else {
+        planKey = "premium";
+        months = parseInt(rawArgs.replace("premium_", ""), 10);
+    }
+
+    const durationKey = `months_${months}` as keyof typeof PRICING_PLANS.premium;
+    const price = PRICING_PLANS[planKey][durationKey]; // e.g. 750
+
+    if (!price) {
+        await ctx.answerCallbackQuery("Error: Invalid plan");
+        return;
+    }
+
+    await ctx.answerCallbackQuery("Создаю счет...");
+
+    const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
+    const payment = await createYookassaPayment(price, description, telegramId);
+
+    if (payment && payment.confirmation && payment.confirmation.confirmation_url) {
+        const payUrl = payment.confirmation.confirmation_url;
+        const days = months * 30;
+        const requestLimit = planKey === "premium_x2" ? 200 : 100;
+        const title = planKey === "premium_x2" ? "Premium X2" : "Premium";
+
+        const messageText = `Вы оформляете подписку ${title} с регулярным списанием раз в ${days} календарных дней.
+Вам будет доступно ${requestLimit} запросов в день.
+Стоимость - ${price} ₽.
+
+Отменить можно по команде /unsubscribe.
+
+Оформляя оплату Вы даете согласие на условия оферты рекуррентных платежей, политики обработки персональных данных и тарифа.
+
+Если у вас есть вопросы по подписке или оплате, напишите нам @GoPevzner .`;
+
+        await ctx.reply(messageText, {
+             parse_mode: "HTML",
+             link_preview_options: { is_disabled: true },
+             reply_markup: {
+                 inline_keyboard: [
+                     [{ text: "Карта 💳", url: payUrl }],
+                     [{ text: "СБП 🏛", url: payUrl }],
+                     [{ text: "Оплатить Telegram Stars", callback_data: `pay_stars_${planKey}_${months}` }]
+                 ]
+             }
+        });
+    } else {
+        await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже или свяжитесь с поддержкой.");
+    }
+    return;
+  }
+
+  // Handle other "buy_" buttons (placeholders for Packs)
   if (
     data === "/premium" ||
     data === "/pro" ||
     data.startsWith("buy_") ||
     data.startsWith("music_mode_")
   ) {
-    await ctx.answerCallbackQuery();
+    await ctx.answerCallbackQuery("В разработке...");
     await ctx.reply(
-      "Эта функция в разработке. Свяжитесь с @support для подробностей."
+      "Выбор пакетов (Video, MJ, Suno) скоро появится. Пока доступна только подписка Premium."
     );
     return;
   }
