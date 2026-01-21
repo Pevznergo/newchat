@@ -29,6 +29,8 @@ export const user = pgTable("User", {
   // Telegram-specific fields
   balance: varchar("balance", { length: 255 }).default("0"), // Token balance for AI requests
   imageGenerationBalance: integer("image_generation_balance").default(0), // Midjourney generations balance
+  videoGenerationBalance: integer("video_generation_balance").default(0), // Video generations balance
+  musicGenerationBalance: integer("music_generation_balance").default(0), // Music generations balance
   points: varchar("points", { length: 255 }).default("0"),
   spinsCount: varchar("spins_count", { length: 255 }).default("0"),
   dailyStreak: varchar("daily_streak", { length: 255 }).default("0"),

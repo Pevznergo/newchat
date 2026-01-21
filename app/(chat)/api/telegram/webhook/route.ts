@@ -5,24 +5,21 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import {
-  getUserByTelegramId,
+  cancelUserSubscription,
   createTelegramUser,
-  setLastMessageId,
+  createUserConsent,
+  getChatsByUserId,
+  getMessageCountByUserId,
+  getMessagesByChatId,
+  getTariffBySlug,
+  getUserByTelegramId,
+  getUserSubscription,
+  hasUserConsented,
+  incrementUserRequestCount,
   saveChat,
   saveMessages,
-  getMessagesByChatId,
-  getMessageCountByUserId,
-  incrementUserRequestCount,
-  createUserConsent,
-  hasUserConsented,
-  getTariffsByType,
-  getTariffBySlug,
-  updateUserPreferences,
+  setLastMessageId,
   updateUserSelectedModel,
-  getUserSubscription,
-  cancelUserSubscription,
-  createStarSubscription,
-  getChatsByUserId
 } from "@/lib/db/queries";
 import { createTributePayment } from "@/lib/tribute";
 import { generateUUID } from "@/lib/utils";
@@ -261,77 +258,9 @@ const PRICING_PLANS = {
   },
 };
 
-const STAR_PRICING = {
-  premium: {
-    months_1: 500,
-    months_3: 1200,
-    months_6: 2000,
-    months_12: 3000,
-  },
-  premium_x2: {
-    months_1: 850,
-    months_3: 2000,
-    months_6: 3250,
-    months_12: 5000,
-  },
-};
 
-async function createYookassaPayment(
-  amount: number,
-  description: string,
-  telegramId: string,
-  tariffSlug: string
-) {
-  const shopId = process.env.YOOKASSA_SHOP_ID;
-  const secretKey = process.env.YOOKASSA_SECRET_KEY;
+// Legacy payment code removed - now using Tribute
 
-  if (!shopId || !secretKey) {
-    console.error("Missing YooKassa credentials");
-    return null;
-  }
-
-  const auth = Buffer.from(`${shopId}:${secretKey}`).toString("base64");
-  const idempotencyKey = generateUUID();
-
-  try {
-    const response = await fetch("https://api.yookassa.ru/v3/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`,
-        "Idempotence-Key": idempotencyKey,
-      },
-      body: JSON.stringify({
-        amount: {
-          value: amount.toFixed(2),
-          currency: "RUB",
-        },
-        capture: true,
-        confirmation: {
-          type: "redirect",
-          return_url: "https://aporto.tech/api/payment/return",
-        },
-        description,
-        metadata: {
-          telegram_id: telegramId,
-          tariff_slug: tariffSlug,
-        },
-        save_payment_method: true,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("YooKassa Error:", errorText);
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("YooKassa Fetch Error:", error);
-    return null;
-  }
-}
 
 function getPremiumKeyboard() {
   return {
@@ -730,7 +659,9 @@ bot.command("premium", async (ctx) => {
 
 bot.command("unsubscribe", async (ctx) => {
   const telegramId = ctx.from?.id.toString();
-  if (!telegramId) return;
+  if (!telegramId) {
+    return;
+  }
 
   try {
     const [user] = await getUserByTelegramId(telegramId);
@@ -971,7 +902,7 @@ bot.on("callback_query:data", async (ctx) => {
 
   if (data.startsWith("pay_")) {
     const rawArgs = data.replace("pay_", "");
-    
+
     // Detect Stars Payment selection
     const isStars = rawArgs.startsWith("stars_");
     const tariffSlug = isStars ? rawArgs.replace("stars_", "") : rawArgs;
@@ -979,14 +910,14 @@ bot.on("callback_query:data", async (ctx) => {
     // Fetch Tariff from DB
     const tariff = await getTariffBySlug(tariffSlug);
     if (!tariff) {
-        await ctx.answerCallbackQuery("Error: Tariff not found");
-        return;
+      await ctx.answerCallbackQuery("Error: Tariff not found");
+      return;
     }
 
     const description = `${tariff.name} (tariff_slug:${tariff.slug})`;
-    
+
     // Determine Currency and Amount
-    // Tribute uses different currencies. 
+    // Tribute uses different currencies.
     // If Stars -> 'XTR'
     // If Rubles -> 'RUB' (amount in kopecks)
 
@@ -994,49 +925,61 @@ bot.on("callback_query:data", async (ctx) => {
     let amount = tariff.priceRub * 100; // to kopecks
 
     if (isStars) {
-        if (!tariff.priceStars) {
-             await ctx.answerCallbackQuery("Error: Stars price not available");
-             return;
-        }
-        currency = "XTR";
-        amount = tariff.priceStars; // XTR usually integer amount
+      if (!tariff.priceStars) {
+        await ctx.answerCallbackQuery("Error: Stars price not available");
+        return;
+      }
+      currency = "XTR";
+      amount = tariff.priceStars; // XTR usually integer amount
     }
 
     await ctx.answerCallbackQuery("Создаю ссылку на оплату...");
 
     const payment = await createTributePayment({
-        amount,
-        currency,
-        orderName: tariff.name,
-        description,
-        telegramId,
-        tariffSlug: tariff.slug
+      amount,
+      currency,
+      orderName: tariff.name,
+      description,
+      telegramId,
+      tariffSlug: tariff.slug,
     });
 
-    if (payment && payment.link) {
-         let messageText = `Вы оформляете заказ: ${tariff.name}.`;
-         if (currency === "RUB") {
-             messageText += `\nСтоимость: ${tariff.priceRub} ₽.`;
-         } else {
-             messageText += `\nСтоимость: ${tariff.priceStars} ⭐️.`;
-         }
+    if (payment?.link) {
+      let messageText = `Вы оформляете заказ: ${tariff.name}.`;
+      if (currency === "RUB") {
+        messageText += `\nСтоимость: ${tariff.priceRub} ₽.`;
+      } else {
+        messageText += `\nСтоимость: ${tariff.priceStars} ⭐️.`;
+      }
 
-         messageText += `\n\nНажмите кнопку ниже для оплаты через Tribute.`;
-         
-         const buttonText = currency === "RUB" ? "Оплатить (RUB)" : "Оплатить (Stars)";
+      messageText += "\n\nНажмите кнопку ниже для оплаты через Tribute.";
 
-         await ctx.reply(messageText, {
-             parse_mode: "HTML",
-             link_preview_options: { is_disabled: true },
-             reply_markup: {
-                 inline_keyboard: [
-                     [{ text: buttonText, url: payment.link }],
-                     ...(!isStars ? [[{ text: "Оплатить Telegram Stars", callback_data: `pay_stars_${tariff.slug}` }]] : [])
-                 ]
-             }
-         });
+      const buttonText =
+        currency === "RUB" ? "Оплатить (RUB)" : "Оплатить (Stars)";
+
+      await ctx.reply(messageText, {
+        parse_mode: "HTML",
+        link_preview_options: { is_disabled: true },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: buttonText, url: payment.link }],
+            ...(isStars
+              ? []
+              : [
+                  [
+                    {
+                      text: "Оплатить Telegram Stars",
+                      callback_data: `pay_stars_${tariff.slug}`,
+                    },
+                  ],
+                ]),
+          ],
+        },
+      });
     } else {
-        await ctx.reply("❌ Ошибка создания платежа в Tribute. Попробуйте позже.");
+      await ctx.reply(
+        "❌ Ошибка создания платежа в Tribute. Попробуйте позже."
+      );
     }
     return;
   }
@@ -1057,8 +1000,6 @@ bot.on("callback_query:data", async (ctx) => {
 
   await ctx.answerCallbackQuery();
 });
-
-
 
 // --- Message Handlers ---
 
