@@ -1,28 +1,34 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { getModelById, getModelLimits } from "@/lib/ai/config";
 import type { AiModel, ModelLimit } from "@/lib/db/schema";
 import { deleteLimit, saveLimit, saveModel } from "../../actions";
 
-export default async function EditModelPage({
+export default function EditModelPage({
   params,
 }: {
   params: { id: string };
 }) {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <EditModelForm id={params.id} />
+        </Suspense>
+    )
+}
+
+async function EditModelForm({ id }: { id: string }) {
   noStore();
-  const isNew = params.id === "new";
+  const isNew = id === "new";
   let model: AiModel | undefined | null = null;
   let limits: ModelLimit[] = [];
 
   if (!isNew) {
-    model = await getModelById(params.id);
+    model = await getModelById(id);
     if (!model) {
       notFound();
     }
-    limits = await getModelLimits(params.id); // Assuming returns modelLimit[] via uuid
-    // Note: getModelLimits currently expects model ID *string* or UUID?
-    // In config.ts I wrote: getModelLimits(modelId: string) { ... where(modelLimit.modelId, modelId) }
-    // modelLimit.modelId IS a UUID foreign key. so passing params.id (UUID) is correct.
+    limits = await getModelLimits(id); 
   }
 
   return (
