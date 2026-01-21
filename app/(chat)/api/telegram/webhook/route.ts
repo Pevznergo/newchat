@@ -283,7 +283,7 @@ async function createYookassaPayment(amount: number, description: string, telegr
         capture: true,
         confirmation: {
           type: "redirect",
-          return_url: "https://t.me/aporto_bot",
+          return_url: "https://aporto.tech/api/payment/return",
         },
         description: description,
         metadata: {
