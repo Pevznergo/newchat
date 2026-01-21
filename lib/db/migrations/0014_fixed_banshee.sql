@@ -1,1 +1,0 @@
-ALTER TABLE "User" ADD COLUMN "image_generation_balance" integer DEFAULT 0;

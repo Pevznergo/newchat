@@ -32,9 +32,9 @@ import {
   suggestion,
   type User,
   user,
-  userConsent,
   vote,
-  tariff,
+  UserConsent,
+  userConsent,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
@@ -711,10 +711,7 @@ export async function incrementUserRequestCount(userId: string) {
 
 export async function updateUserSelectedModel(userId: string, model: string) {
   try {
-    await db
-      .update(user)
-      .set({ selectedModel: model })
-      .where(eq(user.id, userId));
+    await db.update(user).set({ selectedModel: model }).where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to update selected model", error);
     throw new ChatSDKError(
@@ -786,7 +783,7 @@ export async function updateUserPreferences(
       .select()
       .from(user)
       .where(eq(user.id, userId));
-
+    
     if (!existingUser) {
       return;
     }
@@ -825,7 +822,7 @@ export async function getUserSubscription(userId: string) {
       )
       .orderBy(desc(subscription.createdAt))
       .limit(1);
-
+    
     return sub;
   } catch (error) {
     console.error("Failed to get user subscription", error);
@@ -837,12 +834,15 @@ export async function cancelUserSubscription(userId: string) {
   try {
     await db
       .update(subscription)
-      .set({
+      .set({ 
         autoRenew: false,
-        status: "cancelled",
+        status: "cancelled" 
       })
       .where(
-        and(eq(subscription.userId, userId), eq(subscription.status, "active"))
+        and(
+          eq(subscription.userId, userId),
+          eq(subscription.status, "active")
+        )
       );
     return true;
   } catch (error) {
@@ -851,71 +851,32 @@ export async function cancelUserSubscription(userId: string) {
   }
 }
 
-export async function createStarSubscription(
-  userId: string,
-  tariffSlug: string,
-  durationDays: number
-) {
+export async function createStarSubscription(userId: string, tariffSlug: string, durationDays: number) {
   try {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + durationDays);
 
-    await db.insert(subscription).values({
-      userId,
-      tariffSlug,
-      paymentMethodId: "telegram_stars",
-      status: "active",
-      autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
-      startDate: new Date(),
-      endDate,
-    });
-
+    await db
+      .insert(subscription)
+      .values({
+        userId,
+        tariffSlug,
+        paymentMethodId: "telegram_stars",
+        status: "active",
+        autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
+        startDate: new Date(),
+        endDate,
+      });
+      
     // Set has_paid to true for user
-    await db.update(user).set({ hasPaid: true }).where(eq(user.id, userId));
-
+    await db
+        .update(user)
+        .set({ hasPaid: true })
+        .where(eq(user.id, userId));
+        
     return true;
   } catch (error) {
     console.error("Failed to create star subscription", error);
     return false;
   }
-}
-
-export async function getTariffsByType(type: "subscription" | "packet") {
-  try {
-    return await db
-      .select()
-      .from(tariff)
-      .where(and(eq(tariff.type, type), eq(tariff.isActive, true)))
-      .orderBy(asc(tariff.priceRub));
-  } catch (error) {
-    console.error("Failed to get tariffs by type", error);
-    return [];
-  }
-}
-
-export async function getTariffBySlug(slug: string) {
-  try {
-    const [foundTariff] = await db
-        .select()
-        .from(tariff)
-        .where(eq(tariff.slug, slug))
-        .limit(1);
-    return foundTariff;
-  } catch (error) {
-    console.error("Failed to get tariff by slug", error);
-    return null;
-  }
-}
-
-export async function incrementImageGenerationBalance(userId: string, amount: number) {
-    try {
-        await db
-            .update(user)
-            .set({ imageGenerationBalance: sql`${user.imageGenerationBalance} + ${amount}` })
-            .where(eq(user.id, userId));
-        return true;
-    } catch (error) {
-        console.error("Failed to increment image generation balance", error);
-        return false;
-    }
 }
