@@ -10,6 +10,7 @@ import {
   timestamp,
   uuid,
   varchar,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("User", {
@@ -40,6 +41,8 @@ export const user = pgTable("User", {
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
   requestCount: integer("request_count").default(0),
+  selectedModel: varchar("selected_model", { length: 255 }),
+  preferences: json("preferences").$type<Record<string, any>>().default({}),
 
   // Standard fields
   name: varchar("name", { length: 255 }),
@@ -197,3 +200,20 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const termConsent = pgTable(
+  "TermConsent",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    type: varchar("type", { enum: ["image_generation"] }).notNull(),
+    agreedAt: timestamp("agreedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    userConsentIndex: uniqueIndex("user_consent_idx").on(table.userId, table.type),
+  })
+);
+
+export type TermConsent = InferSelectModel<typeof termConsent>;

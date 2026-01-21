@@ -30,11 +30,37 @@ import {
   type Suggestion,
   stream,
   suggestion,
+  termConsent,
+  type TermConsent,
   type User,
   user,
   vote,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
+
+export async function hasUserConsented(userId: string, type: "image_generation") {
+  try {
+    const [result] = await db
+      .select()
+      .from(termConsent)
+      .where(and(eq(termConsent.userId, userId), eq(termConsent.type, type)))
+      .limit(1);
+    return !!result;
+  } catch (error) {
+    console.error("Failed to check consent", error);
+    return false;
+  }
+}
+
+export async function createUserConsent(userId: string, type: "image_generation") {
+  try {
+    return await db.insert(termConsent).values({ userId, type }).returning();
+  } catch (error) {
+    console.error("Failed to create consent", error);
+    throw error;
+  }
+}
+
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -151,6 +177,39 @@ export async function setLastMessageId(userId: string, messageId: string) {
     return true;
   }
 }
+
+export async function updateUserPreferences(userId: string, preferences: Record<string, any>) {
+  try {
+    const [existingUser] = await db.select().from(user).where(eq(user.id, userId));
+    if (!existingUser) return;
+    
+    // Merge existing preferences
+    const newPreferences = {
+        ...((existingUser.preferences as Record<string, any>) || {}),
+        ...preferences
+    };
+
+    await db
+      .update(user)
+      .set({ preferences: newPreferences })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to update preferences", error);
+  }
+}
+
+export async function updateUserSelectedModel(userId: string, model: string) {
+  try {
+    await db
+      .update(user)
+      .set({ selectedModel: model })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to update selected model", error);
+  }
+}
+
+
 
 export async function createGuestUser() {
   const email = `guest-${Date.now()}`;
