@@ -8,9 +8,9 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
-  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("User", {
@@ -212,7 +212,10 @@ export const termConsent = pgTable(
     agreedAt: timestamp("agreedAt").defaultNow().notNull(),
   },
   (table) => ({
-    userConsentIndex: uniqueIndex("user_consent_idx").on(table.userId, table.type),
+    userConsentIndex: uniqueIndex("user_consent_idx").on(
+      table.userId,
+      table.type
+    ),
   })
 );
 

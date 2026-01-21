@@ -31,14 +31,16 @@ import {
   stream,
   suggestion,
   termConsent,
-  type TermConsent,
   type User,
   user,
   vote,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
-export async function hasUserConsented(userId: string, type: "image_generation") {
+export async function hasUserConsented(
+  userId: string,
+  type: "image_generation"
+) {
   try {
     const [result] = await db
       .select()
@@ -52,7 +54,10 @@ export async function hasUserConsented(userId: string, type: "image_generation")
   }
 }
 
-export async function createUserConsent(userId: string, type: "image_generation") {
+export async function createUserConsent(
+  userId: string,
+  type: "image_generation"
+) {
   try {
     return await db.insert(termConsent).values({ userId, type }).returning();
   } catch (error) {
@@ -60,7 +65,6 @@ export async function createUserConsent(userId: string, type: "image_generation"
     throw error;
   }
 }
-
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -178,15 +182,23 @@ export async function setLastMessageId(userId: string, messageId: string) {
   }
 }
 
-export async function updateUserPreferences(userId: string, preferences: Record<string, any>) {
+export async function updateUserPreferences(
+  userId: string,
+  preferences: Record<string, any>
+) {
   try {
-    const [existingUser] = await db.select().from(user).where(eq(user.id, userId));
-    if (!existingUser) return;
-    
+    const [existingUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userId));
+    if (!existingUser) {
+      return;
+    }
+
     // Merge existing preferences
     const newPreferences = {
-        ...((existingUser.preferences as Record<string, any>) || {}),
-        ...preferences
+      ...((existingUser.preferences as Record<string, any>) || {}),
+      ...preferences,
     };
 
     await db
@@ -208,8 +220,6 @@ export async function updateUserSelectedModel(userId: string, model: string) {
     console.error("Failed to update selected model", error);
   }
 }
-
-
 
 export async function createGuestUser() {
   const email = `guest-${Date.now()}`;
