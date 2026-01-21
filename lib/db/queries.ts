@@ -33,6 +33,8 @@ import {
   type User,
   user,
   vote,
+  UserConsent,
+  userConsent,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
@@ -702,5 +704,90 @@ export async function incrementUserRequestCount(userId: string) {
       .where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to increment request count", error);
+  }
+}
+
+// Telegram Bot Queries
+
+export async function updateUserSelectedModel(userId: string, model: string) {
+  try {
+    await db.update(user).set({ selectedModel: model }).where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to update selected model", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to update user selected model"
+    );
+  }
+}
+
+export async function hasUserConsented(userId: string, consentType: string) {
+  try {
+    const result = await db
+      .select()
+      .from(userConsent)
+      .where(
+        and(
+          eq(userConsent.userId, userId),
+          eq(userConsent.consentType, consentType)
+        )
+      )
+      .limit(1);
+
+    return result.length > 0;
+  } catch (error) {
+    console.error("Failed to check user consent", error);
+    return false;
+  }
+}
+
+export async function createUserConsent(userId: string, consentType: string) {
+  try {
+    await db.insert(userConsent).values({
+      userId,
+      consentType,
+    });
+  } catch (error) {
+    console.error("Failed to create user consent", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create user consent"
+    );
+  }
+}
+
+interface UserPreferences {
+  aspect_ratio?: string;
+}
+
+export async function updateUserPreferences(
+  userId: string,
+  prefs: UserPreferences
+) {
+  try {
+    // First get existing preferences
+    const [existingUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userId));
+    
+    if (!existingUser) {
+      return;
+    }
+
+    // Merge existing preferences
+    const currentPrefs = (existingUser.preferences as UserPreferences) || {};
+    const updatedPrefs = { ...currentPrefs, ...prefs };
+
+    await db
+      .update(user)
+      .set({ preferences: updatedPrefs })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to update user preferences", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to update user preferences"
+    );
   }
 }

@@ -40,6 +40,10 @@ export const user = pgTable("User", {
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
   requestCount: integer("request_count").default(0),
+  
+  // Bot preferences
+  selectedModel: varchar("selected_model", { length: 100 }).default("model_gpt4omini"),
+  preferences: json("preferences"), // For storing user preferences like aspect_ratio
 
   // Standard fields
   name: varchar("name", { length: 255 }),
@@ -197,3 +201,14 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const userConsent = pgTable("UserConsent", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  consentType: varchar("consent_type", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type UserConsent = InferSelectModel<typeof userConsent>;
