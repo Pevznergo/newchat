@@ -496,9 +496,9 @@ bot.command("start", async (ctx) => {
           [
             {
               text: "🎁 Колесо Фортуны",
-              web_app: { url: "https://t.me/aporto_bot/app" },
+              web_app: { url: "https://app.aporto.tech/app" },
             },
-            "🎸 Создать песню",
+            { text: "🎸 Создать песню" },
           ],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
@@ -943,7 +943,7 @@ bot.on("message:text", async (ctx) => {
                   [
                     {
                       text: "Колесо Фортуны",
-                      web_app: { url: "https://t.me/aporto_bot/app" },
+                      web_app: { url: "https://app.aporto.tech/app" },
                     },
                   ],
                 ],
