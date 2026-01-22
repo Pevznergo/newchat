@@ -1,20 +1,8 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { auth } from "@/app/(auth)/auth";
-import { redirect } from "next/navigation";
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.email !== "pevznergo@gmail.com") {
-    // Or prompt specific error page
-    redirect("/"); 
-  }
-
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  // TODO: Add real auth check here
   return (
     <div className="flex h-screen w-full flex-col bg-gray-50 text-gray-900">
        <header className="flex items-center justify-between border-b bg-white px-6 py-4 shadow-sm">
@@ -25,9 +13,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 {/* Add more links here */}
             </nav>
          </div>
-         <div className="flex items-center gap-4 text-sm text-gray-500">
-             <span>{session.user.email}</span>
-             {/* Could add logout button form here if needed */}
+         <div>
+             {/* User info or logout */}
          </div>
        </header>
        <main className="flex-1 overflow-auto p-6">{children}</main>
