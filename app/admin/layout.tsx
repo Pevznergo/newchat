@@ -24,9 +24,12 @@ async function AdminHeader() {
   noStore();
   const session = await auth();
 
-  // Middleware handles protection, but we keep this for type safety/rendering
   if (!session?.user) {
-    return null; 
+    redirect("/login");
+  }
+
+  if (session.user.email !== "pevznergo@gmail.com") {
+    redirect("/");
   }
 
   return (
