@@ -1619,4 +1619,167 @@ bot.on("message:text", async (ctx) => {
   }
 });
 
+// --- Photo Message Handler ---
+bot.on("message:photo", async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const caption = ctx.message.caption || ""; // Text accompanying the photo
+
+  try {
+    // 0. Drop Stale Updates
+    const messageDate = ctx.message.date;
+    const now = Math.floor(Date.now() / 1000);
+
+    if (now - messageDate > 60) {
+      console.warn(
+        `Dropping stale photo update from user ${telegramId} (delay: ${now - messageDate}s)`
+      );
+      return;
+    }
+
+    // 1. Get or Create User
+    let [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      [user] = await createTelegramUser(telegramId);
+    }
+
+    // 1.1 Idempotency Check
+    const isNew = await setLastMessageId(
+      user.id,
+      ctx.message.message_id.toString()
+    );
+    if (!isNew) {
+      console.warn(
+        `Dropping duplicate/concurrent processing for photo message ${ctx.message.message_id}`
+      );
+      return;
+    }
+
+    // Check if user is using an image model
+    const selectedModelId = user.selectedModel || "model_gpt4omini";
+
+    if (!selectedModelId.startsWith("model_image_")) {
+      await ctx.reply(
+        "Для работы с изображениями выберите модель изображений через /photo"
+      );
+      return;
+    }
+
+    const imageModelConfig = IMAGE_MODELS[selectedModelId];
+
+    if (!imageModelConfig || !imageModelConfig.enabled) {
+      await ctx.reply("⚠️ Эта модель пока недоступна.");
+      return;
+    }
+
+    // Download the photo from Telegram
+    const photo = ctx.message.photo.at(-1); // Get largest photo
+    const file = await ctx.api.getFile(photo.file_id);
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+    // Download and convert to base64
+    const imageResponse = await fetch(fileUrl);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString("base64");
+    const mimeType = "image/jpeg"; // Telegram usually sends JPEG
+
+    await ctx.replyWithChatAction("upload_photo");
+    await ctx.reply(`🎨 Обрабатываю изображение (${imageModelConfig.name})...`);
+
+    // Handle OpenRouter image models
+    if (imageModelConfig.provider === "openrouter") {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        throw new Error("Missing OPENROUTER_API_KEY");
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://aporto.tech",
+            "X-Title": "Aporto Bot",
+          },
+          body: JSON.stringify({
+            model: imageModelConfig.id,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:${mimeType};base64,${base64Image}`,
+                    },
+                  },
+                  {
+                    type: "text",
+                    text: caption || "Опиши это изображение",
+                  },
+                ],
+              },
+            ],
+            modalities: ["image", "text"],
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.error("OpenRouter API Error:", response.status, err);
+        throw new Error(`OpenRouter API Error: ${response.status} - ${err}`);
+      }
+
+      const data = await response.json();
+      console.log("OpenRouter Photo Response:", JSON.stringify(data, null, 2));
+
+      const message = data.choices?.[0]?.message;
+
+      if (!message) {
+        throw new Error("No message from OpenRouter");
+      }
+
+      // Check if response contains images
+      if (message.images && message.images.length > 0) {
+        const imageUrl = message.images[0].image_url?.url;
+
+        if (imageUrl?.startsWith("data:image")) {
+          const base64Data = imageUrl.split(",")[1];
+          const buffer = Buffer.from(base64Data, "base64");
+          await ctx.replyWithPhoto(
+            new InputFile(buffer, `edited_${Date.now()}.png`),
+            {
+              caption: `🖼 ${caption}\n\nProcessed by ${imageModelConfig.name} (@aporto_bot)`,
+            }
+          );
+        } else if (imageUrl?.startsWith("http")) {
+          await ctx.replyWithPhoto(imageUrl, {
+            caption: `🖼 ${caption}\n\nProcessed by ${imageModelConfig.name} (@aporto_bot)`,
+          });
+        }
+      } else if (message.content) {
+        // If no image, send text response
+        await ctx.reply(message.content);
+      } else {
+        throw new Error("No content or images in response");
+      }
+    } else {
+      await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
+    }
+  } catch (error) {
+    console.error("Photo Processing Error:", error);
+    await ctx.reply(
+      "Произошла ошибка при обработке изображения. Попробуйте позже."
+    );
+  }
+});
+
 export const POST = webhookCallback(bot, "std/http");
