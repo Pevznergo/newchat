@@ -92,9 +92,9 @@ export type ImageModel = {
 
 export const IMAGE_MODELS: Record<string, ImageModel> = {
   model_image_gpt: {
-    id: "gpt-image-1",
-    name: "GPT Images",
-    provider: "openai",
+    id: "google/gemini-2.5-flash-image",
+    name: "Nano Banana",
+    provider: "openrouter",
     enabled: true,
   },
   model_image_midjourney: {
