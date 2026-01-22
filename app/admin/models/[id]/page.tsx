@@ -1,7 +1,6 @@
 import { getModelById, getModelLimits } from "@/lib/ai/config";
 import { saveLimit, saveModel, deleteLimit } from "../../actions";
 import { notFound } from "next/navigation";
-import type { AiModel, ModelLimit } from "@/lib/db/schema";
 
 export default async function EditModelPage({
   params,
@@ -9,12 +8,12 @@ export default async function EditModelPage({
   params: { id: string };
 }) {
   const isNew = params.id === "new";
-  let model: AiModel | undefined | null = null;
-  let limits: ModelLimit[] = [];
+  let model = null;
+  let limits: any[] = [];
 
   if (!isNew) {
     model = await getModelById(params.id);
-    if (!model) { notFound(); }
+    if (!model) notFound();
     limits = await getModelLimits(params.id); // Assuming returns modelLimit[] via uuid
     // Note: getModelLimits currently expects model ID *string* or UUID? 
     // In config.ts I wrote: getModelLimits(modelId: string) { ... where(modelLimit.modelId, modelId) }
@@ -37,9 +36,8 @@ export default async function EditModelPage({
             <input type="hidden" name="id" value={model?.id || ""} />
             
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">Display Name</label>
+              <label className="block text-sm font-medium text-gray-700">Display Name</label>
               <input
-                id="name"
                 type="text"
                 name="name"
                 defaultValue={model?.name || ""}
@@ -49,9 +47,8 @@ export default async function EditModelPage({
             </div>
 
             <div>
-              <label htmlFor="modelId" className="block text-sm font-medium text-gray-700">Model ID (Internal)</label>
+              <label className="block text-sm font-medium text-gray-700">Model ID (Internal)</label>
               <input
-                id="modelId"
                 type="text"
                 name="modelId"
                 defaultValue={model?.modelId || ""}
@@ -63,9 +60,8 @@ export default async function EditModelPage({
             </div>
 
             <div>
-              <label htmlFor="providerId" className="block text-sm font-medium text-gray-700">Provider ID</label>
+              <label className="block text-sm font-medium text-gray-700">Provider ID</label>
               <input
-                id="providerId"
                 type="text"
                 name="providerId"
                 defaultValue={model?.providerId || ""}
@@ -76,9 +72,8 @@ export default async function EditModelPage({
             </div>
 
              <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type</label>
+              <label className="block text-sm font-medium text-gray-700">Type</label>
               <select
-                id="type"
                 name="type"
                 defaultValue={model?.type || "text"}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
@@ -91,9 +86,8 @@ export default async function EditModelPage({
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
               <textarea
-                id="description"
                 name="description"
                 defaultValue={model?.description || ""}
                 rows={3}
@@ -133,39 +127,24 @@ export default async function EditModelPage({
             <div className="mb-6 space-y-4 rounded-md bg-gray-50 p-4">
                 <h4 className="text-sm font-medium text-gray-900">Add New Limit</h4>
                 <form action={saveLimit} className="flex flex-col gap-3">
-                    <input type="hidden" name="modelId" value={model?.id} />
-                    <input type="hidden" name="redirectId" value={model?.id} />
+                    <input type="hidden" name="modelId" value={model!.id} />
+                    <input type="hidden" name="redirectId" value={model!.id} />
                     
                     <div className="grid grid-cols-2 gap-3">
-                        <select 
-                            name="userRole" 
-                            className="rounded border px-2 py-1 text-sm"
-                            aria-label="User Limit Role"
-                        >
+                        <select name="userRole" className="rounded border px-2 py-1 text-sm">
                             <option value="free">Free User</option>
                             <option value="premium">Premium</option>
                             <option value="premium_x2">Premium X2</option>
                             <option value="regular">Regular</option>
                         </select>
-                        <select 
-                            name="limitPeriod" 
-                            className="rounded border px-2 py-1 text-sm"
-                            aria-label="Limit Period"
-                        >
+                        <select name="limitPeriod" className="rounded border px-2 py-1 text-sm">
                             <option value="monthly">Monthly</option>
                             <option value="daily">Daily</option>
                             <option value="total">Total</option>
                         </select>
                     </div>
                     <div className="flex gap-3">
-                         <input 
-                            type="number" 
-                            name="limitCount" 
-                            placeholder="Limit (e.g. 5)" 
-                            className="flex-1 rounded border px-2 py-1 text-sm" 
-                            required 
-                            aria-label="Limit Count"
-                         />
+                         <input type="number" name="limitCount" placeholder="Limit (e.g. 5)" className="flex-1 rounded border px-2 py-1 text-sm" required />
                          <button type="submit" className="rounded bg-black px-3 py-1 text-sm text-white">Add</button>
                     </div>
                 </form>
@@ -181,7 +160,7 @@ export default async function EditModelPage({
                             <span>{l.limitCount} per {l.limitPeriod}</span>
                         </div>
                          <form action={deleteLimit.bind(null, l.id)}>
-                            <button type="submit" className="text-sm text-red-600 hover:text-red-800">Delete</button>
+                            <button className="text-sm text-red-600 hover:text-red-800">Delete</button>
                         </form>
                     </div>
                 ))}

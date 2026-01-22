@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import fs from "node:fs";
+import fs from "fs";
 import path from "path";
 
 // Adjust path to .env.local from scripts folder (assuming run from root, but script is in scripts/)
@@ -15,7 +15,7 @@ async function verify() {
   
   const map = await getProviderMap();
   console.log("Provider Map Keys:", Object.keys(map).length);
-  console.log("Sample (model_gpt4omini):", map.model_gpt4omini);
+  console.log("Sample (model_gpt4omini):", map["model_gpt4omini"]);
   
   const models = await getActiveModels();
   console.log("Active Models Count:", models.length);

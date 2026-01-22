@@ -1282,8 +1282,8 @@ bot.on("message:text", async (ctx) => {
              
              // Set TTL based on period
              let ttl = 60 * 60 * 24 * 30; // Default 30 days
-             if (modelLimit.limitPeriod === 'daily') { ttl = 60 * 60 * 24; }
-             if (modelLimit.limitPeriod === 'monthly') { ttl = 60 * 60 * 24 * 30; }
+             if (modelLimit.limitPeriod === 'daily') ttl = 60 * 60 * 24;
+             if (modelLimit.limitPeriod === 'monthly') ttl = 60 * 60 * 24 * 30;
              // strict ttl alignment to calendar not implemented here, using rolling window or simple expiry
              
              if (currentUsage === 0) {
