@@ -1673,6 +1673,12 @@ bot.on("message:photo", async (ctx) => {
 
     // Download the photo from Telegram
     const photo = ctx.message.photo.at(-1); // Get largest photo
+
+    if (!photo) {
+      await ctx.reply("Не удалось получить изображение.");
+      return;
+    }
+
     const file = await ctx.api.getFile(photo.file_id);
     const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
