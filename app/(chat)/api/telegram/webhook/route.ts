@@ -1687,10 +1687,133 @@ bot.on("message:photo", async (ctx) => {
     // Check if user is using an image model
     const selectedModelId = user.selectedModel || "model_gpt4omini";
 
-    if (!selectedModelId.startsWith("model_image_")) {
-      await ctx.reply(
-        "Для работы с изображениями выберите модель изображений через /photo"
-      );
+    // If it is an image model, proceed with Image Editing flow
+    if (selectedModelId.startsWith("model_image_")) {
+      const imageModelConfig = IMAGE_MODELS[selectedModelId];
+
+      if (!imageModelConfig || !imageModelConfig.enabled) {
+        await ctx.reply("⚠️ Эта модель пока недоступна.");
+        return;
+      }
+      // ... Proceed to image editing (lines 1702+)
+    } else {
+      // It is a Text Model -> Treat as Vision Request
+      // 1. Download photo
+      const photo = ctx.message.photo.at(-1);
+      if (!photo) {
+        await ctx.reply("Не удалось получить изображение.");
+        return;
+      }
+
+      await ctx.replyWithChatAction("typing");
+
+      const file = await ctx.api.getFile(photo.file_id);
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+      // 2. Prepare context
+      const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
+
+      // 3. Generate Text with Vision
+      try {
+        // We need 'generateText' which is imported at top.
+
+        // Download image to buffer/base64 not strictly needed if we pass URL,
+        // but 'ai' sdk often handles URLs. Let's start with URL if possible or fetch.
+        // Vercel AI SDK 'user' content can take { type: 'image', image: ... }.
+        // image can be URL or base64. Telegram URL might be private/require token?
+        // Yes, `fileUrl` contains token. It should be accessible by the server.
+
+        // Get history
+        // 4. Find active chat or create new one (Reuse logic or refactor? Copy-paste safe for now)
+        const { chats } = await getChatsByUserId({
+          id: user.id,
+          limit: 1,
+          startingAfter: null,
+          endingBefore: null,
+        });
+
+        let chatId: string;
+        if (chats.length > 0) {
+          chatId = chats[0].id;
+        } else {
+          chatId = generateUUID();
+          await saveChat({
+            id: chatId,
+            userId: user.id,
+            title: "Telegram Chat",
+            visibility: "private",
+          });
+        }
+
+        // Fetch history
+        const history = await getMessagesByChatId({ id: chatId });
+        const aiMessages: any[] = history.map((m) => ({
+          role: m.role,
+          content:
+            m.role === "user"
+              ? // Simple text mapping for history, preserving images might be complex in this DB schema
+                // if parts are not stored fully. Assuming parts has text.
+                (m.parts as any[])
+                  .map((p) => p.text)
+                  .join("\n")
+              : (m.parts as any[]).map((p) => p.text).join("\n"),
+        }));
+
+        // Fetch image to pass as Uint8Array or Buffer to be safe?
+        // AI SDK supports fetchable URLs.
+        const imageResponse = await fetch(fileUrl);
+        const imageBuffer = await imageResponse.arrayBuffer();
+
+        const response = await generateText({
+          model: getLanguageModel(realModelId),
+          messages: [
+            ...aiMessages,
+            {
+              role: "user",
+              content: [
+                { type: "text", text: caption || "Что на этом изображении?" },
+                { type: "image", image: imageBuffer },
+              ],
+            },
+          ],
+        });
+
+        const responseText = response.text;
+
+        // Reply
+        const MAX_LENGTH = 4000;
+        for (let i = 0; i < responseText.length; i += MAX_LENGTH) {
+          await ctx.reply(responseText.substring(i, i + MAX_LENGTH));
+        }
+
+        // Save
+        const userMessageId = generateUUID();
+        await saveMessages({
+          messages: [
+            {
+              id: userMessageId,
+              chatId,
+              role: "user",
+              parts: [{ type: "text", text: `[Image] ${caption}` }], // Store as text placeholder for now
+              attachments: [],
+              createdAt: new Date(),
+            },
+            {
+              id: generateUUID(),
+              chatId,
+              role: "assistant",
+              parts: [{ type: "text", text: responseText }],
+              attachments: [],
+              createdAt: new Date(),
+            },
+          ],
+        });
+      } catch (e) {
+        console.error("Vision Error:", e);
+        await ctx.reply(
+          "Произошла ошибка при анализе изображения. Возможно, эта модель не поддерживает зрение."
+        );
+      }
       return;
     }
 
