@@ -12,8 +12,8 @@ export default async function ModelsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">AI Models</h2>
         <Link
-          className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
           href="/admin/models/new"
+          className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
         >
           Add New Model
         </Link>
@@ -33,14 +33,12 @@ export default async function ModelsPage() {
           </thead>
           <tbody>
             {models.length === 0 && (
-              <tr>
-                <td className="px-6 py-4 text-center" colSpan={6}>
-                  No models found.
-                </td>
-              </tr>
+                <tr>
+                    <td colSpan={6} className="px-6 py-4 text-center">No models found.</td>
+                </tr>
             )}
             {models.map((model) => (
-              <tr className="border-b bg-white hover:bg-gray-50" key={model.id}>
+              <tr key={model.id} className="border-b bg-white hover:bg-gray-50">
                 <td className="px-6 py-4 font-medium text-gray-900">
                   {model.name}
                   {model.isPremium && (
@@ -53,29 +51,23 @@ export default async function ModelsPage() {
                 <td className="px-6 py-4">{model.providerId}</td>
                 <td className="px-6 py-4 capitalize">{model.type}</td>
                 <td className="px-6 py-4">
-                  <form
-                    action={toggleModelStatus.bind(
-                      null,
-                      model.id,
-                      !model.isActive
-                    )}
-                  >
+                  <form action={toggleModelStatus.bind(null, model.id, !model.isActive)}>
                     <button
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        type="submit"
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         model.isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                      type="submit"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
                     >
-                      {model.isActive ? "Active" : "Inactive"}
+                        {model.isActive ? "Active" : "Inactive"}
                     </button>
                   </form>
                 </td>
                 <td className="px-6 py-4">
                   <Link
-                    className="font-medium text-blue-600 hover:underline"
                     href={`/admin/models/${model.id}`}
+                    className="font-medium text-blue-600 hover:underline"
                   >
                     Edit
                   </Link>

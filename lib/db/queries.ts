@@ -15,6 +15,8 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatSDKError } from "../errors";
@@ -30,8 +32,9 @@ import {
   suggestion,
   type User,
   user,
-  userConsent,
   vote,
+  UserConsent,
+  userConsent,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
@@ -40,6 +43,7 @@ import { generateHashedPassword } from "./utils";
 // https://authjs.dev/reference/adapter/drizzle
 
 import { db } from "./drizzle";
+
 
 // const client = postgres(process.env.POSTGRES_URL!);
 // const db = drizzle(client);
@@ -709,10 +713,7 @@ export async function incrementUserRequestCount(userId: string) {
 
 export async function updateUserSelectedModel(userId: string, model: string) {
   try {
-    await db
-      .update(user)
-      .set({ selectedModel: model })
-      .where(eq(user.id, userId));
+    await db.update(user).set({ selectedModel: model }).where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to update selected model", error);
     throw new ChatSDKError(
@@ -784,7 +785,7 @@ export async function updateUserPreferences(
       .select()
       .from(user)
       .where(eq(user.id, userId));
-
+    
     if (!existingUser) {
       return;
     }
@@ -823,7 +824,7 @@ export async function getUserSubscription(userId: string) {
       )
       .orderBy(desc(subscription.createdAt))
       .limit(1);
-
+    
     return sub;
   } catch (error) {
     console.error("Failed to get user subscription", error);
@@ -835,12 +836,15 @@ export async function cancelUserSubscription(userId: string) {
   try {
     await db
       .update(subscription)
-      .set({
+      .set({ 
         autoRenew: false,
-        status: "cancelled",
+        status: "cancelled" 
       })
       .where(
-        and(eq(subscription.userId, userId), eq(subscription.status, "active"))
+        and(
+          eq(subscription.userId, userId),
+          eq(subscription.status, "active")
+        )
       );
     return true;
   } catch (error) {
@@ -849,28 +853,29 @@ export async function cancelUserSubscription(userId: string) {
   }
 }
 
-export async function createStarSubscription(
-  userId: string,
-  tariffSlug: string,
-  durationDays: number
-) {
+export async function createStarSubscription(userId: string, tariffSlug: string, durationDays: number) {
   try {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + durationDays);
 
-    await db.insert(subscription).values({
-      userId,
-      tariffSlug,
-      paymentMethodId: "telegram_stars",
-      status: "active",
-      autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
-      startDate: new Date(),
-      endDate,
-    });
-
+    await db
+      .insert(subscription)
+      .values({
+        userId,
+        tariffSlug,
+        paymentMethodId: "telegram_stars",
+        status: "active",
+        autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
+        startDate: new Date(),
+        endDate,
+      });
+      
     // Set has_paid to true for user
-    await db.update(user).set({ hasPaid: true }).where(eq(user.id, userId));
-
+    await db
+        .update(user)
+        .set({ hasPaid: true })
+        .where(eq(user.id, userId));
+        
     return true;
   } catch (error) {
     console.error("Failed to create star subscription", error);

@@ -1,27 +1,33 @@
 import { generateText, tool } from "ai";
-import { Bot, webhookCallback } from "grammy";
 import { z } from "zod";
-import { getModelLimit, getProviderMap } from "@/lib/ai/config";
+import { Bot, webhookCallback } from "grammy";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import {
-  cancelUserSubscription,
-  createStarSubscription,
   createTelegramUser,
   createUserConsent,
   getChatsByUserId,
   getMessageCountByUserId,
   getMessagesByChatId,
   getUserByTelegramId,
-  getUserSubscription,
   hasUserConsented,
   incrementUserRequestCount,
   saveChat,
   saveMessages,
   setLastMessageId,
+  updateUserPreferences,
   updateUserSelectedModel,
+  getUserSubscription,
+  cancelUserSubscription,
+  createStarSubscription,
 } from "@/lib/db/queries";
+import {
+  getProviderMap,
+  getModelLimit,
+  getActiveModels,
+  type ModelConfig,
+} from "@/lib/ai/config";
 import { generateUUID } from "@/lib/utils";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -80,7 +86,7 @@ const FALLBACK_PROVIDER_MAP: Record<string, string> = {
   model_grok41: "xai/grok-beta", // Using grok-beta or grok-2-latest
   model_deepresearch: "openai/gpt-4o", // Placeholder
   // Image/Video models use default text model for chat context, tool calls handle generation
-  model_video_veo: "openai/gpt-4o",
+  model_video_veo: "openai/gpt-4o", 
   model_video_sora: "openai/gpt-4o",
   model_video_kling: "openai/gpt-4o",
   model_video_pika: "openai/gpt-4o",
@@ -283,12 +289,7 @@ const STAR_PRICING = {
   },
 };
 
-async function createYookassaPayment(
-  amount: number,
-  description: string,
-  telegramId: string,
-  tariffSlug: string
-) {
+async function createYookassaPayment(amount: number, description: string, telegramId: string, tariffSlug: string) {
   const shopId = process.env.YOOKASSA_SHOP_ID;
   const secretKey = process.env.YOOKASSA_SECRET_KEY;
 
@@ -305,7 +306,7 @@ async function createYookassaPayment(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`,
+        "Authorization": `Basic ${auth}`,
         "Idempotence-Key": idempotencyKey,
       },
       body: JSON.stringify({
@@ -318,7 +319,7 @@ async function createYookassaPayment(
           type: "redirect",
           return_url: "https://aporto.tech/api/payment/return",
         },
-        description,
+        description: description,
         metadata: {
           telegram_id: telegramId,
           tariff_slug: tariffSlug,
@@ -360,37 +361,19 @@ function getPremiumKeyboard() {
 function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
   const prices = PRICING_PLANS[plan];
   // const _label = plan === "premium" ? "Premium" : "Premium X2";
-
+  
   return {
     inline_keyboard: [
-      [
-        {
-          text: `1 месяц – ${prices.months_1}₽`,
-          callback_data: `pay_${plan}_1`,
-        },
-      ],
-      [
-        {
-          text: `3 месяца – ${prices.months_3}₽ (-20%)`,
-          callback_data: `pay_${plan}_3`,
-        },
-      ],
-      [
-        {
-          text: `6 месяцев – ${prices.months_6}₽ (-35%)`,
-          callback_data: `pay_${plan}_6`,
-        },
-      ],
-      [
-        {
-          text: `12 месяцев – ${prices.months_12}₽ (-50%)`,
-          callback_data: `pay_${plan}_12`,
-        },
-      ],
+      [{ text: `1 месяц – ${prices.months_1}₽`, callback_data: `pay_${plan}_1` }],
+      [{ text: `3 месяца – ${prices.months_3}₽ (-20%)`, callback_data: `pay_${plan}_3` }],
+      [{ text: `6 месяцев – ${prices.months_6}₽ (-35%)`, callback_data: `pay_${plan}_6` }],
+      [{ text: `12 месяцев – ${prices.months_12}₽ (-50%)`, callback_data: `pay_${plan}_12` }],
       [{ text: "🔙 Назад", callback_data: "premium_back" }],
     ],
   };
 }
+
+
 
 function getMusicGenerationKeyboard() {
   return {
@@ -574,13 +557,11 @@ Telegram: ${user?.telegramId || "N/A"}
 }
 
 async function showSettingsMenu(ctx: any) {
-  await ctx.reply(
-    "⚙️ Настройки:\n\nЗдесь можно будет настроить параметры генерации."
-  );
+    await ctx.reply("⚙️ Настройки:\n\nЗдесь можно будет настроить параметры генерации.");
 }
 
 async function showHelp(ctx: any) {
-  await ctx.reply(`🎱 Список команд:
+    await ctx.reply(`🎱 Список команд:
 
 /start - Перезапустить бота
 /model - Выбрать нейросеть
@@ -596,12 +577,11 @@ async function showHelp(ctx: any) {
 }
 
 async function showPrivacy(ctx: any) {
-  await ctx.reply(
-    "📄 Условия использования:\n\nИспользуя бота, вы соглашаетесь с правилами обработки данных и условиями сервиса."
-  );
+    await ctx.reply("📄 Условия использования:\n\nИспользуя бота, вы соглашаетесь с правилами обработки данных и условиями сервиса.");
 }
 
 // --- Commands ---
+
 
 bot.command("start", async (ctx) => {
   console.log("Received /start command");
@@ -614,18 +594,18 @@ bot.command("start", async (ctx) => {
 
     // Update Commands Menu
     await ctx.api.setMyCommands([
-      { command: "start", description: "👋 О нас" },
-      { command: "account", description: "👤 Профиль" },
-      { command: "premium", description: "🚀 Премиум" },
-      { command: "deletecontext", description: "💬 Очистить контекст" },
-      { command: "photo", description: "🌅 Создать изображение" },
-      { command: "video", description: "🎬 Создать видео" },
-      { command: "suno", description: "🎸 Создать песню" },
-      { command: "s", description: "🔎 Поиск в интернете" },
-      { command: "model", description: "📝 Выбрать модель" },
-      { command: "settings", description: "⚙️ Настройки" },
-      { command: "help", description: "🎱 Список команд" },
-      { command: "privacy", description: "📄 Условия использования" },
+        { command: "start", description: "👋 О нас" },
+        { command: "account", description: "👤 Профиль" },
+        { command: "premium", description: "🚀 Премиум" },
+        { command: "deletecontext", description: "💬 Очистить контекст" },
+        { command: "photo", description: "🌅 Создать изображение" },
+        { command: "video", description: "🎬 Создать видео" },
+        { command: "suno", description: "🎸 Создать песню" },
+        { command: "s", description: "🔎 Поиск в интернете" },
+        { command: "model", description: "📝 Выбрать модель" },
+        { command: "settings", description: "⚙️ Настройки" },
+        { command: "help", description: "🎱 Список команд" },
+        { command: "privacy", description: "📄 Условия использования" },
     ]);
 
     // Extract payload from /start command (QR code source)
@@ -723,23 +703,19 @@ bot.command("clear", async (ctx) => {
 });
 
 bot.command("account", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
-  const [user] = await getUserByTelegramId(telegramId);
-  await showAccountInfo(ctx, user);
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) { return; }
+    const [user] = await getUserByTelegramId(telegramId);
+    await showAccountInfo(ctx, user);
 });
 
 bot.command("premium", async (ctx) => {
-  await showPremiumMenu(ctx);
+    await showPremiumMenu(ctx);
 });
 
 bot.command("unsubscribe", async (ctx) => {
   const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
+  if (!telegramId) { return; }
 
   try {
     const [user] = await getUserByTelegramId(telegramId);
@@ -757,13 +733,9 @@ bot.command("unsubscribe", async (ctx) => {
     const success = await cancelUserSubscription(user.id);
     if (success) {
       const date = sub.endDate.toLocaleDateString("ru-RU");
-      await ctx.reply(
-        `✅ Автопродление подписки отключено.\nПодписка действует до ${date}.`
-      );
+      await ctx.reply(`✅ Автопродление подписки отключено.\nПодписка действует до ${date}.`);
     } else {
-      await ctx.reply(
-        "❌ Ошибка при отмене. Свяжитесь с поддержкой @GoPevzner."
-      );
+      await ctx.reply("❌ Ошибка при отмене. Свяжитесь с поддержкой @GoPevzner.");
     }
   } catch (error) {
     console.error("Error in /unsubscribe:", error);
@@ -772,7 +744,7 @@ bot.command("unsubscribe", async (ctx) => {
 });
 
 bot.command("deletecontext", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
+    const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
   }
@@ -801,63 +773,47 @@ bot.command("deletecontext", async (ctx) => {
 });
 
 bot.command("photo", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
-  const [user] = await getUserByTelegramId(telegramId);
-  if (user) {
-    await showImageMenu(ctx, user);
-  }
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) { return; }
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) { await showImageMenu(ctx, user); }
 });
 
 bot.command("video", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
-  const [user] = await getUserByTelegramId(telegramId);
-  if (user) {
-    await showVideoMenu(ctx, user);
-  }
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) { return; }
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) { await showVideoMenu(ctx, user); }
 });
 
 bot.command("suno", async (ctx) => {
-  await showMusicMenu(ctx);
+    await showMusicMenu(ctx);
 });
 
 bot.command("s", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
-  const [user] = await getUserByTelegramId(telegramId);
-  if (user) {
-    await showSearchMenu(ctx, user);
-  }
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) { return; }
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) { await showSearchMenu(ctx, user); }
 });
 
 bot.command("model", async (ctx) => {
-  const telegramId = ctx.from?.id.toString();
-  if (!telegramId) {
-    return;
-  }
-  const [user] = await getUserByTelegramId(telegramId);
-  if (user) {
-    await showModelMenu(ctx, user);
-  }
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) { return; }
+    const [user] = await getUserByTelegramId(telegramId);
+    if (user) { await showModelMenu(ctx, user); }
 });
 
 bot.command("settings", async (ctx) => {
-  await showSettingsMenu(ctx);
+    await showSettingsMenu(ctx);
 });
 
 bot.command("help", async (ctx) => {
-  await showHelp(ctx);
+    await showHelp(ctx);
 });
 
 bot.command("privacy", async (ctx) => {
-  await showPrivacy(ctx);
+    await showPrivacy(ctx);
 });
 
 // --- Callback Query Handler ---
@@ -931,42 +887,38 @@ bot.on("callback_query:data", async (ctx) => {
     }
 
     try {
-      await createUserConsent(user.id, "image_generation", {
-        telegramId,
-      });
+        await createUserConsent(user.id, "image_generation", {
+            telegramId: telegramId,
+        });
 
-      await ctx.deleteMessage();
+        await ctx.deleteMessage();
 
-      const currentModel = user.selectedModel?.startsWith("model_image_")
+        const currentModel = user.selectedModel?.startsWith("model_image_")
         ? user.selectedModel
         : "model_image_gpt";
 
-      await ctx.reply("Выберите модель для создания изображений:", {
+        await ctx.reply("Выберите модель для создания изображений:", {
         reply_markup: getImageModelKeyboard(currentModel),
-      });
-      await ctx.answerCallbackQuery("Условия приняты!");
+        });
+        await ctx.answerCallbackQuery("Условия приняты!");
     } catch (e) {
-      console.error("Consent error:", e);
-      await ctx.answerCallbackQuery({
-        text: "Ошибка сохранения согласия. Попробуйте позже.",
-        show_alert: true,
-      });
+        console.error("Consent error:", e);
+        await ctx.answerCallbackQuery({
+            text: "Ошибка сохранения согласия. Попробуйте позже.",
+            show_alert: true
+        });
     }
     return;
   }
 
   // Handle premium menu navigation
   if (data === "buy_premium") {
-    await ctx.editMessageReplyMarkup({
-      reply_markup: getSubscriptionKeyboard("premium"),
-    });
+    await ctx.editMessageReplyMarkup({ reply_markup: getSubscriptionKeyboard("premium") });
     await ctx.answerCallbackQuery();
     return;
   }
   if (data === "buy_premium_x2") {
-    await ctx.editMessageReplyMarkup({
-      reply_markup: getSubscriptionKeyboard("premium_x2"),
-    });
+    await ctx.editMessageReplyMarkup({ reply_markup: getSubscriptionKeyboard("premium_x2") });
     await ctx.answerCallbackQuery();
     return;
   }
@@ -979,7 +931,7 @@ bot.on("callback_query:data", async (ctx) => {
   // Handle payment creation
   if (data.startsWith("pay_")) {
     const rawArgs = data.replace("pay_", "");
-
+    
     // Detect Stars Payment
     const isStars = rawArgs.startsWith("stars_");
     const cleanArgs = isStars ? rawArgs.replace("stars_", "") : rawArgs;
@@ -988,64 +940,58 @@ bot.on("callback_query:data", async (ctx) => {
     let months = 1;
 
     if (cleanArgs.startsWith("premium_x2_")) {
-      planKey = "premium_x2";
-      months = Number.parseInt(cleanArgs.replace("premium_x2_", ""), 10);
+        planKey = "premium_x2";
+        months = parseInt(cleanArgs.replace("premium_x2_", ""), 10);
     } else {
-      planKey = "premium";
-      months = Number.parseInt(cleanArgs.replace("premium_", ""), 10);
+        planKey = "premium";
+        months = parseInt(cleanArgs.replace("premium_", ""), 10);
     }
 
-    const durationKey =
-      `months_${months}` as keyof typeof PRICING_PLANS.premium;
+    const durationKey = `months_${months}` as keyof typeof PRICING_PLANS.premium;
     const tariffSlug = `${planKey}_${months}`;
     const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
 
     if (isStars) {
-      // Safe cast or check
-      const starPlan = STAR_PRICING[planKey] as Record<string, number>;
-      const starsPrice = starPlan[durationKey];
+        // Safe cast or check
+        const starPlan = STAR_PRICING[planKey] as Record<string, number>;
+        const starsPrice = starPlan[durationKey];
 
-      if (!starsPrice) {
-        await ctx.answerCallbackQuery("Error: Price not found");
+        if (!starsPrice) {
+            await ctx.answerCallbackQuery("Error: Price not found");
+            return;
+        }
+
+        await ctx.answerCallbackQuery("Создаю инвойс...");
+        // sendInvoice(chat_id, title, description, payload, provider_token, currency, prices)
+        await ctx.replyWithInvoice(
+            description, // title
+            `Оплата подписки ${description}`, // description
+            tariffSlug, // payload
+            "XTR", // currency
+            [{ label: description, amount: starsPrice }] // prices
+        );
         return;
-      }
-
-      await ctx.answerCallbackQuery("Создаю инвойс...");
-      // sendInvoice(chat_id, title, description, payload, provider_token, currency, prices)
-      await ctx.replyWithInvoice(
-        description, // title
-        `Оплата подписки ${description}`, // description
-        tariffSlug, // payload
-        "XTR", // currency
-        [{ label: description, amount: starsPrice }] // prices
-      );
-      return;
     }
 
     // Existing YooKassa Logic
     const price = PRICING_PLANS[planKey][durationKey]; // e.g. 750
 
     if (!price) {
-      await ctx.answerCallbackQuery("Error: Invalid plan");
-      return;
+        await ctx.answerCallbackQuery("Error: Invalid plan");
+        return;
     }
 
     await ctx.answerCallbackQuery("Создаю счет...");
 
-    const payment = await createYookassaPayment(
-      price,
-      description,
-      telegramId,
-      tariffSlug
-    );
+    const payment = await createYookassaPayment(price, description, telegramId, tariffSlug);
 
     if (payment?.confirmation?.confirmation_url) {
-      const payUrl = payment.confirmation.confirmation_url;
-      const days = months * 30;
-      const requestLimit = planKey === "premium_x2" ? 200 : 100;
-      const title = planKey === "premium_x2" ? "Premium X2" : "Premium";
+        const payUrl = payment.confirmation.confirmation_url;
+        const days = months * 30;
+        const requestLimit = planKey === "premium_x2" ? 200 : 100;
+        const title = planKey === "premium_x2" ? "Premium X2" : "Premium";
 
-      const messageText = `Вы оформляете подписку ${title} с регулярным списанием раз в ${days} календарных дней.
+        const messageText = `Вы оформляете подписку ${title} с регулярным списанием раз в ${days} календарных дней.
 Вам будет доступно ${requestLimit} запросов в день.
 Стоимость - ${price} ₽.
 
@@ -1055,29 +1001,25 @@ bot.on("callback_query:data", async (ctx) => {
 
 Если у вас есть вопросы по подписке или оплате, напишите нам @GoPevzner .`;
 
-      await ctx.reply(messageText, {
-        parse_mode: "HTML",
-        link_preview_options: { is_disabled: true },
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "Карта 💳", url: payUrl }],
-            [{ text: "СБП 🏛", url: payUrl }],
-            [
-              {
-                text: "Оплатить Telegram Stars",
-                callback_data: `pay_stars_${planKey}_${months}`,
-              },
-            ],
-          ],
-        },
-      });
+        await ctx.reply(messageText, {
+             parse_mode: "HTML",
+             link_preview_options: { is_disabled: true },
+             reply_markup: {
+                 inline_keyboard: [
+                     [{ text: "Карта 💳", url: payUrl }],
+                     [{ text: "СБП 🏛", url: payUrl }],
+                     [{ text: "Оплатить Telegram Stars", callback_data: `pay_stars_${planKey}_${months}` }]
+                 ]
+             }
+        });
     } else {
-      await ctx.reply(
-        "❌ Ошибка создания платежа. Попробуйте позже или свяжитесь с поддержкой."
-      );
+        await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже или свяжитесь с поддержкой.");
     }
     return;
   }
+
+
+
 
   // Handle other "buy_" buttons (placeholders for Packs)
   if (
@@ -1098,187 +1040,161 @@ bot.on("callback_query:data", async (ctx) => {
 
 // Checkout Handlers for Stars
 bot.on("pre_checkout_query", async (ctx) => {
-  await ctx.answerPreCheckoutQuery(true);
+    await ctx.answerPreCheckoutQuery(true);
 });
 
 bot.on("message:successful_payment", async (ctx) => {
-  const payment = ctx.message.successful_payment;
-  const tariffSlug = payment.invoice_payload;
-  const telegramId = ctx.from.id.toString();
-  const totalAmount = payment.total_amount;
+    const payment = ctx.message.successful_payment;
+    const tariffSlug = payment.invoice_payload;
+    const telegramId = ctx.from.id.toString();
+    const totalAmount = payment.total_amount;
 
-  console.log(
-    `Successful Stars payment: ${totalAmount} XTR for ${tariffSlug} from user ${telegramId}`
-  );
+    console.log(`Successful Stars payment: ${totalAmount} XTR for ${tariffSlug} from user ${telegramId}`);
 
-  try {
-    const [user] = await getUserByTelegramId(telegramId);
-    if (!user) {
-      console.error(`User not found for payment: ${telegramId}`);
-      return;
+    try {
+        const [user] = await getUserByTelegramId(telegramId);
+        if (!user) {
+            console.error(`User not found for payment: ${telegramId}`);
+            return;
+        }
+
+        const parts = tariffSlug.split("_");
+        const months = parseInt(parts.at(-1) ?? "1", 10);
+        const durationDays = months * 30;
+
+        await createStarSubscription(user.id, tariffSlug, durationDays);
+        
+        await ctx.reply(`✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`);
+    } catch (error) {
+        console.error("Error processing successful_payment:", error);
+        await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");
     }
-
-    const parts = tariffSlug.split("_");
-    const months = Number.parseInt(parts.at(-1) ?? "1", 10);
-    const durationDays = months * 30;
-
-    await createStarSubscription(user.id, tariffSlug, durationDays);
-
-    await ctx.reply(
-      `✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`
-    );
-  } catch (error) {
-    console.error("Error processing successful_payment:", error);
-    await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");
-  }
 });
 
 // --- Message Handlers ---
 
 bot.on("message:photo", async (ctx) => {
-  const telegramId = ctx.from.id.toString();
-  const photos = ctx.message.photo;
-  const caption = ctx.message.caption || "";
+    const telegramId = ctx.from.id.toString();
+    const photos = ctx.message.photo;
+    const caption = ctx.message.caption || "";
 
-  // Get the largest photo (last in array)
-  const fileId = photos.at(-1)?.file_id;
-  if (!fileId) {
-    return; // Should not happen if photo exists
-  }
-
-  // Check if user exists
-  let [user] = await getUserByTelegramId(telegramId);
-  if (!user) {
-    // Create user silently or ask to start?
-    // Let's create for seamless experience, but ideally /start should be first.
-    [user] = await createTelegramUser(telegramId);
-  }
-
-  // Enforcement Checks (similar to text) checks
-  const _userType: "pro" | "regular" = user.hasPaid ? "pro" : "regular";
-
-  // 1. Get or Create Chat
-  const { chats } = await getChatsByUserId({
-    id: user.id,
-    limit: 1,
-    startingAfter: null,
-    endingBefore: null,
-  });
-  const chatId = chats.length > 0 ? chats[0].id : generateUUID();
-
-  if (chats.length === 0) {
-    await saveChat({
-      id: chatId,
-      userId: user.id,
-      title: "Telegram Chat",
-      visibility: "private",
-    });
-  }
-
-  await ctx.replyWithChatAction("typing");
-
-  try {
-    // Get File Link
-    const file = await ctx.api.getFile(fileId);
-    // Construct standard Telegram file URL
-    // Using grammy's getFile result path
-    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-
-    // Save User Message with Image
-    const userMessageId = generateUUID();
-    await saveMessages({
-      messages: [
-        {
-          id: userMessageId,
-          chatId,
-          role: "user",
-          parts: [
-            { type: "text", text: caption }, // Use caption as prompt
-            { type: "image", image: new URL(fileUrl) }, // Send URL to AI SDK
-          ],
-          attachments: [],
-          createdAt: new Date(),
-        },
-      ],
-    });
-
-    await incrementUserRequestCount(user.id);
-
-    // Fetch History
-    const history = await getMessagesByChatId({ id: chatId });
-
-    // Convert to AI Core format
-    const aiMessages: any[] = history.map((m) => {
-      const content: any[] = [];
-      for (const p of m.parts as any[]) {
-        if (p.type === "text") {
-          content.push({ type: "text", text: p.text });
-        }
-        // If we stored image URL in DB, we need to ensure AI SDK can read it.
-        // AI SDK v3 expects image parts.
-        // Ideally we should store the image securely or download it.
-        // For now, passing the telegram URL (valid for 1 hour usually).
-        if (p.type === "image") {
-          content.push({ type: "image", image: p.image });
-        }
-      }
-      return { role: m.role, content };
-    });
-
-    // Generate Response
-    const selectedModelId = user.selectedModel || "model_gpt4omini"; // Vision capable?
-    // Verify if model supports vision? Most LLMs (GPT-4o, Gemini 1.5, Claude 3.5) do.
-
-    const providerMap = await getProviderMap();
-    const realModelId =
-      providerMap[selectedModelId] ||
-      FALLBACK_PROVIDER_MAP[selectedModelId] ||
-      "openai/gpt-4o";
-
-    // Dynamic Limit Check here (skipped for brevity, but should be added)
-    // ... (reuse limit check logic if possible refactor)
-
-    const response = await generateText({
-      model: getLanguageModel(realModelId),
-      system: systemPrompt({
-        selectedChatModel: realModelId,
-        requestHints: {
-          latitude: undefined,
-          longitude: undefined,
-          city: undefined,
-          country: undefined,
-        },
-      }),
-      messages: aiMessages,
-    });
-
-    const responseText = response.text;
-
-    // Save Assistant Message
-    const botMessageId = generateUUID();
-    await saveMessages({
-      messages: [
-        {
-          id: botMessageId,
-          chatId,
-          role: "assistant",
-          parts: [{ type: "text", text: responseText }],
-          attachments: [],
-          createdAt: new Date(),
-        },
-      ],
-    });
-
-    // Send Reply
-    const MAX_LENGTH = 4000;
-    for (let i = 0; i < responseText.length; i += MAX_LENGTH) {
-      await ctx.reply(responseText.substring(i, i + MAX_LENGTH));
+    // Get the largest photo (last in array)
+    const fileId = photos[photos.length - 1].file_id;
+    
+    // Check if user exists
+    let [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+        // Create user silently or ask to start?
+        // Let's create for seamless experience, but ideally /start should be first.
+        [user] = await createTelegramUser(telegramId);
     }
-  } catch (e) {
-    console.error("Error processing photo:", e);
-    await ctx.reply("Не удалось обработать изображение. Попробуйте позже.");
-  }
+    
+    // Enforcement Checks (similar to text) checks
+    const userType: "pro" | "regular" = user.hasPaid ? "pro" : "regular";
+
+    // 1. Get or Create Chat
+    const { chats } = await getChatsByUserId({ id: user.id, limit: 1, startingAfter: null, endingBefore: null });
+    let chatId = chats.length > 0 ? chats[0].id : generateUUID();
+    
+    if (chats.length === 0) {
+        await saveChat({ id: chatId, userId: user.id, title: "Telegram Chat", visibility: "private" });
+    }
+
+    await ctx.replyWithChatAction("typing");
+
+    try {
+        // Get File Link
+        const file = await ctx.api.getFile(fileId);
+        // Construct standard Telegram file URL
+        // Using grammy's getFile result path
+        const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+        // Save User Message with Image
+        const userMessageId = generateUUID();
+        await saveMessages({
+            messages: [{
+                id: userMessageId,
+                chatId,
+                role: "user",
+                parts: [
+                    { type: "text", text: caption }, // Use caption as prompt
+                    { type: "image", image: new URL(fileUrl) } // Send URL to AI SDK
+                ],
+                attachments: [],
+                createdAt: new Date(),
+            }]
+        });
+
+        await incrementUserRequestCount(user.id);
+        
+        // Fetch History
+        const history = await getMessagesByChatId({ id: chatId });
+        
+        // Convert to AI Core format
+        const aiMessages: any[] = history.map((m) => {
+            const content: any[] = [];
+            (m.parts as any[]).forEach(p => {
+                if (p.type === 'text') content.push({ type: 'text', text: p.text });
+                 // If we stored image URL in DB, we need to ensure AI SDK can read it.
+                 // AI SDK v3 expects image parts.
+                 // Ideally we should store the image securely or download it.
+                 // For now, passing the telegram URL (valid for 1 hour usually).
+                if (p.type === 'image') content.push({ type: 'image', image: p.image });
+            });
+            return { role: m.role, content };
+        });
+
+        // Generate Response
+        const selectedModelId = user.selectedModel || "model_gpt4omini"; // Vision capable?
+        // Verify if model supports vision? Most LLMs (GPT-4o, Gemini 1.5, Claude 3.5) do.
+        
+        const providerMap = await getProviderMap();
+        const realModelId = providerMap[selectedModelId] || FALLBACK_PROVIDER_MAP[selectedModelId] || "openai/gpt-4o";
+
+        // Dynamic Limit Check here (skipped for brevity, but should be added)
+        // ... (reuse limit check logic if possible refactor)
+
+        const response = await generateText({
+            model: getLanguageModel(realModelId),
+            system: systemPrompt({
+                selectedChatModel: realModelId,
+                requestHints: {
+                    latitude: undefined,
+                    longitude: undefined,
+                    city: undefined,
+                    country: undefined,
+                },
+            }),
+            messages: aiMessages,
+        });
+
+        const responseText = response.text;
+        
+         // Save Assistant Message
+        const botMessageId = generateUUID();
+        await saveMessages({
+            messages: [{
+                id: botMessageId,
+                chatId,
+                role: "assistant",
+                parts: [{ type: "text", text: responseText }],
+                attachments: [],
+                createdAt: new Date(),
+            }]
+        });
+
+         // Send Reply
+        const MAX_LENGTH = 4000;
+        for (let i = 0; i < responseText.length; i += MAX_LENGTH) {
+            await ctx.reply(responseText.substring(i, i + MAX_LENGTH));
+        }
+
+    } catch (e) {
+        console.error("Error processing photo:", e);
+        await ctx.reply("Не удалось обработать изображение. Попробуйте позже.");
+    }
 });
+
 
 bot.on("message:text", async (ctx) => {
   const telegramId = ctx.from.id.toString();
@@ -1286,60 +1202,58 @@ bot.on("message:text", async (ctx) => {
 
   // Helper for button handling
   const handleButton = async (action: (user: any) => Promise<void>) => {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      // ignore
-    }
-    const [user] = await getUserByTelegramId(telegramId);
-    if (user) {
-      await action(user);
-    }
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        // ignore
+      }
+      const [user] = await getUserByTelegramId(telegramId);
+      if (user) { await action(user); }
   };
 
   if (text === "📝 Выбрать модель") {
-    await handleButton((user) => showModelMenu(ctx, user));
-    return;
+      await handleButton((user) => showModelMenu(ctx, user));
+      return;
   }
 
   if (text === "🎨 Создать картинку") {
-    await handleButton((user) => showImageMenu(ctx, user));
-    return;
+      await handleButton((user) => showImageMenu(ctx, user));
+      return;
   }
 
   if (text === "🔎 Интернет-поиск") {
-    await handleButton((user) => showSearchMenu(ctx, user));
-    return;
+      await handleButton((user) => showSearchMenu(ctx, user));
+      return;
   }
 
   if (text === "🎬 Создать видео") {
-    await handleButton((user) => showVideoMenu(ctx, user));
-    return;
+      await handleButton((user) => showVideoMenu(ctx, user));
+      return;
   }
 
   if (text === "🎸 Создать песню") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      // ignore
-    }
-    await showMusicMenu(ctx);
-    return;
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        // ignore
+      }
+      await showMusicMenu(ctx);
+      return;
   }
 
   if (text === "🚀 Премиум" || text === "/premium") {
-    try {
-      await ctx.deleteMessage();
-    } catch (_e) {
-      // ignore
-    }
-    await showPremiumMenu(ctx);
-    return;
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+         // ignore
+      }
+      await showPremiumMenu(ctx);
+      return;
   }
 
   if (text === "👤 Мой профиль") {
-    await handleButton((user) => showAccountInfo(ctx, user));
-    return;
+       await handleButton((user) => showAccountInfo(ctx, user));
+       return;
   }
 
   // Regular message processing
@@ -1451,70 +1365,60 @@ bot.on("message:text", async (ctx) => {
 
     // Dynamic Provider Map
     const providerMap = await getProviderMap();
-    const realModelId =
-      providerMap[selectedModelId] ||
-      FALLBACK_PROVIDER_MAP[selectedModelId] ||
-      "openai/gpt-4o-mini";
+    const realModelId = providerMap[selectedModelId] || FALLBACK_PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
 
     // --- Dynamic Limit Check ---
     const userRole = user.hasPaid ? "premium" : "free"; // Simplified role logic, refine as needed
     const modelLimit = await getModelLimit(selectedModelId, userRole);
 
     if (modelLimit) {
-      const redis = (await import("@/lib/redis")).default;
-      // Limit Key: usage:limit:{limitId}:{userId} or usage:model:{modelId}:{userId}
-      // Let's use generic key structure
-      const usageKey = `usage:limit:${modelLimit.id}:${user.id}`;
-
-      try {
-        const usageStr = await redis.get(usageKey);
-        const currentUsage = usageStr ? Number.parseInt(usageStr, 10) : 0;
-
-        if (currentUsage >= modelLimit.limitCount) {
-          // Formatting period for message
-          const periodMap: Record<string, string> = {
-            daily: "день",
-            monthly: "месяц",
-            total: "все время",
-          };
-          const periodName =
-            periodMap[modelLimit.limitPeriod] || modelLimit.limitPeriod;
-
-          await ctx.reply(
-            `🛑 Лимит исчерпан!\n\nДля модели ${selectedModelId} установлен лимит: ${modelLimit.limitCount} запросов в ${periodName}.\nОбновите подписку или дождитесь сброса лимита.`,
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "💎 Купить Premium", callback_data: "buy_premium" }],
-                ],
-              },
+        const redis = (await import("@/lib/redis")).default;
+        // Limit Key: usage:limit:{limitId}:{userId} or usage:model:{modelId}:{userId}
+        // Let's use generic key structure
+        const usageKey = `usage:limit:${modelLimit.id}:${user.id}`;
+        
+        try {
+            const usageStr = await redis.get(usageKey);
+            const currentUsage = usageStr ? parseInt(usageStr, 10) : 0;
+            
+            if (currentUsage >= modelLimit.limitCount) {
+                // Formatting period for message
+                const periodMap: Record<string, string> = { daily: "день", monthly: "месяц", total: "все время" };
+                const periodName = periodMap[modelLimit.limitPeriod] || modelLimit.limitPeriod;
+                
+                 await ctx.reply(
+                    `🛑 Лимит исчерпан!\n\nДля модели ${selectedModelId} установлен лимит: ${modelLimit.limitCount} запросов в ${periodName}.\nОбновите подписку или дождитесь сброса лимита.`,
+                    {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "💎 Купить Premium", callback_data: "buy_premium" }],
+                            ]
+                        }
+                    }
+                );
+                return;
             }
-          );
-          return;
-        }
+            
+            // Increment
+             const multi = redis.multi();
+             multi.incr(usageKey);
+             
+             // Set TTL based on period
+             let ttl = 60 * 60 * 24 * 30; // Default 30 days
+             if (modelLimit.limitPeriod === 'daily') { ttl = 60 * 60 * 24; }
+             if (modelLimit.limitPeriod === 'monthly') { ttl = 60 * 60 * 24 * 30; }
+             // strict ttl alignment to calendar not implemented here, using rolling window or simple expiry
+             
+             if (currentUsage === 0) {
+                 multi.expire(usageKey, ttl);
+             }
+             await multi.exec();
 
-        // Increment
-        const multi = redis.multi();
-        multi.incr(usageKey);
-
-        // Set TTL based on period
-        let ttl = 60 * 60 * 24 * 30; // Default 30 days
-        if (modelLimit.limitPeriod === "daily") {
-          ttl = 60 * 60 * 24;
+        } catch (e) {
+            console.error("Limit check failed", e);
         }
-        if (modelLimit.limitPeriod === "monthly") {
-          ttl = 60 * 60 * 24 * 30;
-        }
-        // strict ttl alignment to calendar not implemented here, using rolling window or simple expiry
-
-        if (currentUsage === 0) {
-          multi.expire(usageKey, ttl);
-        }
-        await multi.exec();
-      } catch (e) {
-        console.error("Limit check failed", e);
-      }
     }
+
 
     await ctx.replyWithChatAction("typing");
 
