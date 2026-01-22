@@ -1,10 +1,12 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { getAllModels } from "@/lib/ai/config";
 import { toggleModelStatus } from "../actions";
 
-export default function ModelsPage() {
+export default async function ModelsPage() {
+  noStore();
+  const models = await getAllModels();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -17,18 +19,6 @@ export default function ModelsPage() {
         </Link>
       </div>
 
-       <Suspense fallback={<div>Loading models...</div>}>
-          <ModelsTable />
-       </Suspense>
-    </div>
-  );
-}
-
-async function ModelsTable() {
-  noStore();
-  const models = await getAllModels();
-
-  return (
       <div className="overflow-hidden rounded-lg border bg-white shadow">
         <table className="w-full text-left text-sm text-gray-500">
           <thead className="bg-gray-50 text-xs uppercase text-gray-700">
@@ -95,5 +85,6 @@ async function ModelsTable() {
           </tbody>
         </table>
       </div>
+    </div>
   );
 }
