@@ -1337,7 +1337,9 @@ bot.on("message:text", async (ctx) => {
           // Increment usage
           const multi = redis.multi();
           multi.incr(usageKey);
-          if (count === 0) multi.expire(usageKey, 30 * 24 * 60 * 60);
+          if (count === 0) {
+            multi.expire(usageKey, 30 * 24 * 60 * 60);
+          }
           await multi.exec();
         } catch (e) {
           console.error("Redis usage check failed", e);
@@ -1364,7 +1366,7 @@ bot.on("message:text", async (ctx) => {
               },
             });
 
-            if (image && image.base64) {
+            if (image?.base64) {
               const buffer = Buffer.from(image.base64, "base64");
               await ctx.replyWithPhoto(
                 new InputFile(buffer, `image_${Date.now()}.png`),
