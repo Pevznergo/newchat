@@ -43,7 +43,7 @@ const MODEL_NAMES: Record<string, string> = {
   model_o3: "OpenAI o3",
   model_gpt41: "GPT-4.1",
   model_gpt5mini: "GPT-5 mini",
-  model_gpt4omini: "GPT-4o mini",
+  model_gpt4omini: "GPT-4o mini", // Available
   model_claude45sonnet: "Claude 4.5 Sonnet",
   model_claude45thinking: "Claude 4.5 Thinking",
   model_deepseek32: "DeepSeek-V3.2",
@@ -63,6 +63,19 @@ const MODEL_NAMES: Record<string, string> = {
   model_image_midjourney: "Midjourney",
   model_image_flux: "FLUX 2",
 };
+
+const LOCKED_MODELS = [
+  "model_gpt52",
+  "model_o3",
+  "model_gpt41",
+  "model_gpt5mini",
+  "model_claude45sonnet",
+  "model_claude45thinking",
+  "model_deepseek32",
+  "model_deepseek32thinking",
+  "model_gemini3pro",
+  "model_gemini3flash",
+];
 
 const PROVIDER_MAP: Record<string, string> = {
   model_gpt52: "openai/gpt-4o", // Fallback until GPT-5.2 is available
@@ -93,60 +106,63 @@ const PROVIDER_MAP: Record<string, string> = {
 
 function getModelKeyboard(selectedModel: string) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
+  const isLocked = (id: string) => (LOCKED_MODELS.includes(id) ? "🔒 " : "");
+  const getLabel = (id: string, name: string) =>
+    `${isLocked(id)}${isSelected(id)}${name}`;
 
   return {
     inline_keyboard: [
       [
         {
-          text: `${isSelected("model_gpt52")}GPT-5.2`,
+          text: getLabel("model_gpt52", "GPT-5.2"),
           callback_data: "model_gpt52",
         },
         {
-          text: `${isSelected("model_o3")}OpenAI o3`,
+          text: getLabel("model_o3", "OpenAI o3"),
           callback_data: "model_o3",
         },
         {
-          text: `${isSelected("model_gpt41")}GPT-4.1`,
+          text: getLabel("model_gpt41", "GPT-4.1"),
           callback_data: "model_gpt41",
         },
       ],
       [
         {
-          text: `${isSelected("model_gpt5mini")}GPT-5 mini`,
+          text: getLabel("model_gpt5mini", "GPT-5 mini"),
           callback_data: "model_gpt5mini",
         },
         {
-          text: `${isSelected("model_gpt4omini")}GPT-4o mini`,
+          text: getLabel("model_gpt4omini", "GPT-4o mini"),
           callback_data: "model_gpt4omini",
         },
       ],
       [
         {
-          text: `${isSelected("model_claude45sonnet")}Claude 4.5 Sonnet`,
+          text: getLabel("model_claude45sonnet", "Claude 4.5 Sonnet"),
           callback_data: "model_claude45sonnet",
         },
         {
-          text: `${isSelected("model_claude45thinking")}Claude 4.5 Thinking`,
+          text: getLabel("model_claude45thinking", "Claude 4.5 Thinking"),
           callback_data: "model_claude45thinking",
         },
       ],
       [
         {
-          text: `${isSelected("model_deepseek32")}DeepSeek-V3.2`,
+          text: getLabel("model_deepseek32", "DeepSeek-V3.2"),
           callback_data: "model_deepseek32",
         },
         {
-          text: `${isSelected("model_deepseek32thinking")}DeepSeek-V3.2 Thinking`,
+          text: getLabel("model_deepseek32thinking", "DeepSeek-V3.2 Thinking"),
           callback_data: "model_deepseek32thinking",
         },
       ],
       [
         {
-          text: `${isSelected("model_gemini3pro")}Gemini 3 Pro`,
+          text: getLabel("model_gemini3pro", "Gemini 3 Pro"),
           callback_data: "model_gemini3pro",
         },
         {
-          text: `${isSelected("model_gemini3flash")}Gemini 3 Flash`,
+          text: getLabel("model_gemini3flash", "Gemini 3 Flash"),
           callback_data: "model_gemini3flash",
         },
       ],
@@ -661,7 +677,7 @@ bot.command("start", async (ctx) => {
           [
             {
               text: "🎁 Колесо Фортуны",
-              web_app: { url: "https://aporto.tech/app" },
+              web_app: { url: "https://t.me/aporto_bot/app" },
             },
             { text: "🎸 Создать песню" },
           ],
@@ -862,6 +878,29 @@ bot.on("callback_query:data", async (ctx) => {
 
   // Handle model selection
   if (data.startsWith("model_")) {
+    const isLocked = LOCKED_MODELS.includes(data);
+
+    if (isLocked) {
+      const modelName = MODEL_NAMES[data] || "этой модели";
+      await ctx.editMessageText(
+        `⚠️ Для отправки запросов к модели ${modelName} приобретите подписку Премиум`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🚀 Подключить премиум",
+                  callback_data: "menu_premium",
+                },
+              ],
+            ],
+          },
+        }
+      );
+      // await ctx.answerCallbackQuery(); // Optional: close loading state if needed
+      return;
+    }
+
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       await ctx.answerCallbackQuery();
@@ -1572,7 +1611,7 @@ bot.on("message:text", async (ctx) => {
                   [
                     {
                       text: "Колесо Фортуны",
-                      web_app: { url: "https://aporto.tech/app" },
+                      web_app: { url: "https://t.me/aporto_bot/app" },
                     },
                   ],
                 ],
@@ -1763,12 +1802,12 @@ bot.on("message:photo", async (ctx) => {
           await ctx.replyWithPhoto(
             new InputFile(buffer, `edited_${Date.now()}.png`),
             {
-              caption: `🖼 ${caption}\n\nProcessed by ${imageModelConfig.name} (@aporto_bot)`,
+              caption: `🖼 ${caption}\n\nProcessed by @aporto_bot`,
             }
           );
         } else if (imageUrl?.startsWith("http")) {
           await ctx.replyWithPhoto(imageUrl, {
-            caption: `🖼 ${caption}\n\nProcessed by ${imageModelConfig.name} (@aporto_bot)`,
+            caption: `🖼 ${caption}\n\nProcessed by @aporto_bot`,
           });
         }
       } else if (message.content) {
