@@ -1398,6 +1398,9 @@ bot.on("message:text", async (ctx) => {
             }
 
             // Direct fetch to OpenRouter Chat Completions for Image Generation
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60_000); // 60 seconds timeout
+
             const response = await fetch(
               "https://openrouter.ai/api/v1/chat/completions",
               {
@@ -1411,25 +1414,25 @@ bot.on("message:text", async (ctx) => {
                 body: JSON.stringify({
                   model: imageModelConfig.id,
                   messages: [{ role: "user", content: text }],
-                  // OpenRouter specific for image gen models?
-                  // Usually just text prompt. If 'modalities' needed, add it.
-                  // Documentation says 'modalities': ['image'] might be needed for some models or handled automatically.
-                  // Let's try standard chat format first as per some docs, but if it fails we add modalities.
-                  // Actually research said: "modalities": ["image", "text"] may be required.
-                  // Let's add it to be safe for a dedicated image model.
-                  // However, 'google/gemini-2.0-flash-exp:free' supports both.
+                  // Explicitly request image and text capabilities
+                  modalities: ["image", "text"],
                 }),
+                signal: controller.signal,
               }
             );
 
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
               const err = await response.text();
+              console.error("OpenRouter API Error:", response.status, err);
               throw new Error(
                 `OpenRouter API Error: ${response.status} - ${err}`
               );
             }
 
             const data = await response.json();
+            console.log("OpenRouter Response:", JSON.stringify(data, null, 2));
 
             // Expected format: data.choices[0].message.content contains markdown image or url?
             // Or data.choices[0].message.content is the image url directly?
