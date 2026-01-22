@@ -642,6 +642,9 @@ bot.command("start", async (ctx) => {
       [user] = await createTelegramUser(telegramId, undefined, startParam);
     }
 
+    // Reset model to default on start
+    await updateUserSelectedModel(user.id, "model_gpt5nano");
+
     const welcomeMessage = `Привет! ИИ-бот №1 открывает вам доступ к лучшим нейросетям для создания текста, изображений, видео и песен.
 
 БЕСПЛАТНО – 100 вопросов в неделю: ChatGPT, DeepSeek, Perplexity, Gemini, ИИ-фотошоп Nano Banana Pro и GPT Image 1.5.
@@ -706,6 +709,9 @@ bot.command("clear", async (ctx) => {
       title: "Telegram Chat (Cleared)",
       visibility: "private",
     });
+
+    // Reset model to default
+    await updateUserSelectedModel(user.id, "model_gpt5nano");
 
     await ctx.reply(
       "🧹 История очищена! Я забыл всё, о чём мы говорили ранее.\nГотов к новому диалогу! 🚀"
@@ -784,6 +790,9 @@ bot.command("deletecontext", async (ctx) => {
       title: "Telegram Chat (Cleared)",
       visibility: "private",
     });
+
+    // Reset model to default
+    await updateUserSelectedModel(user.id, "model_gpt5nano");
 
     await ctx.reply(
       "🧹 История очищена! Я забыл всё, о чём мы говорили ранее.\nГотов к новому диалогу! 🚀"
