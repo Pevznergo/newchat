@@ -66,7 +66,7 @@ export const chatModels: ChatModel[] = [
     name: "DeepSeek-V3.2",
     provider: "openrouter",
     description: "Strong open model",
-    tier: "advanced",
+    tier: "basic",
   },
   {
     id: "openrouter/deepseek/deepseek-v3.2-thinking",

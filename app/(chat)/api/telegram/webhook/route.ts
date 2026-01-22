@@ -43,6 +43,7 @@ const FREE_MODELS = [
   "model_gemini3flash",
   "model_gemini3flash",
   "model_image_nano_banana", // Nano Banana
+  "model_deepseek32",
 ];
 
 const MODEL_NAMES: Record<string, string> = {
