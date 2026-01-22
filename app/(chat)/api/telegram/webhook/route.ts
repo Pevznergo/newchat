@@ -61,6 +61,8 @@ const MODEL_NAMES: Record<string, string> = {
   model_image_banana_pro: "Nano Banana Pro",
   model_image_midjourney: "Midjourney",
   model_image_flux: "FLUX 2",
+  model_grok41: "Grok 4.1",
+  model_deepresearch: "Deep Research",
 };
 
 const PROVIDER_MAP: Record<string, string> = {
@@ -85,6 +87,8 @@ const PROVIDER_MAP: Record<string, string> = {
   model_image_banana_pro: "openai/dall-e-3",
   model_image_midjourney: "openai/gpt-4o",
   model_image_flux: "openai/gpt-4o",
+  model_grok41: "xai/grok-2-vision-1212", // Placeholder for Grok 4.1 if not available
+  model_deepresearch: "openai/o3-deep-research-2025-06-26", // Placeholder matches o3
 };
 
 function getModelKeyboard(selectedModel: string, isPremium: boolean) {
@@ -217,32 +221,48 @@ function getVideoModelKeyboard(selectedModel: string, isPremium: boolean) {
   };
 }
 
-function getSearchModelKeyboard(selectedModel: string) {
+function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
+  const isLocked = (id: string) => (!isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "");
+  const getLabel = (id: string, name: string) => `${isLocked(id)}${isSelected(id)}${name}`;
 
   return {
     inline_keyboard: [
       [
         {
-          text: `${isSelected("model_perplexity")}Perplexity`,
+          text: getLabel("model_perplexity", "Perplexity"),
           callback_data: "model_perplexity",
         },
         {
-          text: `${isSelected("model_gpt52")}GPT 5.2`,
+          text: getLabel("model_gpt52", "GPT 5.2"),
           callback_data: "model_gpt52",
+        },
+        {
+          text: getLabel("model_claude45sonnet", "Claude 4.5"),
+          callback_data: "model_claude45sonnet",
         },
       ],
       [
         {
-          text: `${isSelected("model_gemini3pro")}Gemini 3.0 Pro`,
+          text: getLabel("model_gemini3pro", "Gemini 3.0 Pro"),
           callback_data: "model_gemini3pro",
         },
         {
-          text: `${isSelected("model_gemini3flash")}Gemini 3.0 Flash`,
+          text: getLabel("model_gemini3flash", "Gemini 3.0 Flash"),
           callback_data: "model_gemini3flash",
         },
       ],
-      [{ text: "Закрыть", callback_data: "menu_close" }],
+      [
+        {
+          text: getLabel("model_grok41", "Grok 4.1"),
+          callback_data: "model_grok41",
+        },
+        {
+          text: getLabel("model_deepresearch", "Deep Research"),
+          callback_data: "model_deepresearch",
+        },
+        { text: "Zakрыть", callback_data: "menu_close" },
+      ],
     ],
   };
 }
@@ -483,17 +503,17 @@ async function showImageMenu(ctx: any, user: any) {
   });
 }
 
-async function showSearchMenu(ctx: any) {
-  // const currentModel = user?.selectedModel || "model_gemini3pro"; // Unused
+async function showSearchMenu(ctx: any, user: any) {
+  const currentModel = user?.selectedModel || "model_gemini3flash"; // Default to free model
 
-  const searchText = `Выберите модель поиска:
+  const searchText = `Выберите модель поиска или оставьте выбранную модель по-умолчанию
 
-ℹ️ Режим Deep Research готовит детально проработанные ответы
+ℹ️ Режим Deep Research готовит детально проработанные ответы, поэтому занимает больше времени
 
-Отправьте ваш запрос в чат 👇`;
+Чтобы начать поиск отправьте в чат ваш запрос 👇`;
 
   await ctx.reply(searchText, {
-    // reply_markup: getSearchModelKeyboard(currentModel), // Removed per request
+    reply_markup: getSearchModelKeyboard(currentModel, !!user.hasPaid),
   });
 }
 
@@ -915,7 +935,7 @@ bot.command("s", async (ctx) => {
   }
   const [user] = await getUserByTelegramId(telegramId);
   if (user) {
-    await showSearchMenu(ctx);
+      await showSearchMenu(ctx, user);
   }
 });
 
@@ -1038,7 +1058,7 @@ bot.on("callback_query:data", async (ctx) => {
           data
         )
       ) {
-        keyboard = getSearchModelKeyboard(data);
+        keyboard = getSearchModelKeyboard(data, !!user.hasPaid);
       } else {
         keyboard = getModelKeyboard(data, !!user.hasPaid);
       }
@@ -1294,7 +1314,7 @@ bot.on("message:text", async (ctx) => {
   }
 
   if (text === "🔎 Интернет-поиск") {
-    await handleButton(() => showSearchMenu(ctx));
+    await handleButton((user) => showSearchMenu(ctx, user));
     return;
   }
 
