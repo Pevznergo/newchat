@@ -1359,6 +1359,9 @@ bot.on("message:text", async (ctx) => {
               prompt: text,
               n: 1,
               size: "1024x1024",
+              providerOptions: {
+                openai: { quality: "low" },
+              },
             });
 
             if (image && image.base64) {
