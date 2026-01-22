@@ -579,13 +579,71 @@ async function showPremiumMenu(ctx: any) {
   });
 }
 
+// --- Profile Helpers ---
+
+function getProfileKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: "🚀 Подключить Премиум", callback_data: "buy_premium" }],
+      [{ text: "🔙 Назад", callback_data: "menu_start" }],
+    ],
+  };
+}
+
 async function showAccountInfo(ctx: any, user: any) {
-  const text = `👤 Мой профиль:
-ID: ${user?.id || "N/A"}
-Telegram: ${user?.telegramId || "N/A"}
-Модель: ${user?.selectedModel || "model_gpt4omini"}
-Статус: ${user?.hasPaid ? "Premium 🚀" : "Free ✨"}`;
-  await ctx.reply(text);
+  const isPremium = !!user.hasPaid;
+  const entitlements = entitlementsByUserType[isPremium ? "pro" : "regular"];
+  
+  // Fetch message count for 24h (Daily Usage)
+  const messageCount = await getMessageCountByUserId({
+    id: user.id,
+    differenceInHours: 24,
+  });
+
+  const dailyLimit = entitlements.maxMessagesPerDay || 10;
+  
+  // Get neat model name
+  const currentModelKey = user.selectedModel || "model_gpt4omini";
+  const currentModelName = MODEL_NAMES[currentModelKey] || currentModelKey;
+
+  const text = `👤 <b>Мой профиль</b>:
+ID: ${user.telegramId || "N/A"}
+Подписка: ${isPremium ? "Премиум 🚀" : "Стандартная ✔"}
+Выбрана модель: ${currentModelName} /model
+
+📊 <b>Статистика использования</b>
+
+Запросов сегодня: ${messageCount}/${dailyLimit}
+ └ GPT-5 nano | GPT-4o mini
+ └ DeepSeek-V3.2 | Gemini 3 Flash
+ └ картинки Nano Banana
+ └ ИИ-фотошоп Nano Banana
+
+Нужно больше? Подключите /premium
+
+🚀 <b>Подписка Премиум</b>:
+ └ 100-200 запросов в день
+ └ GPT-5.2 | GPT-4.1 | OpenAI o3
+ └ Gemini 3 Pro | Claude 4.5
+ └ Nano Banana Pro 🔥
+ └ работа с документами
+
+🌅 <b>Пакет Midjourney</b>: 0/0
+ └ Midjourney | Flux 2
+ └ Midjourney Video
+
+🎬 <b>Пакет видео</b>: 0/0
+ └ Veo 3.1 | Sora 2 | Kling | Hailuo | Pika
+ └ видео на основе изображений
+
+🎸 <b>Песни Suno</b>: 0/0
+
+� Поддержка: @GoPevzner`;
+
+  await ctx.reply(text, {
+    parse_mode: "HTML",
+    reply_markup: getProfileKeyboard(),
+  });
 }
 
 async function showSettingsMenu(ctx: any) {
