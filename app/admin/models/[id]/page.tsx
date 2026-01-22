@@ -1,16 +1,20 @@
-import { unstable_noStore as noStore } from "next/cache";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { getModelById, getModelLimits } from "@/lib/ai/config";
 import type { AiModel, ModelLimit } from "@/lib/db/schema";
 import { deleteLimit, saveLimit, saveModel } from "../../actions";
 
-export default function EditModelPage({ params }: { params: { id: string } }) {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <EditModelForm id={params.id} />
-    </Suspense>
-  );
+export default function EditModelPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <EditModelForm id={params.id} />
+        </Suspense>
+    )
 }
 
 async function EditModelForm({ id }: { id: string }) {
@@ -24,7 +28,7 @@ async function EditModelForm({ id }: { id: string }) {
     if (!model) {
       notFound();
     }
-    limits = await getModelLimits(id);
+    limits = await getModelLimits(id); 
   }
 
   return (
