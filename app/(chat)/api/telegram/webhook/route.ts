@@ -36,7 +36,12 @@ export const maxDuration = 60;
 
 // --- Constants & Helpers ---
 
-const FREE_MODELS = ["model_gpt5nano", "model_gpt4omini", "model_gemini3flash"];
+const FREE_MODELS = [
+  "model_gpt5nano",
+  "model_gpt4omini",
+  "model_gemini3flash",
+  "model_image_gpt", // Nano Banana
+];
 
 const MODEL_NAMES: Record<string, string> = {
   model_gpt52: "GPT-5.2",
@@ -92,9 +97,10 @@ const PROVIDER_MAP: Record<string, string> = {
   model_image_flux: "openai/gpt-4o",
 };
 
-function getModelKeyboard(selectedModel: string) {
+function getModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
-  const isLocked = (id: string) => (LOCKED_MODELS.includes(id) ? "🔒 " : "");
+  const isLocked = (id: string) =>
+    !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
   const getLabel = (id: string, name: string) =>
     `${isLocked(id)}${isSelected(id)}${name}`;
 
@@ -159,15 +165,18 @@ function getModelKeyboard(selectedModel: string) {
   };
 }
 
-function getImageModelKeyboard(selectedModel?: string) {
+function getImageModelKeyboard(
+  selectedModel: string | undefined,
+  isPremium: boolean
+) {
   const buttons = Object.entries(IMAGE_MODELS).map(([key, model]) => {
     const isSelected = selectedModel === key;
-    const isLocked = LOCKED_MODELS.includes(key);
-    const status = isLocked ? "🔒" : isSelected ? "✅" : ""; // Lock takes precedence
+    const isLocked = !isPremium && !FREE_MODELS.includes(key);
+    const status = isLocked ? "🔒" : isSelected ? "✅" : "";
 
     return [
       {
-        text: `${status} ${model.name} ${isLocked ? "(Скоро)" : ""}`,
+        text: `${status} ${model.name}`,
         callback_data: key,
       },
     ];
@@ -178,9 +187,10 @@ function getImageModelKeyboard(selectedModel?: string) {
   return { inline_keyboard: buttons };
 }
 
-function getVideoModelKeyboard(selectedModel: string) {
+function getVideoModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
-  const isLocked = (id: string) => (LOCKED_MODELS.includes(id) ? "🔒 " : "");
+  const isLocked = (id: string) =>
+    !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
   const getLabel = (id: string, name: string) =>
     `${isLocked(id)}${isSelected(id)}${name}`;
 
@@ -424,7 +434,7 @@ async function showModelMenu(ctx: any, user: any) {
 GPT-5 mini, Gemini 3 Flash и DeepSeek доступны бесплатно`;
 
   await ctx.reply(modelInfo, {
-    reply_markup: getModelKeyboard(currentModel),
+    reply_markup: getModelKeyboard(currentModel, user?.hasPaid),
   });
 }
 
@@ -460,7 +470,7 @@ async function showImageMenu(ctx: any, user: any) {
     : "model_image_gpt";
 
   await ctx.reply("Выберите модель для создания изображений:", {
-    reply_markup: getImageModelKeyboard(currentModel),
+    reply_markup: getImageModelKeyboard(currentModel, user?.hasPaid),
   });
 }
 
@@ -488,7 +498,7 @@ async function showVideoMenu(ctx: any, user: any) {
 🎬 Veo 3.1, Sora 2, Kling, Pika и Hailuo создают видео по описанию или изображению`;
 
   await ctx.reply(videoMenuText, {
-    reply_markup: getVideoModelKeyboard(currentModel),
+    reply_markup: getVideoModelKeyboard(currentModel, user?.hasPaid),
   });
 }
 
@@ -871,29 +881,6 @@ bot.on("callback_query:data", async (ctx) => {
 
   // Handle model selection
   if (data.startsWith("model_")) {
-    const isLocked = LOCKED_MODELS.includes(data);
-
-    if (isLocked) {
-      const modelName = MODEL_NAMES[data] || "этой модели";
-      await ctx.editMessageText(
-        `⚠️ Для отправки запросов к модели ${modelName} приобретите подписку Премиум`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "🚀 Подключить премиум",
-                  callback_data: "menu_premium",
-                },
-              ],
-            ],
-          },
-        }
-      );
-      // await ctx.answerCallbackQuery(); // Optional: close loading state if needed
-      return;
-    }
-
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       await ctx.answerCallbackQuery();
@@ -902,13 +889,26 @@ bot.on("callback_query:data", async (ctx) => {
 
     const isFreeModel = FREE_MODELS.includes(data);
 
-    // Premium check
+    // Premium check - Strict Lock
     if (!user.hasPaid && !isFreeModel) {
       const modelName = MODEL_NAMES[data] || "Selected Model";
-      await ctx.answerCallbackQuery({
-        text: `💎 ${modelName} доступна в Premium`,
-        show_alert: true,
-      });
+      await ctx.editMessageText(
+        `⚠️ Для отправки запросов к модели ${modelName} приобретите подписку Премиум`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🚀 Подключить премиум",
+                  callback_data: "buy_premium",
+                },
+              ],
+              [{ text: "🔙 Назад", callback_data: "menu_start" }],
+            ],
+          },
+        }
+      );
+      await ctx.answerCallbackQuery();
       return;
     }
 
@@ -928,9 +928,9 @@ bot.on("callback_query:data", async (ctx) => {
     try {
       let keyboard: { inline_keyboard: any[][] };
       if (data.startsWith("model_image_")) {
-        keyboard = getImageModelKeyboard(data);
+        keyboard = getImageModelKeyboard(data, !!user.hasPaid);
       } else if (data.startsWith("model_video_")) {
-        keyboard = getVideoModelKeyboard(data);
+        keyboard = getVideoModelKeyboard(data, !!user.hasPaid);
       } else if (
         ["model_perplexity", "model_grok41", "model_deepresearch"].includes(
           data
@@ -938,7 +938,7 @@ bot.on("callback_query:data", async (ctx) => {
       ) {
         keyboard = getSearchModelKeyboard(data);
       } else {
-        keyboard = getModelKeyboard(data);
+        keyboard = getModelKeyboard(data, !!user.hasPaid);
       }
 
       await ctx.editMessageReplyMarkup({
@@ -970,7 +970,7 @@ bot.on("callback_query:data", async (ctx) => {
         : "model_image_gpt";
 
       await ctx.reply("Выберите модель для создания изображений:", {
-        reply_markup: getImageModelKeyboard(currentModel),
+        reply_markup: getImageModelKeyboard(currentModel, !!user?.hasPaid),
       });
       await ctx.answerCallbackQuery("Условия приняты!");
     } catch (e) {
@@ -1121,6 +1121,7 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
+  await ctx.answerCallbackQuery();
   await ctx.answerCallbackQuery();
 });
 
