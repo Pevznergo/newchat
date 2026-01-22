@@ -883,6 +883,15 @@ bot.on("callback_query:data", async (ctx) => {
     // Update selection
     await updateUserSelectedModel(user.id, data);
 
+    // Create a new chat to "clear" history context when model changes
+    const chatId = generateUUID();
+    await saveChat({
+      id: chatId,
+      userId: user.id,
+      title: "Telegram Chat (New Model)",
+      visibility: "private",
+    });
+
     // Determine which keyboard to use based on model type
     try {
       let keyboard: { inline_keyboard: any[][] };

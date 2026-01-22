@@ -92,7 +92,7 @@ export type ImageModel = {
 
 export const IMAGE_MODELS: Record<string, ImageModel> = {
   model_image_gpt: {
-    id: "gpt-image-1.5",
+    id: "gpt-image-1",
     name: "GPT Images",
     provider: "openai",
     enabled: true,
