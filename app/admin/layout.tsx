@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 import type { ReactNode } from "react";
 import { auth } from "@/app/(auth)/auth";
 
@@ -9,7 +8,6 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
-  noStore();
   const session = await auth();
 
   if (!session?.user) {
