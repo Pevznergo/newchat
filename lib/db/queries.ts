@@ -42,11 +42,9 @@ import { generateHashedPassword } from "./utils";
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 
-import { db } from "./drizzle";
-
 // biome-ignore lint: Forbidden non-null assertion.
-// const client = postgres(process.env.POSTGRES_URL!);
-// const db = drizzle(client);
+const client = postgres(process.env.POSTGRES_URL!);
+const db = drizzle(client);
 
 export async function getUser(email: string): Promise<User[]> {
   try {
