@@ -80,7 +80,6 @@ const PROVIDER_MAP: Record<string, string> = {
   model_video_kling: "openai/gpt-4o",
   model_video_pika: "openai/gpt-4o",
   model_video_hailuo: "openai/gpt-4o",
-  model_video_hailuo: "openai/gpt-4o",
   model_image_nano_banana: "openai/chatgpt-image-latest",
   model_image_banana_pro: "openai/dall-e-3",
   model_image_midjourney: "openai/gpt-4o",
