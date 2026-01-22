@@ -40,7 +40,8 @@ const FREE_MODELS = [
   "model_gpt5nano",
   "model_gpt4omini",
   "model_gemini3flash",
-  "model_image_gpt", // Nano Banana
+  "model_gemini3flash",
+  "model_image_nano_banana", // Nano Banana
 ];
 
 const MODEL_NAMES: Record<string, string> = {
@@ -55,8 +56,8 @@ const MODEL_NAMES: Record<string, string> = {
   model_deepseek32thinking: "DeepSeek-V3.2 Thinking",
   model_gemini3pro: "Gemini 3 Pro",
   model_gemini3flash: "Gemini 3 Flash",
-  model_image_gpt: "Nano Banana",
-  model_image_banana: "Nano Banana",
+  model_image_nano_banana: "Nano Banana",
+  model_image_banana_pro: "Nano Banana Pro",
   model_image_midjourney: "Midjourney",
   model_image_flux: "FLUX 2",
 };
@@ -79,8 +80,9 @@ const PROVIDER_MAP: Record<string, string> = {
   model_video_kling: "openai/gpt-4o",
   model_video_pika: "openai/gpt-4o",
   model_video_hailuo: "openai/gpt-4o",
-  model_image_gpt: "openai/chatgpt-image-latest",
-  model_image_banana: "openai/gpt-4o",
+  model_video_hailuo: "openai/gpt-4o",
+  model_image_nano_banana: "openai/chatgpt-image-latest",
+  model_image_banana_pro: "openai/dall-e-3",
   model_image_midjourney: "openai/gpt-4o",
   model_image_flux: "openai/gpt-4o",
 };
@@ -921,6 +923,32 @@ bot.on("callback_query:data", async (ctx) => {
       visibility: "private",
     });
 
+    // Special handling for Nano Banana (Free)
+    if (data === "model_image_nano_banana") {
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        /* ignore */
+      }
+
+      await ctx.replyWithPhoto(
+        new InputFile(
+          "/Users/igortkachenko/Downloads/newchat/public/nano_banana_intro.jpg"
+        ),
+        {
+          caption:
+            "Создавайте и редактируйте изображения прямо в чате.\n\nГотовы начать?\nОтправьте изображение, которое вы хотите изменить, или напишите в чат, что нужно создать",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🔙 Назад", callback_data: "menu_start" }],
+            ],
+          },
+        }
+      );
+      await ctx.answerCallbackQuery("Модель выбрана!");
+      return;
+    }
+
     // Determine which keyboard to use based on model type
     try {
       let keyboard: { inline_keyboard: any[][] };
@@ -964,7 +992,7 @@ bot.on("callback_query:data", async (ctx) => {
 
       const currentModel = user.selectedModel?.startsWith("model_image_")
         ? user.selectedModel
-        : "model_image_gpt";
+        : "model_image_nano_banana";
 
       await ctx.reply("Выберите модель для создания изображений:", {
         reply_markup: getImageModelKeyboard(currentModel, !!user?.hasPaid),
