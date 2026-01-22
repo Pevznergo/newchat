@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { unstable_noStore as noStore } from "next/cache";
 import { getAllModels } from "@/lib/ai/config";
 import { toggleModelStatus } from "../actions";
 
 export default async function ModelsPage() {
-  noStore();
   const models = await getAllModels();
 
   return (

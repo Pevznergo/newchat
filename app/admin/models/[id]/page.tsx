@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 import { getModelById, getModelLimits } from "@/lib/ai/config";
 import type { AiModel, ModelLimit } from "@/lib/db/schema";
 import { deleteLimit, saveLimit, saveModel } from "../../actions";
@@ -9,7 +8,6 @@ export default async function EditModelPage({
 }: {
   params: { id: string };
 }) {
-  noStore();
   const isNew = params.id === "new";
   let model: AiModel | undefined | null = null;
   let limits: ModelLimit[] = [];
