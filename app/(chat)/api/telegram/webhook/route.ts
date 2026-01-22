@@ -43,21 +43,13 @@ const MODEL_NAMES: Record<string, string> = {
   model_o3: "OpenAI o3",
   model_gpt41: "GPT-4.1",
   model_gpt5nano: "GPT-5 Nano",
-  model_gpt4omini: "GPT-4o mini", // Available
+  model_gpt4omini: "GPT-4o Mini",
   model_claude45sonnet: "Claude 4.5 Sonnet",
   model_claude45thinking: "Claude 4.5 Thinking",
   model_deepseek32: "DeepSeek-V3.2",
   model_deepseek32thinking: "DeepSeek-V3.2 Thinking",
   model_gemini3pro: "Gemini 3 Pro",
   model_gemini3flash: "Gemini 3 Flash",
-  model_perplexity: "Perplexity",
-  model_grok41: "Grok 4.1",
-  model_deepresearch: "Deep Research",
-  model_video_veo: "Veo 3.1",
-  model_video_sora: "Sora Video",
-  model_video_kling: "Kling AI",
-  model_video_pika: "Pika 2.5",
-  model_video_hailuo: "Hailuo 2.3",
   model_image_gpt: "Nano Banana",
   model_image_banana: "Nano Banana",
   model_image_midjourney: "Midjourney",
@@ -65,16 +57,6 @@ const MODEL_NAMES: Record<string, string> = {
 };
 
 const LOCKED_MODELS = [
-  "model_gpt52",
-  "model_o3",
-  "model_gpt41",
-  "model_claude45sonnet",
-  "model_claude45thinking",
-  "model_deepseek32",
-  "model_deepseek32thinking",
-  "model_gemini3pro",
-  "model_gemini3pro",
-  "model_gemini3flash",
   // Image Models
   "model_image_midjourney",
   "model_image_flux",
@@ -87,21 +69,18 @@ const LOCKED_MODELS = [
 ];
 
 const PROVIDER_MAP: Record<string, string> = {
-  model_gpt52: "openai/gpt-4o", // Fallback until GPT-5.2 is available
-  model_o3: "openai/gpt-4o", // Fallback until o3 is available
-  model_gpt41: "openai/gpt-4o", // Fallback until GPT-4.1 is available
-  model_gpt5nano: "openai/gpt-4o-mini", // Fallback
-  model_gpt4omini: "openai/gpt-4o-mini",
-  model_claude45sonnet: "anthropic/claude-3-5-sonnet-20240620",
-  model_claude45thinking: "anthropic/claude-3-5-sonnet-20240620", // Thinking not yet separate model ID
-  model_deepseek32: "deepseek/deepseek-chat",
-  model_deepseek32thinking: "deepseek/deepseek-reasoner",
-  model_gemini3pro: "google/gemini-1.5-pro-latest",
-  model_gemini3flash: "google/gemini-1.5-flash-latest",
-  model_perplexity: "openrouter/perplexity/llama-3.1-sonar-large-128k-online",
-  model_grok41: "xai/grok-beta", // Using grok-beta or grok-2-latest
-  model_deepresearch: "openai/gpt-4o", // Placeholder
-  // Image/Video models use default text model for chat context, tool calls handle generation
+  model_gpt52: "openai/gpt-5.2-2025-12-11",
+  model_o3: "openai/o3-deep-research-2025-06-26",
+  model_gpt41: "openai/gpt-4.1-2025-04-14",
+  model_gpt5nano: "openai/gpt-5-nano-2025-08-07",
+  model_gpt4omini: "openai/gpt-4o-mini-2024-07-18",
+  model_claude45sonnet: "openrouter/anthropic/claude-4.5-sonnet",
+  model_claude45thinking: "openrouter/anthropic/claude-4.5-thinking",
+  model_deepseek32: "openrouter/deepseek/deepseek-v3.2",
+  model_deepseek32thinking: "openrouter/deepseek/deepseek-v3.2-thinking",
+  model_gemini3pro: "openrouter/google/gemini-3.0-pro",
+  model_gemini3flash: "openrouter/google/gemini-3.0-flash",
+  // Image/Video models use default text model for chat context
   model_video_veo: "openai/gpt-4o",
   model_video_sora: "openai/gpt-4o",
   model_video_kling: "openai/gpt-4o",
@@ -485,8 +464,8 @@ async function showImageMenu(ctx: any, user: any) {
   });
 }
 
-async function showSearchMenu(ctx: any, user: any) {
-  const currentModel = user?.selectedModel || "model_gemini3pro";
+async function showSearchMenu(ctx: any) {
+  // const currentModel = user?.selectedModel || "model_gemini3pro"; // Unused
 
   const searchText = `Выберите модель поиска:
 
@@ -495,7 +474,7 @@ async function showSearchMenu(ctx: any, user: any) {
 Отправьте ваш запрос в чат 👇`;
 
   await ctx.reply(searchText, {
-    reply_markup: getSearchModelKeyboard(currentModel),
+    // reply_markup: getSearchModelKeyboard(currentModel), // Removed per request
   });
 }
 
@@ -850,7 +829,7 @@ bot.command("s", async (ctx) => {
   }
   const [user] = await getUserByTelegramId(telegramId);
   if (user) {
-    await showSearchMenu(ctx, user);
+    await showSearchMenu(ctx);
   }
 });
 
@@ -1212,7 +1191,7 @@ bot.on("message:text", async (ctx) => {
   }
 
   if (text === "🔎 Интернет-поиск") {
-    await handleButton((user) => showSearchMenu(ctx, user));
+    await handleButton(() => showSearchMenu(ctx));
     return;
   }
 

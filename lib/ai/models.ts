@@ -10,63 +10,83 @@ export type ChatModel = {
 };
 
 export const chatModels: ChatModel[] = [
-  // Anthropic
-  {
-    id: "anthropic/claude-3-5-sonnet-20240620",
-    name: "Claude 3.5 Sonnet",
-    provider: "anthropic",
-    description: "Best balance of speed, intelligence, and cost",
-    tier: "advanced",
-  },
-  {
-    id: "anthropic/claude-3-haiku-20240307",
-    name: "Claude 3 Haiku",
-    provider: "anthropic",
-    description: "Fast and affordable, great for everyday tasks",
-    tier: "basic",
-  },
   // OpenAI
   {
-    id: "openai/gpt-4o-2024-11-20",
-    name: "GPT-4o",
+    id: "openai/gpt-5.2-2025-12-11",
+    name: "GPT-5.2",
     provider: "openai",
-    description: "Most capable OpenAI model",
+    description: "New top-tier OpenAI model",
     tier: "advanced",
   },
   {
-    id: "openai/gpt-4o-mini-2024-07-18",
-    name: "GPT-4o Mini",
+    id: "openai/o3-deep-research-2025-06-26",
+    name: "OpenAI o3",
     provider: "openai",
-    description: "Fast and cost-effective for simple tasks",
-    tier: "basic",
+    description: "Deep research and reasoning model",
+    tier: "advanced",
   },
   {
     id: "openai/gpt-4.1-2025-04-14",
     name: "GPT-4.1",
     provider: "openai",
-    description: "New ultra-efficient experimental model",
-    tier: "basic",
+    description: "Efficient and capable universal model",
+    tier: "advanced",
   },
   {
     id: "openai/gpt-5-nano-2025-08-07",
     name: "GPT-5 Nano",
     provider: "openai",
-    description: "Latest OpenAI model - ultra fast and efficient",
+    description: "Ultra-fast and efficient",
     tier: "basic",
   },
-  // Google
   {
-    id: "google/gemini-1.5-pro-latest",
-    name: "Gemini 1.5 Pro",
-    provider: "google",
-    description: "Most capable Google model",
+    id: "openai/gpt-4o-mini-2024-07-18",
+    name: "GPT-4o Mini",
+    provider: "openai",
+    description: "Trusted fast model",
+    tier: "basic",
+  },
+  // OpenRouter (Anthropic/Google/DeepSeek)
+  {
+    id: "openrouter/anthropic/claude-4.5-sonnet",
+    name: "Claude 4.5 Sonnet",
+    provider: "openrouter",
+    description: "Best for coding and nuance",
     tier: "advanced",
   },
   {
-    id: "google/gemini-1.5-flash-latest",
-    name: "Gemini 1.5 Flash",
-    provider: "google",
-    description: "Ultra fast and affordable",
+    id: "openrouter/anthropic/claude-4.5-thinking",
+    name: "Claude 4.5 Thinking",
+    provider: "openrouter",
+    description: "Thinking mode for complex tasks",
+    tier: "advanced",
+  },
+  {
+    id: "openrouter/deepseek/deepseek-v3.2",
+    name: "DeepSeek-V3.2",
+    provider: "openrouter",
+    description: "Strong open model",
+    tier: "advanced",
+  },
+  {
+    id: "openrouter/deepseek/deepseek-v3.2-thinking",
+    name: "DeepSeek-V3.2 Thinking",
+    provider: "openrouter",
+    description: "Deep reasoning open model",
+    tier: "advanced",
+  },
+  {
+    id: "openrouter/google/gemini-3.0-pro",
+    name: "Gemini 3 Pro",
+    provider: "openrouter",
+    description: "Google's best model",
+    tier: "advanced",
+  },
+  {
+    id: "openrouter/google/gemini-3.0-flash",
+    name: "Gemini 3 Flash",
+    provider: "openrouter",
+    description: "High speed, low latency",
     tier: "basic",
   },
 ];
@@ -98,21 +118,15 @@ export const IMAGE_MODELS: Record<string, ImageModel> = {
     enabled: true,
   },
   model_image_midjourney: {
-    id: "midjourney",
+    id: "midjourney/midjourney-v6",
     name: "Midjourney",
-    provider: "midjourney",
-    enabled: false, // Coming soon
+    provider: "openai", // Placeholder, processed by specialized tools/bot logic
+    enabled: false,
   },
   model_image_flux: {
-    id: "flux-pro",
-    name: "Flux 2",
-    provider: "replicate",
-    enabled: false, // Coming soon
-  },
-  model_image_nana: {
-    id: "nana-banano",
-    name: "Nana Banano",
-    provider: "other",
-    enabled: false, // Coming soon
+    id: "flux-2-schnell",
+    name: "FLUX 2",
+    provider: "openai",
+    enabled: false,
   },
 };
