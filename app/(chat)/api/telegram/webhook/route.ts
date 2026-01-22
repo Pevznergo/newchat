@@ -36,13 +36,13 @@ export const maxDuration = 60;
 
 // --- Constants & Helpers ---
 
-const FREE_MODELS = ["model_gpt5mini", "model_gpt4omini", "model_gemini3flash"];
+const FREE_MODELS = ["model_gpt5nano", "model_gpt4omini", "model_gemini3flash"];
 
 const MODEL_NAMES: Record<string, string> = {
   model_gpt52: "GPT-5.2",
   model_o3: "OpenAI o3",
   model_gpt41: "GPT-4.1",
-  model_gpt5mini: "GPT-5 mini",
+  model_gpt5nano: "GPT-5 Nano",
   model_gpt4omini: "GPT-4o mini", // Available
   model_claude45sonnet: "Claude 4.5 Sonnet",
   model_claude45thinking: "Claude 4.5 Thinking",
@@ -68,20 +68,29 @@ const LOCKED_MODELS = [
   "model_gpt52",
   "model_o3",
   "model_gpt41",
-  "model_gpt5mini",
   "model_claude45sonnet",
   "model_claude45thinking",
   "model_deepseek32",
   "model_deepseek32thinking",
   "model_gemini3pro",
+  "model_gemini3pro",
   "model_gemini3flash",
+  // Image Models
+  "model_image_midjourney",
+  "model_image_flux",
+  // Video Models
+  "model_video_veo",
+  "model_video_sora",
+  "model_video_kling",
+  "model_video_pika",
+  "model_video_hailuo",
 ];
 
 const PROVIDER_MAP: Record<string, string> = {
   model_gpt52: "openai/gpt-4o", // Fallback until GPT-5.2 is available
   model_o3: "openai/gpt-4o", // Fallback until o3 is available
   model_gpt41: "openai/gpt-4o", // Fallback until GPT-4.1 is available
-  model_gpt5mini: "openai/gpt-4o-mini", // Fallback
+  model_gpt5nano: "openai/gpt-4o-mini", // Fallback
   model_gpt4omini: "openai/gpt-4o-mini",
   model_claude45sonnet: "anthropic/claude-3-5-sonnet-20240620",
   model_claude45thinking: "anthropic/claude-3-5-sonnet-20240620", // Thinking not yet separate model ID
@@ -128,8 +137,8 @@ function getModelKeyboard(selectedModel: string) {
       ],
       [
         {
-          text: getLabel("model_gpt5mini", "GPT-5 mini"),
-          callback_data: "model_gpt5mini",
+          text: getLabel("model_gpt5nano", "GPT-5 Nano"),
+          callback_data: "model_gpt5nano",
         },
         {
           text: getLabel("model_gpt4omini", "GPT-4o mini"),
@@ -174,10 +183,12 @@ function getModelKeyboard(selectedModel: string) {
 function getImageModelKeyboard(selectedModel?: string) {
   const buttons = Object.entries(IMAGE_MODELS).map(([key, model]) => {
     const isSelected = selectedModel === key;
-    const status = model.enabled ? (isSelected ? "✅" : "") : "🔒";
+    const isLocked = LOCKED_MODELS.includes(key);
+    const status = isLocked ? "🔒" : isSelected ? "✅" : ""; // Lock takes precedence
+
     return [
       {
-        text: `${status} ${model.name} ${model.enabled ? "" : "(Скоро)"}`,
+        text: `${status} ${model.name} ${isLocked ? "(Скоро)" : ""}`,
         callback_data: key,
       },
     ];
@@ -190,32 +201,35 @@ function getImageModelKeyboard(selectedModel?: string) {
 
 function getVideoModelKeyboard(selectedModel: string) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
+  const isLocked = (id: string) => (LOCKED_MODELS.includes(id) ? "🔒 " : "");
+  const getLabel = (id: string, name: string) =>
+    `${isLocked(id)}${isSelected(id)}${name}`;
 
   return {
     inline_keyboard: [
       [
         {
-          text: `${isSelected("model_video_veo")}🪼 Veo 3.1`,
+          text: getLabel("model_video_veo", "🪼 Veo 3.1"),
           callback_data: "model_video_veo",
         },
         {
-          text: `${isSelected("model_video_sora")}☁️ Sora 2`,
+          text: getLabel("model_video_sora", "☁️ Sora 2"),
           callback_data: "model_video_sora",
         },
       ],
       [
         {
-          text: `${isSelected("model_video_kling")}🐼 Kling`,
+          text: getLabel("model_video_kling", "🐼 Kling"),
           callback_data: "model_video_kling",
         },
         {
-          text: `${isSelected("model_video_pika")}🐰 Pika`,
+          text: getLabel("model_video_pika", "🐰 Pika"),
           callback_data: "model_video_pika",
         },
       ],
       [
         {
-          text: `${isSelected("model_video_hailuo")}🦊 Hailuo`,
+          text: getLabel("model_video_hailuo", "🦊 Hailuo"),
           callback_data: "model_video_hailuo",
         },
       ],
