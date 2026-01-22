@@ -262,7 +262,7 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
           text: getLabel("model_deepresearch", "Deep Research"),
           callback_data: "model_deepresearch",
         },
-        { text: "Zakрыть", callback_data: "menu_close" },
+        { text: "Закрыть", callback_data: "menu_close" },
       ],
     ],
   };
