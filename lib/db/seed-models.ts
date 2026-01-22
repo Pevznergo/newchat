@@ -109,7 +109,7 @@ const MODELS = [
   {
     modelId: "model_image_gpt",
     name: "GPT Images",
-    providerId: "openai/chatgpt-image-latest",
+    providerId: "openai/gpt-4o",
     type: "image",
     isPremium: false,
   },
