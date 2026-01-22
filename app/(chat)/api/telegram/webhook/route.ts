@@ -1,3 +1,4 @@
+import path from "node:path";
 import { generateText, tool } from "ai";
 import { Bot, InputFile, webhookCallback } from "grammy";
 import { z } from "zod";
@@ -951,7 +952,7 @@ bot.on("callback_query:data", async (ctx) => {
 
       await ctx.replyWithPhoto(
         new InputFile(
-          "/Users/igortkachenko/Downloads/newchat/public/nano_banana_intro.jpg"
+          path.join(process.cwd(), "public", "nano_banana_intro.jpg")
         ),
         {
           caption:
