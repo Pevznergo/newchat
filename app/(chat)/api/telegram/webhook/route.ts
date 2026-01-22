@@ -61,18 +61,6 @@ const MODEL_NAMES: Record<string, string> = {
   model_image_flux: "FLUX 2",
 };
 
-const LOCKED_MODELS = [
-  // Image Models
-  "model_image_midjourney",
-  "model_image_flux",
-  // Video Models
-  "model_video_veo",
-  "model_video_sora",
-  "model_video_kling",
-  "model_video_pika",
-  "model_video_hailuo",
-];
-
 const PROVIDER_MAP: Record<string, string> = {
   model_gpt52: "openai/gpt-5.2-2025-12-11",
   model_o3: "openai/o3-deep-research-2025-06-26",
