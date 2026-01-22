@@ -82,3 +82,37 @@ export const modelsByProvider = chatModels.reduce(
   },
   {} as Record<string, ChatModel[]>
 );
+
+export type ImageModel = {
+  id: string;
+  name: string;
+  provider: string;
+  enabled: boolean;
+};
+
+export const IMAGE_MODELS: Record<string, ImageModel> = {
+  "model_image_gpt": {
+    id: "gpt-image-1.5-2025-12-16",
+    name: "GPT Images",
+    provider: "openai",
+    enabled: true
+  },
+  "model_image_midjourney": {
+    id: "midjourney", 
+    name: "Midjourney",
+    provider: "midjourney",
+    enabled: false // Coming soon
+  },
+  "model_image_flux": {
+    id: "flux-pro",
+    name: "Flux 2",
+    provider: "replicate",
+    enabled: false // Coming soon
+  },
+   "model_image_nana": {
+    id: "nana-banano",
+    name: "Nana Banano",
+    provider: "other",
+    enabled: false // Coming soon
+  }
+};
