@@ -399,6 +399,25 @@ function getMusicGenerationKeyboard() {
   };
 }
 
+// --- Constants & Helpers ---
+
+async function safeAnswerCallbackQuery(ctx: any, text?: string, options?: any) {
+  try {
+    await ctx.answerCallbackQuery(text, options);
+  } catch (error: any) {
+    const msg = error?.message || "";
+    if (
+      msg.includes("query is too old") ||
+      msg.includes("query ID is invalid")
+    ) {
+      // Ignore these specific errors
+      console.warn("Suppressed answerCallbackQuery error:", msg);
+    } else {
+      console.error("answerCallbackQuery failed:", error);
+    }
+  }
+}
+
 // --- Menu Helpers ---
 
 async function showModelMenu(ctx: any, user: any) {
@@ -456,7 +475,7 @@ async function showImageMenu(ctx: any, user: any) {
 
   const currentModel = user.selectedModel?.startsWith("model_image_")
     ? user.selectedModel
-    : "model_image_gpt";
+    : "model_image_nano_banana";
 
   await ctx.reply("Выберите модель для создания изображений:", {
     reply_markup: getImageModelKeyboard(currentModel, user?.hasPaid),
@@ -873,7 +892,7 @@ bot.on("callback_query:data", async (ctx) => {
   // Handle menu navigation
   if (data === "menu_start" || data === "menu_close") {
     await ctx.deleteMessage();
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallbackQuery(ctx);
     return;
   }
 
@@ -881,7 +900,7 @@ bot.on("callback_query:data", async (ctx) => {
   if (data.startsWith("model_")) {
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
-      await ctx.answerCallbackQuery();
+      await safeAnswerCallbackQuery(ctx);
       return;
     }
 
@@ -906,7 +925,7 @@ bot.on("callback_query:data", async (ctx) => {
           },
         }
       );
-      await ctx.answerCallbackQuery();
+      await safeAnswerCallbackQuery(ctx);
       return;
     }
 
@@ -944,7 +963,7 @@ bot.on("callback_query:data", async (ctx) => {
           },
         }
       );
-      await ctx.answerCallbackQuery("Модель выбрана!");
+      await safeAnswerCallbackQuery(ctx, "Модель выбрана!");
       return;
     }
 
@@ -968,9 +987,9 @@ bot.on("callback_query:data", async (ctx) => {
       await ctx.editMessageReplyMarkup({
         reply_markup: keyboard,
       });
-      await ctx.answerCallbackQuery("Модель выбрана!");
+      await safeAnswerCallbackQuery(ctx, "Модель выбрана!");
     } catch (_e) {
-      await ctx.answerCallbackQuery();
+      await safeAnswerCallbackQuery(ctx);
     }
     return;
   }
@@ -996,10 +1015,10 @@ bot.on("callback_query:data", async (ctx) => {
       await ctx.reply("Выберите модель для создания изображений:", {
         reply_markup: getImageModelKeyboard(currentModel, !!user?.hasPaid),
       });
-      await ctx.answerCallbackQuery("Условия приняты!");
+      await safeAnswerCallbackQuery(ctx, "Условия приняты!");
     } catch (e) {
       console.error("Consent error:", e);
-      await ctx.answerCallbackQuery({
+      await safeAnswerCallbackQuery(ctx, undefined, {
         text: "Ошибка сохранения согласия. Попробуйте позже.",
         show_alert: true,
       });
@@ -1012,19 +1031,19 @@ bot.on("callback_query:data", async (ctx) => {
     await ctx.editMessageReplyMarkup({
       reply_markup: getSubscriptionKeyboard("premium"),
     });
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallbackQuery(ctx);
     return;
   }
   if (data === "buy_premium_x2") {
     await ctx.editMessageReplyMarkup({
       reply_markup: getSubscriptionKeyboard("premium_x2"),
     });
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallbackQuery(ctx);
     return;
   }
   if (data === "premium_back") {
     await ctx.editMessageReplyMarkup({ reply_markup: getPremiumKeyboard() });
-    await ctx.answerCallbackQuery();
+    await safeAnswerCallbackQuery(ctx);
     return;
   }
 
@@ -1058,11 +1077,11 @@ bot.on("callback_query:data", async (ctx) => {
       const starsPrice = starPlan[durationKey];
 
       if (!starsPrice) {
-        await ctx.answerCallbackQuery("Error: Price not found");
+        await safeAnswerCallbackQuery(ctx, "Error: Price not found");
         return;
       }
 
-      await ctx.answerCallbackQuery("Создаю инвойс...");
+      await safeAnswerCallbackQuery(ctx, "Создаю инвойс...");
       // sendInvoice(chat_id, title, description, payload, provider_token, currency, prices)
       await ctx.replyWithInvoice(
         description, // title
@@ -1078,11 +1097,11 @@ bot.on("callback_query:data", async (ctx) => {
     const price = PRICING_PLANS[planKey][durationKey]; // e.g. 750
 
     if (!price) {
-      await ctx.answerCallbackQuery("Error: Invalid plan");
+      await safeAnswerCallbackQuery(ctx, "Error: Invalid plan");
       return;
     }
 
-    await ctx.answerCallbackQuery("Создаю счет...");
+    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
 
     const payment = await createYookassaPayment(
       price,
@@ -1138,15 +1157,15 @@ bot.on("callback_query:data", async (ctx) => {
     data.startsWith("buy_") ||
     data.startsWith("music_mode_")
   ) {
-    await ctx.answerCallbackQuery("В разработке...");
+    await safeAnswerCallbackQuery(ctx, "В разработке...");
     await ctx.reply(
       "Выбор пакетов (Video, MJ, Suno) скоро появится. Пока доступна только подписка Premium."
     );
     return;
   }
 
-  await ctx.answerCallbackQuery();
-  await ctx.answerCallbackQuery();
+  await safeAnswerCallbackQuery(ctx);
+  await safeAnswerCallbackQuery(ctx);
 });
 
 // Checkout Handlers for Stars
