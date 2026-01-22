@@ -91,28 +91,28 @@ export type ImageModel = {
 };
 
 export const IMAGE_MODELS: Record<string, ImageModel> = {
-  "model_image_gpt": {
-    id: "gpt-image-1.5-2025-12-16",
+  model_image_gpt: {
+    id: "gpt-image-1.5",
     name: "GPT Images",
     provider: "openai",
-    enabled: true
+    enabled: true,
   },
-  "model_image_midjourney": {
-    id: "midjourney", 
+  model_image_midjourney: {
+    id: "midjourney",
     name: "Midjourney",
     provider: "midjourney",
-    enabled: false // Coming soon
+    enabled: false, // Coming soon
   },
-  "model_image_flux": {
+  model_image_flux: {
     id: "flux-pro",
     name: "Flux 2",
     provider: "replicate",
-    enabled: false // Coming soon
+    enabled: false, // Coming soon
   },
-   "model_image_nana": {
+  model_image_nana: {
     id: "nana-banano",
     name: "Nana Banano",
     provider: "other",
-    enabled: false // Coming soon
-  }
+    enabled: false, // Coming soon
+  },
 };
