@@ -19,6 +19,7 @@ import {
   createStarSubscription,
   createTelegramUser,
   createUserConsent,
+  getAiModels,
   getChatsByUserId,
   getMessageCountByUserId,
   getMessagesByChatId,
@@ -30,7 +31,9 @@ import {
   saveChat,
   saveMessages,
   setLastMessageId,
+  setUserDetails,
   updateUserSelectedModel,
+  upsertAiModel,
 } from "@/lib/db/queries";
 import { generateUUID } from "@/lib/utils";
 
@@ -499,15 +502,41 @@ function getVideoPackagesKeyboard() {
   return { inline_keyboard: buttons };
 }
 
+// --- Global Cache for Models ---
+let CACHED_MODELS: any[] | null = null;
+let CACHE_TIMESTAMP = 0;
+const CACHE_TTL = 60 * 1000; // 1 minute
+
+async function ensureModelsLoaded() {
+  const now = Date.now();
+  if (!CACHED_MODELS || now - CACHE_TIMESTAMP > CACHE_TTL) {
+    try {
+      CACHED_MODELS = await getAiModels();
+      CACHE_TIMESTAMP = now;
+    } catch (e) {
+      console.error("Failed to load models for cache", e);
+      // Fallback: don't crash, just use hardcoded defaults if possible or empty
+    }
+  }
+}
+
 // --- Cost & Limit Helpers ---
 
-function calculateRequestCost(
+async function calculateRequestCost(
   modelId: string,
   contextLength = 0,
   videoDurationSec = 0,
   isEditing = false
-): number {
-  let cost = MODEL_COSTS[modelId] || 1; // Default to 1 if unknown
+): Promise<number> {
+  await ensureModelsLoaded();
+
+  // Find in DB cache
+  const dbModel = CACHED_MODELS?.find((m) => m.modelId === modelId);
+
+  let cost = dbModel ? dbModel.cost : MODEL_COSTS[modelId] || 1;
+
+  // Heuristic for Feature/Special costs if not found in DB or using FEATURE_COSTS directly
+  // logic: if modelId is a "feature key" like "image_recognition", logic below handles it?
 
   // Context Length Multiplier for Text Models
   if (contextLength > CONTEXT_COST_RUBRIC.threshold) {
@@ -1652,6 +1681,128 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
+  // --- Admin Commands ---
+  if (text.startsWith("/")) {
+    const parts = text.split(" ");
+    const command = parts[0];
+
+    // Helper: Check Admin
+    const isAdmin = async () => {
+      const [user] = await getUserByTelegramId(telegramId);
+      // Bootstrap: If ID matches hardcoded owner (replace with real ID if known) OR user.isAdmin
+      const OWNER_ID = "YOUR_TELEGRAM_ID_HERE"; // Replace or rely on DB
+      return user?.isAdmin || telegramId === OWNER_ID; // Fallback for first run
+    };
+
+    if (command === "/admin" && (await isAdmin())) {
+      const targetId = parts[1] || telegramId;
+      const [target] = await getUserByTelegramId(targetId);
+      if (!target) {
+        await ctx.reply("User not found.");
+        return;
+      }
+      await ctx.reply(
+        `👤 <b>User Report</b>
+ID: <code>${target.telegramId}</code>
+Role: <b>${target.hasPaid ? "Premium/Pro" : "Free"}</b>
+Admin: ${target.isAdmin ? "✅" : "❌"}
+Requests: ${target.requestCount}
+Limit: ${target.hasPaid ? SUBSCRIPTION_LIMITS.premium : SUBSCRIPTION_LIMITS.free}
+Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never"}`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    if (command === "/set_premium" && (await isAdmin())) {
+      const targetId = parts[1];
+      const status = parts[2] === "on";
+      if (!targetId) {
+        await ctx.reply("Usage: /set_premium [tg_id] [on/off]");
+        return;
+      }
+
+      const [target] = await getUserByTelegramId(targetId);
+      if (target) {
+        await setUserDetails({
+          userId: target.id,
+          hasPaid: status,
+          isActive: true,
+        });
+        await ctx.reply(`User ${targetId} premium set to ${status}`);
+      } else {
+        await ctx.reply(
+          "User not found via Telegram ID. Ensure they have started the bot."
+        );
+      }
+      return;
+    }
+
+    if (command === "/set_limit" && (await isAdmin())) {
+      const targetId = parts[1];
+      const amount = Number.parseInt(parts[2], 10);
+      if (!targetId || Number.isNaN(amount)) {
+        await ctx.reply("Usage: /set_limit [tg_id] [amount]");
+        return;
+      }
+
+      const [target] = await getUserByTelegramId(targetId);
+      if (target) {
+        await setUserDetails({ userId: target.id, requestCount: amount });
+        await ctx.reply(`User ${targetId} request count set to ${amount}`);
+      }
+      return;
+    }
+
+    if (command === "/make_admin" && (await isAdmin())) {
+      const targetId = parts[1];
+      if (!targetId) {
+        await ctx.reply("Usage: /make_admin [tg_id]");
+        return;
+      }
+      const [target] = await getUserByTelegramId(targetId);
+      if (target) {
+        await setUserDetails({ userId: target.id, isAdmin: true });
+        await ctx.reply(`User ${targetId} is now an Admin.`);
+      }
+      return;
+    }
+
+    // Secret Seeding Command
+    if (command === "/seed_models" && (await isAdmin())) {
+      await ctx.reply("Seeding models...");
+      let count = 0;
+
+      // Seed MODEL_COSTS
+      for (const [id, cost] of Object.entries(MODEL_COSTS)) {
+        await upsertAiModel({
+          modelId: id,
+          name: id,
+          provider: id.split("/")[0] || "unknown",
+          type: id.includes("image") ? "image" : "text",
+          cost,
+          isEnabled: true,
+        });
+        count++;
+      }
+
+      // Seed FEATURE_COSTS (as pseudo-models)
+      for (const [key, cost] of Object.entries(FEATURE_COSTS)) {
+        await upsertAiModel({
+          modelId: key,
+          name: key,
+          provider: "feature",
+          type: "feature",
+          cost,
+          isEnabled: true,
+        });
+        count++;
+      }
+      await ctx.reply(`Seeded ${count} models/features.`);
+      return;
+    }
+  }
+
   if (text === "🚀 Премиум" || text === "/premium") {
     try {
       await ctx.deleteMessage();
@@ -1712,7 +1863,7 @@ bot.on("message:text", async (ctx) => {
     }
 
     // B. Cost & Subscription Limit
-    const cost = calculateRequestCost(
+    const cost = await calculateRequestCost(
       user.selectedModel || "model_gpt4omini",
       text.length
     );

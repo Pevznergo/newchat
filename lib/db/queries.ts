@@ -22,6 +22,8 @@ import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatSDKError } from "../errors";
 import { generateUUID } from "../utils";
 import {
+  type AiModel,
+  aiModel,
   type Chat,
   chat,
   type DBMessage,
@@ -887,5 +889,91 @@ export async function createStarSubscription(
   } catch (error) {
     console.error("Failed to create star subscription", error);
     return false;
+  }
+}
+
+// --- Admin & Model Queries ---
+
+export async function setUserDetails({
+  userId,
+  isAdmin,
+  hasPaid,
+  requestCount,
+  isActive,
+}: {
+  userId: string;
+  isAdmin?: boolean;
+  hasPaid?: boolean;
+  requestCount?: number;
+  isActive?: boolean;
+}) {
+  try {
+    const updateData: any = {};
+    if (isAdmin !== undefined) updateData.isAdmin = isAdmin;
+    if (hasPaid !== undefined) updateData.hasPaid = hasPaid;
+    if (requestCount !== undefined) updateData.requestCount = requestCount;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    return await db
+      .update(user)
+      .set(updateData)
+      .where(eq(user.id, userId))
+      .returning();
+  } catch (error) {
+    console.error("Failed to set user details", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to set user details"
+    );
+  }
+}
+
+export async function getAiModels() {
+  try {
+    return await db.select().from(aiModel).orderBy(asc(aiModel.name));
+  } catch (error) {
+    console.error("Failed to get AI models", error);
+    throw new ChatSDKError("bad_request:database", "Failed to get AI models");
+  }
+}
+
+export async function upsertAiModel(
+  modelData: Partial<AiModel> & { modelId: string }
+) {
+  try {
+    return await db
+      .insert(aiModel)
+      .values({
+        id: modelData.id || generateUUID(),
+        modelId: modelData.modelId,
+        name: modelData.name || modelData.modelId,
+        provider: modelData.provider || "openai",
+        type: modelData.type || "text",
+        cost: modelData.cost || 1,
+        isPremium: modelData.isPremium || false,
+        isPro: modelData.isPro || false,
+        isEnabled: modelData.isEnabled || true,
+      })
+      .onConflictDoUpdate({
+        target: aiModel.modelId,
+        set: { ...modelData, updatedAt: new Date() },
+      })
+      .returning();
+  } catch (error) {
+    console.error("Failed to upsert AI model", error);
+    throw new ChatSDKError("bad_request:database", "Failed to upsert AI model");
+  }
+}
+
+export async function updateAiModel(modelId: string, data: Partial<AiModel>) {
+  try {
+    return await db
+      .update(aiModel)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(aiModel.modelId, modelId))
+      .returning();
+  } catch (error) {
+    console.error("Failed to update AI model", error);
+    throw new ChatSDKError("bad_request:database", "Failed to update AI model");
   }
 }

@@ -37,6 +37,7 @@ export const user = pgTable("User", {
 
   // User status fields
   isActive: boolean("is_active").default(false),
+  isAdmin: boolean("is_admin").default(false),
   hasPaid: boolean("has_paid").default(false),
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
@@ -252,3 +253,19 @@ export const subscription = pgTable("Subscription", {
 });
 
 export type Subscription = InferSelectModel<typeof subscription>;
+
+export const aiModel = pgTable("AiModel", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  modelId: varchar("model_id", { length: 255 }).unique().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  provider: varchar("provider", { length: 100 }).notNull(), // openai, openrouter, etc
+  type: varchar("type", { length: 50 }).notNull(), // text, image, video
+  cost: integer("cost").notNull().default(1),
+  isPremium: boolean("is_premium").default(false),
+  isPro: boolean("is_pro").default(false),
+  isEnabled: boolean("is_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type AiModel = InferSelectModel<typeof aiModel>;
