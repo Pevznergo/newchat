@@ -224,8 +224,10 @@ function getVideoModelKeyboard(selectedModel: string, isPremium: boolean) {
 
 function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
-  const isLocked = (id: string) => (!isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "");
-  const getLabel = (id: string, name: string) => `${isLocked(id)}${isSelected(id)}${name}`;
+  const isLocked = (id: string) =>
+    !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+  const getLabel = (id: string, name: string) =>
+    `${isLocked(id)}${isSelected(id)}${name}`;
 
   return {
     inline_keyboard: [
@@ -298,6 +300,26 @@ const STAR_PRICING = {
     months_6: 3250,
     months_12: 5000,
   },
+};
+
+const MJ_PRICING = {
+  50: 250,
+  100: 450,
+  200: 800,
+  500: 1750,
+};
+
+const VIDEO_PRICING = {
+  2: 150,
+  10: 500,
+  20: 900,
+  50: 2000,
+};
+
+const SUNO_PRICING = {
+  20: 250,
+  50: 500,
+  100: 900,
 };
 
 async function createYookassaPayment(
@@ -441,6 +463,57 @@ async function safeAnswerCallbackQuery(ctx: any, text?: string, options?: any) {
 }
 
 // --- Menu Helpers ---
+
+function getMidjourneyPackagesKeyboard() {
+  const buttons = Object.entries(MJ_PRICING).map(([count, price]) => {
+    return [
+      {
+        text: `${count} генераций – ${price} ₽`,
+        callback_data: `select_mj_${count}`,
+      },
+    ];
+  });
+  buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]); // Fixed callback to premium_back as per user flow expectation? Or maybe menu_start. Let's stick to premium_back if it came from premium menu. But wait, buy_midjourney is in premium menu. So back should go to premium menu.
+  return { inline_keyboard: buttons };
+}
+
+function getVideoPackagesKeyboard() {
+  const buttons = Object.entries(VIDEO_PRICING).map(([count, price]) => {
+    return [
+      {
+        text: `${count} генераций – ${price} ₽`,
+        callback_data: `select_video_${count}`,
+      },
+    ];
+  });
+  buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]);
+  return { inline_keyboard: buttons };
+}
+
+function getSunoPackagesKeyboard() {
+  const buttons = Object.entries(SUNO_PRICING).map(([count, price]) => {
+    return [
+      {
+        text: `${count} генераций – ${price} ₽`,
+        callback_data: `select_suno_${count}`,
+      },
+    ];
+  });
+  buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]);
+  return { inline_keyboard: buttons };
+}
+
+function getPaymentMethodKeyboard(payUrl: string) {
+  return {
+    inline_keyboard: [
+      [{ text: "Карта 💳", url: payUrl }],
+      [{ text: "СБП 🏛", url: payUrl }],
+      // Optional: Add stars payment if desired, but user request specifically mentioned SBP/Card leading to gateway.
+      // Re-reading user request: "и кнопки с выбором формы оплаты - СБП или По карте, которые ведут в наш платежный шлюз"
+      [{ text: "🔙 Назад", callback_data: "buy_midjourney" }],
+    ],
+  };
+}
 
 async function showModelMenu(ctx: any, user: any) {
   const currentModel = user?.selectedModel || "model_gpt4omini";
@@ -614,7 +687,7 @@ function getProfileKeyboard() {
 async function showAccountInfo(ctx: any, user: any) {
   const isPremium = !!user.hasPaid;
   const entitlements = entitlementsByUserType[isPremium ? "pro" : "regular"];
-  
+
   // Fetch message count for 24h (Daily Usage)
   const messageCount = await getMessageCountByUserId({
     id: user.id,
@@ -622,7 +695,7 @@ async function showAccountInfo(ctx: any, user: any) {
   });
 
   const dailyLimit = entitlements.maxMessagesPerDay || 10;
-  
+
   // Get neat model name
   const currentModelKey = user.selectedModel || "model_gpt4omini";
   const currentModelName = MODEL_NAMES[currentModelKey] || currentModelKey;
@@ -936,7 +1009,7 @@ bot.command("s", async (ctx) => {
   }
   const [user] = await getUserByTelegramId(telegramId);
   if (user) {
-      await showSearchMenu(ctx, user);
+    await showSearchMenu(ctx, user);
   }
 });
 
@@ -1226,6 +1299,136 @@ bot.on("callback_query:data", async (ctx) => {
       await ctx.reply(
         "❌ Ошибка создания платежа. Попробуйте позже или свяжитесь с поддержкой."
       );
+    }
+    return;
+  }
+
+  // Handle Midjourney Package Selection
+  if (data === "buy_midjourney") {
+    await ctx.reply("Выберите количество:", {
+      reply_markup: getMidjourneyPackagesKeyboard(),
+    });
+    await safeAnswerCallbackQuery(ctx);
+    return;
+  }
+
+  // Handle Specific Midjourney Package Payment
+  if (data.startsWith("select_mj_")) {
+    const count = Number.parseInt(data.replace("select_mj_", ""), 10);
+    const price = MJ_PRICING[count as keyof typeof MJ_PRICING];
+
+    if (!price) {
+      await safeAnswerCallbackQuery(ctx, "Ошибка: тариф не найден");
+      return;
+    }
+
+    const description = `Midjourney (${count} генераций)`;
+    const tariffSlug = `midjourney_${count}`; // No duration, it's a pack
+
+    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+
+    // Create Payment
+    const payment = await createYookassaPayment(
+      price,
+      description,
+      telegramId,
+      tariffSlug
+    );
+
+    if (payment?.confirmation?.confirmation_url) {
+      const payUrl = payment.confirmation.confirmation_url;
+
+      await ctx.reply("Выберите способ оплаты:", {
+        reply_markup: getPaymentMethodKeyboard(payUrl),
+      });
+    } else {
+      await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже.");
+    }
+    return;
+  }
+
+  // Handle Video Package Selection
+  if (data === "buy_video") {
+    await ctx.reply("Выберите количество:", {
+      reply_markup: getVideoPackagesKeyboard(),
+    });
+    await safeAnswerCallbackQuery(ctx);
+    return;
+  }
+
+  // Handle Specific Video Package Payment
+  if (data.startsWith("select_video_")) {
+    const count = Number.parseInt(data.replace("select_video_", ""), 10);
+    const price = VIDEO_PRICING[count as keyof typeof VIDEO_PRICING];
+
+    if (!price) {
+      await safeAnswerCallbackQuery(ctx, "Ошибка: тариф не найден");
+      return;
+    }
+
+    const description = `Video (${count} генераций)`;
+    const tariffSlug = `video_${count}`;
+
+    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+
+    const payment = await createYookassaPayment(
+      price,
+      description,
+      telegramId,
+      tariffSlug
+    );
+
+    if (payment?.confirmation?.confirmation_url) {
+      const payUrl = payment.confirmation.confirmation_url;
+
+      await ctx.reply("Выберите способ оплаты:", {
+        reply_markup: getPaymentMethodKeyboard(payUrl),
+      });
+    } else {
+      await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже.");
+    }
+    return;
+  }
+
+  // Handle Suno Package Selection
+  if (data === "buy_suno") {
+    await ctx.reply("Выберите количество:", {
+      reply_markup: getSunoPackagesKeyboard(),
+    });
+    await safeAnswerCallbackQuery(ctx);
+    return;
+  }
+
+  // Handle Specific Suno Package Payment
+  if (data.startsWith("select_suno_")) {
+    const count = Number.parseInt(data.replace("select_suno_", ""), 10);
+    const price = SUNO_PRICING[count as keyof typeof SUNO_PRICING];
+
+    if (!price) {
+      await safeAnswerCallbackQuery(ctx, "Ошибка: тариф не найден");
+      return;
+    }
+
+    const description = `Suno (${count} генераций)`;
+    const tariffSlug = `suno_${count}`;
+
+    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+
+    const payment = await createYookassaPayment(
+      price,
+      description,
+      telegramId,
+      tariffSlug
+    );
+
+    if (payment?.confirmation?.confirmation_url) {
+      const payUrl = payment.confirmation.confirmation_url;
+
+      await ctx.reply("Выберите способ оплаты:", {
+        reply_markup: getPaymentMethodKeyboard(payUrl),
+      });
+    } else {
+      await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже.");
     }
     return;
   }
