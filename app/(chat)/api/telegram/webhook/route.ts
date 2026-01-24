@@ -525,8 +525,8 @@ async function ensureModelsLoaded() {
 async function calculateRequestCost(
   modelId: string,
   contextLength = 0,
-  videoDurationSec = 0,
-  isEditing = false
+  _videoDurationSec = 0,
+  _isEditing = false
 ): Promise<number> {
   await ensureModelsLoaded();
 
@@ -547,7 +547,7 @@ async function calculateRequestCost(
     // If base is 1, and we have 1 block over, we want x2.
     // logic: multiplier = 1 + extraBlocks
     const multiplier = CONTEXT_COST_RUBRIC.baseMultiplier + extraBlocks;
-    cost = cost * multiplier;
+    cost *= multiplier;
   }
 
   // Video/Image Special Logic overrides
@@ -562,7 +562,7 @@ async function checkAndEnforceLimits(
   user: any,
   cost: number
 ): Promise<boolean> {
-  const isPremium = user.hasPaid; // Premium or Pro (needs distinction via tariff normally, but let's assume hasPaid covers both for now, or check detailed subscription)
+  const _isPremium = user.hasPaid; // Premium or Pro (needs distinction via tariff normally, but let's assume hasPaid covers both for now, or check detailed subscription)
   // We need to know if user is Free or Paid. Querying subscription details or trusting `hasPaid`.
   // Ideally `user` object has `subscription` info joined. If not, we might need to fetch it or rely on `hasPaid`.
   // For now: if !hasPaid -> Free.
@@ -1868,7 +1868,9 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       text.length
     );
     const allowed = await checkAndEnforceLimits(ctx, user, cost);
-    if (!allowed) return;
+    if (!allowed) {
+      return;
+    }
 
     // --- ENFORCEMENT END ---
 
@@ -2292,7 +2294,9 @@ bot.on("message:photo", async (ctx) => {
     }
 
     const allowed = await checkAndEnforceLimits(ctx, user, cost);
-    if (!allowed) return;
+    if (!allowed) {
+      return;
+    }
 
     // If it is an image model, proceed with Image Editing flow
     if (selectedModelId.startsWith("model_image_")) {

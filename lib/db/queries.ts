@@ -909,10 +909,18 @@ export async function setUserDetails({
 }) {
   try {
     const updateData: any = {};
-    if (isAdmin !== undefined) updateData.isAdmin = isAdmin;
-    if (hasPaid !== undefined) updateData.hasPaid = hasPaid;
-    if (requestCount !== undefined) updateData.requestCount = requestCount;
-    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isAdmin !== undefined) {
+      updateData.isAdmin = isAdmin;
+    }
+    if (hasPaid !== undefined) {
+      updateData.hasPaid = hasPaid;
+    }
+    if (requestCount !== undefined) {
+      updateData.requestCount = requestCount;
+    }
+    if (isActive !== undefined) {
+      updateData.isActive = isActive;
+    }
 
     return await db
       .update(user)

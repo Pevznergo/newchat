@@ -134,6 +134,8 @@ export const FEATURE_COSTS = {
 
 export function getKlingVideoEditingCost(durationSec: number) {
   // Kling O1 Edit: 3s=165, 4s=220, 5s=275... (+55 per sec)
-  if (durationSec < 3) return 165;
+  if (durationSec < 3) {
+    return 165;
+  }
   return 165 + (durationSec - 3) * 55;
 }
