@@ -83,7 +83,7 @@ export const chatModels: ChatModel[] = [
     tier: "advanced",
   },
   {
-    id: "openrouter/google/gemini-3.0-flash",
+    id: "openrouter/google/gemini-3-flash-preview",
     name: "Gemini 3 Flash",
     provider: "openrouter",
     description: "High speed, low latency",

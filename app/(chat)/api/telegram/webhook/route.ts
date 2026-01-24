@@ -77,7 +77,7 @@ const PROVIDER_MAP: Record<string, string> = {
   model_deepseek32: "openrouter/deepseek/deepseek-v3.2",
   model_deepseek32thinking: "openrouter/deepseek/deepseek-v3.2-thinking",
   model_gemini3pro: "openrouter/google/gemini-3.0-pro",
-  model_gemini3flash: "openrouter/google/gemini-3.0-flash",
+  model_gemini3flash: "openrouter/google/gemini-3-flash-preview",
   // Image/Video models use default text model for chat context
   model_video_veo: "openai/gpt-4o",
   model_video_sora: "openai/gpt-4o",
