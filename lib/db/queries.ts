@@ -32,9 +32,8 @@ import {
   suggestion,
   type User,
   user,
-  vote,
-  UserConsent,
   userConsent,
+  vote,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
@@ -696,14 +695,25 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
   }
 }
 
-export async function incrementUserRequestCount(userId: string) {
+export async function incrementUserRequestCount(userId: string, amount = 1) {
   try {
     await db
       .update(user)
-      .set({ requestCount: sql`${user.requestCount} + 1` })
+      .set({ requestCount: sql`${user.requestCount} + ${amount}` })
       .where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to increment request count", error);
+  }
+}
+
+export async function resetUserRequestCount(userId: string) {
+  try {
+    await db
+      .update(user)
+      .set({ requestCount: 0, lastResetDate: new Date() })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to reset request count", error);
   }
 }
 
@@ -711,7 +721,10 @@ export async function incrementUserRequestCount(userId: string) {
 
 export async function updateUserSelectedModel(userId: string, model: string) {
   try {
-    await db.update(user).set({ selectedModel: model }).where(eq(user.id, userId));
+    await db
+      .update(user)
+      .set({ selectedModel: model })
+      .where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to update selected model", error);
     throw new ChatSDKError(
@@ -783,7 +796,7 @@ export async function updateUserPreferences(
       .select()
       .from(user)
       .where(eq(user.id, userId));
-    
+
     if (!existingUser) {
       return;
     }
@@ -822,7 +835,7 @@ export async function getUserSubscription(userId: string) {
       )
       .orderBy(desc(subscription.createdAt))
       .limit(1);
-    
+
     return sub;
   } catch (error) {
     console.error("Failed to get user subscription", error);
@@ -834,15 +847,12 @@ export async function cancelUserSubscription(userId: string) {
   try {
     await db
       .update(subscription)
-      .set({ 
+      .set({
         autoRenew: false,
-        status: "cancelled" 
+        status: "cancelled",
       })
       .where(
-        and(
-          eq(subscription.userId, userId),
-          eq(subscription.status, "active")
-        )
+        and(eq(subscription.userId, userId), eq(subscription.status, "active"))
       );
     return true;
   } catch (error) {
@@ -851,29 +861,28 @@ export async function cancelUserSubscription(userId: string) {
   }
 }
 
-export async function createStarSubscription(userId: string, tariffSlug: string, durationDays: number) {
+export async function createStarSubscription(
+  userId: string,
+  tariffSlug: string,
+  durationDays: number
+) {
   try {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + durationDays);
 
-    await db
-      .insert(subscription)
-      .values({
-        userId,
-        tariffSlug,
-        paymentMethodId: "telegram_stars",
-        status: "active",
-        autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
-        startDate: new Date(),
-        endDate,
-      });
-      
+    await db.insert(subscription).values({
+      userId,
+      tariffSlug,
+      paymentMethodId: "telegram_stars",
+      status: "active",
+      autoRenew: false, // Stars are usually one-time unless recurrent is supported (not implemented yet for Stars here)
+      startDate: new Date(),
+      endDate,
+    });
+
     // Set has_paid to true for user
-    await db
-        .update(user)
-        .set({ hasPaid: true })
-        .where(eq(user.id, userId));
-        
+    await db.update(user).set({ hasPaid: true }).where(eq(user.id, userId));
+
     return true;
   } catch (error) {
     console.error("Failed to create star subscription", error);

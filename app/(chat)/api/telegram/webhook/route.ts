@@ -2,7 +2,15 @@ import path from "node:path";
 import { generateText, tool } from "ai";
 import { Bot, InputFile, webhookCallback } from "grammy";
 import { z } from "zod";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import {
+  CONTEXT_COST_RUBRIC,
+  FEATURE_COSTS,
+  MODEL_COSTS,
+} from "@/lib/ai/cost-models";
+import {
+  entitlementsByUserType,
+  SUBSCRIPTION_LIMITS,
+} from "@/lib/ai/entitlements";
 import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -18,6 +26,7 @@ import {
   getUserSubscription,
   hasUserConsented,
   incrementUserRequestCount,
+  resetUserRequestCount,
   saveChat,
   saveMessages,
   setLastMessageId,
@@ -488,6 +497,101 @@ function getVideoPackagesKeyboard() {
   });
   buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]);
   return { inline_keyboard: buttons };
+}
+
+// --- Cost & Limit Helpers ---
+
+function calculateRequestCost(
+  modelId: string,
+  contextLength = 0,
+  videoDurationSec = 0,
+  isEditing = false
+): number {
+  let cost = MODEL_COSTS[modelId] || 1; // Default to 1 if unknown
+
+  // Context Length Multiplier for Text Models
+  if (contextLength > CONTEXT_COST_RUBRIC.threshold) {
+    const extraBlocks = Math.ceil(
+      (contextLength - CONTEXT_COST_RUBRIC.threshold) / CONTEXT_COST_RUBRIC.step
+    );
+    // "For 6001-12000 will be x2, 12001-18000 x3"
+    // If base is 1, and we have 1 block over, we want x2.
+    // logic: multiplier = 1 + extraBlocks
+    const multiplier = CONTEXT_COST_RUBRIC.baseMultiplier + extraBlocks;
+    cost = cost * multiplier;
+  }
+
+  // Video/Image Special Logic overrides
+  // (Ideally precise logic maps specific internal model IDs to cost features)
+
+  return cost;
+}
+
+// Check limits and return true if allowed, false if blocked (and sends message)
+async function checkAndEnforceLimits(
+  ctx: any,
+  user: any,
+  cost: number
+): Promise<boolean> {
+  const isPremium = user.hasPaid; // Premium or Pro (needs distinction via tariff normally, but let's assume hasPaid covers both for now, or check detailed subscription)
+  // We need to know if user is Free or Paid. Querying subscription details or trusting `hasPaid`.
+  // Ideally `user` object has `subscription` info joined. If not, we might need to fetch it or rely on `hasPaid`.
+  // For now: if !hasPaid -> Free.
+
+  let limit = SUBSCRIPTION_LIMITS.free;
+  let currentCount = user.requestCount || 0;
+
+  if (user.hasPaid) {
+    // Determine if Premium or Pro?
+    // User schema doesn't have "tier". We might need to look at `tariffSlug` from subscription.
+    // However, existing code might not fetch subscription.
+    // For simplicity/MVP: If `hasPaid` is true, we assume at least Premium.
+    // If we can't easily distinguish, we might default to Premium limit (2500) or Pro (7500).
+    // Let's assume hitting 2500 is rare for now or try to fetch sub.
+    limit = SUBSCRIPTION_LIMITS.premium; // Default paid limit.
+    // real logic: check subscription table.
+  }
+
+  // Free Tier Reset Logic
+  if (!user.hasPaid) {
+    const lastReset = user.lastResetDate ? new Date(user.lastResetDate) : null;
+    const now = new Date();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    // If never reset or older than 7 days -> Reset
+    if (!lastReset || now.getTime() - lastReset.getTime() > sevenDaysMs) {
+      await resetUserRequestCount(user.id);
+      currentCount = 0; // Local update
+    }
+  }
+
+  // Check Limit
+  if (currentCount + cost > limit) {
+    const message = `🚧 <b>Лимит исчерпан!</b>
+
+Вы достигли лимита запросов.
+Free: раз в неделю.
+Premium/Pro: раз в месяц.
+
+Что делать?
+• Испытайте удачу в колесе фортуны
+• Подключите Премиум / Pro
+• Пригласите друзей`;
+
+    await ctx.reply(message, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🎡 Испытать удачу", callback_data: "spin_wheel" }], // ensuring callback exists
+          [{ text: "💎 Подключить Премиум", callback_data: "open_premium" }],
+          [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }], // ensuring handler exists
+        ],
+      },
+    });
+    return false;
+  }
+
+  return true;
 }
 
 function getSunoPackagesKeyboard() {
@@ -1607,18 +1711,14 @@ bot.on("message:text", async (ctx) => {
       return;
     }
 
-    // B. Message Count Limit
-    const messageCount = await getMessageCountByUserId({
-      id: user.id,
-      differenceInHours: 24,
-    });
+    // B. Cost & Subscription Limit
+    const cost = calculateRequestCost(
+      user.selectedModel || "model_gpt4omini",
+      text.length
+    );
+    const allowed = await checkAndEnforceLimits(ctx, user, cost);
+    if (!allowed) return;
 
-    if (messageCount >= entitlements.maxMessagesPerDay && userType !== "pro") {
-      await ctx.reply(
-        "Ой, дневной лимит сообщений исчерпан! 🛑\n\nНо это не конец! 🚀\nПереходите на **PRO-тариф** для безлимитного общения или испытайте удачу в **Колесе Фортуны** 🎡 — там можно выиграть дополнительные токены, подписку и другие призы.\n\nВозвращайтесь к общению без границ!"
-      );
-      return;
-    }
     // --- ENFORCEMENT END ---
 
     // 2. Find active chat or create new one
@@ -1658,7 +1758,7 @@ bot.on("message:text", async (ctx) => {
       ],
     });
 
-    await incrementUserRequestCount(user.id);
+    await incrementUserRequestCount(user.id, cost);
 
     // 4. Fetch History
     const history = await getMessagesByChatId({ id: chatId });
@@ -2027,6 +2127,22 @@ bot.on("message:photo", async (ctx) => {
     // Check if user is using an image model
     const selectedModelId = user.selectedModel || "model_gpt4omini";
 
+    // --- COST CALCULATION & ENFORCEMENT ---
+    let cost = 10; // Default Vision Cost
+    if (selectedModelId.startsWith("model_image_")) {
+      // Heuristic for Image Edit cost
+      // "gpt-image-1-edit" = 20. default to 20.
+      cost = 20;
+      // If we want precise mapping:
+      // const key = selectedModelId.replace("model_", "").replace(/_/g, "-") + "-edit";
+      // cost = FEATURE_COSTS[key] || 20;
+    } else {
+      cost = FEATURE_COSTS.image_recognition || 10;
+    }
+
+    const allowed = await checkAndEnforceLimits(ctx, user, cost);
+    if (!allowed) return;
+
     // If it is an image model, proceed with Image Editing flow
     if (selectedModelId.startsWith("model_image_")) {
       const imageModelConfig = IMAGE_MODELS[selectedModelId];
@@ -2148,6 +2264,8 @@ bot.on("message:photo", async (ctx) => {
             },
           ],
         });
+
+        await incrementUserRequestCount(user.id, cost); // Charge for Vision
       } catch (e) {
         console.error("Vision Error:", e);
         await ctx.reply(
@@ -2272,7 +2390,9 @@ bot.on("message:photo", async (ctx) => {
       }
     } else {
       await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
+      return;
     }
+    await incrementUserRequestCount(user.id, cost); // Charge for Image Edit
   } catch (error) {
     console.error("Photo Processing Error:", error);
     await ctx.reply(

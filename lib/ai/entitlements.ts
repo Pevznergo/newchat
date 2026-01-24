@@ -8,28 +8,34 @@ type Entitlements = {
 export const entitlementsByUserType: Record<UserType, Entitlements> = {
   /*
    * For users without an account (Guest)
-   * Limit: 3 messages, 2500 chars, Basic models only
+   * Limit: 20 requests (Strict trial)
    */
   guest: {
-    maxMessagesPerDay: 3,
+    maxMessagesPerDay: 20,
     charLimit: 2500,
   },
 
   /*
-   * For users with an account (Regular)
-   * Limit: 15 messages, 2500 chars, Basic models only
+   * For users with an account (Free)
+   * Limit: 100 requests per 7 days
    */
   regular: {
-    maxMessagesPerDay: 15,
+    maxMessagesPerDay: 100,
     charLimit: 2500,
   },
 
   /*
-   * For users with an account and a paid membership (Pro)
-   * Limit: Unlimited, 20000 chars, All models
+   * For users with an account and a paid membership (Pro/Premium)
+   * Limit: Defined by subscription type (2500 or 7500)
    */
   pro: {
-    maxMessagesPerDay: Number.POSITIVE_INFINITY,
+    maxMessagesPerDay: 7500,
     charLimit: 20_000,
   },
+};
+
+export const SUBSCRIPTION_LIMITS = {
+  free: 100,
+  premium: 2500,
+  pro: 7500,
 };
