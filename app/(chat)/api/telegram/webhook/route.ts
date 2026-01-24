@@ -52,11 +52,11 @@ const MODEL_NAMES: Record<string, string> = {
   model_gpt41: "GPT-4.1",
   model_gpt5nano: "GPT-5 Nano",
   model_gpt4omini: "GPT-4o Mini",
-  model_claude45sonnet: "Claude 4.5 Sonnet",
-  model_claude45thinking: "Claude 4.5 Thinking",
-  model_deepseek32: "DeepSeek-V3.2",
-  model_deepseek32thinking: "DeepSeek-V3.2 Thinking",
-  model_gemini3pro: "Gemini 3 Pro",
+  model_claude45sonnet: "Claude 3.5 Sonnet",
+  model_claude45thinking: "Claude 3.7 Sonnet Thinking",
+  model_deepseek32: "DeepSeek-V3",
+  model_deepseek32thinking: "DeepSeek-R1",
+  model_gemini3pro: "Gemini 1.5 Pro",
   model_gemini3flash: "Gemini 3 Flash",
   model_image_nano_banana: "Nano Banana",
   model_image_banana_pro: "Nano Banana Pro",
@@ -72,11 +72,11 @@ const PROVIDER_MAP: Record<string, string> = {
   model_gpt41: "openai/gpt-4.1-2025-04-14",
   model_gpt5nano: "openai/gpt-5-nano-2025-08-07",
   model_gpt4omini: "openai/gpt-4o-mini-2024-07-18",
-  model_claude45sonnet: "openrouter/anthropic/claude-4.5-sonnet",
-  model_claude45thinking: "openrouter/anthropic/claude-4.5-thinking",
-  model_deepseek32: "openrouter/deepseek/deepseek-v3.2",
-  model_deepseek32thinking: "openrouter/deepseek/deepseek-v3.2-thinking",
-  model_gemini3pro: "openrouter/google/gemini-3.0-pro",
+  model_claude45sonnet: "openrouter/anthropic/claude-3.5-sonnet",
+  model_claude45thinking: "openrouter/anthropic/claude-3.7-sonnet",
+  model_deepseek32: "openrouter/deepseek/deepseek-chat",
+  model_deepseek32thinking: "openrouter/deepseek/deepseek-r1",
+  model_gemini3pro: "openrouter/google/gemini-pro-1.5",
   model_gemini3flash: "openrouter/google/gemini-3-flash-preview",
   // Image/Video models use default text model for chat context
   model_video_veo: "openai/gpt-4o",
@@ -616,8 +616,7 @@ async function showMusicMenu(ctx: any) {
   });
 }
 
-async function showPremiumMenu(ctx: any) {
-  const premiumMenuText = `Бот открывает доступ к лучшим AI-сервисам на одной платформе:
+const PREMIUM_MENU_TEXT = `Бот открывает доступ к лучшим AI-сервисам на одной платформе:
 
 <b>Бесплатно | ЕЖЕНЕДЕЛЬНО</b>
 100 любых запросов
@@ -631,7 +630,7 @@ async function showPremiumMenu(ctx: any) {
 <b>ПРЕМИУМ | МЕСЯЦ</b>
 🔼 Лимит запросов – 100 в день
 ✅ Все опции выше
-🌅 Nano Banana Pro | GPT Image 1.5
+✅ Nano Banana Pro | GPT Image 1.5
 ✅ GPT-5.2 | GPT-4.1 | OpenAI o3
 ✅ Gemini 3 Pro | Claude 4.5
 ✅ Работа с документами
@@ -649,24 +648,25 @@ async function showPremiumMenu(ctx: any) {
 🌅 /Midjourney V7 и Flux 2
 ✅ Midjourney Video
 ✅ Замена лиц на фото
-Стоимость: от 350 ₽
+Стоимость: от 250 ₽
 
 <b>ВИДЕО | ПАКЕТ</b>
 От 2 до 50 генераций (на выбор)
 🎬 Veo 3.1 | Sora 2 | Kling | Hailuo | Pika
 ✅ Видео на основе изображений
 ✅ Креативные видео-эффекты
-Стоимость: от 225 ₽
+Стоимость: от 150 ₽
 
 <b>ПЕСНИ SUNO | ПАКЕТ</b>
 От 20 до 100 генераций (на выбор)
 🎸 Нейросеть /Suno V5
 ✅ Свои стихи или генерация с AI
-Стоимость: от 350 ₽
+Стоимость: от 250 ₽
 
 💬 По вопросам оплаты: @GoPevzner`;
 
-  await ctx.reply(premiumMenuText, {
+async function showPremiumMenu(ctx: any) {
+  await ctx.reply(PREMIUM_MENU_TEXT, {
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
     reply_markup: getPremiumKeyboard(),
@@ -678,7 +678,7 @@ async function showPremiumMenu(ctx: any) {
 function getProfileKeyboard() {
   return {
     inline_keyboard: [
-      [{ text: "🚀 Подключить Премиум", callback_data: "buy_premium" }],
+      [{ text: "🚀 Подключить Премиум", callback_data: "open_premium" }],
       [{ text: "🔙 Назад", callback_data: "menu_start" }],
     ],
   };
@@ -1070,7 +1070,7 @@ bot.on("callback_query:data", async (ctx) => {
               [
                 {
                   text: "🚀 Подключить премиум",
-                  callback_data: "buy_premium",
+                  callback_data: "open_premium",
                 },
               ],
               [{ text: "🔙 Назад", callback_data: "menu_start" }],
@@ -1176,6 +1176,17 @@ bot.on("callback_query:data", async (ctx) => {
         show_alert: true,
       });
     }
+    return;
+  }
+
+  // Handle full premium menu display (replace mode)
+  if (data === "open_premium") {
+    await ctx.editMessageText(PREMIUM_MENU_TEXT, {
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: getPremiumKeyboard(),
+    });
+    await safeAnswerCallbackQuery(ctx);
     return;
   }
 
@@ -1687,7 +1698,7 @@ bot.on("message:text", async (ctx) => {
                     [
                       {
                         text: "💎 Купить Premium",
-                        callback_data: "buy_premium",
+                        callback_data: "open_premium",
                       },
                     ],
                     [
