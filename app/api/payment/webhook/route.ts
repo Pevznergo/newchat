@@ -22,6 +22,7 @@ type YookassaEvent = {
     metadata?: {
       telegram_id?: string;
       tariff_slug?: string;
+      message_id?: string; // Add message_id
     };
   };
 };
@@ -56,10 +57,67 @@ export async function POST(request: Request) {
       telegramId,
       tariffSlug,
       paymentMethodId,
-      // amount: payment.amount.value, // Removed as per signature update
+      // amount: payment.amount.value,
     });
 
     if (success) {
+      if (process.env.TELEGRAM_BOT_TOKEN) {
+        try {
+          const { Bot } = await import("grammy");
+          const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+
+          // Delete the invoice message if ID is present
+          if (payment.metadata?.message_id) {
+            try {
+              await bot.api.deleteMessage(
+                telegramId,
+                Number(payment.metadata.message_id)
+              );
+            } catch (e) {
+              console.warn("Failed to delete invoice message:", e);
+            }
+          }
+
+          // Determine subscription duration text
+          let durationText = "30 дней";
+          if (tariffSlug.endsWith("_12")) {
+            durationText = "12 месяцев";
+          } else if (tariffSlug.endsWith("_6")) {
+            durationText = "6 месяцев";
+          } else if (tariffSlug.endsWith("_3")) {
+            durationText = "3 месяца";
+          } else if (
+            tariffSlug.startsWith("midjourney_") ||
+            tariffSlug.startsWith("video_") ||
+            tariffSlug.startsWith("suno_")
+          ) {
+            durationText = "пакет генераций";
+          }
+
+          // Convert date to readable string
+          const date = new Date();
+          if (durationText !== "пакет генераций") {
+            const daysToAdd = durationText.includes("месяц")
+              ? Number.parseInt(durationText, 10) * 30
+              : 30;
+            date.setDate(date.getDate() + daysToAdd);
+          }
+
+          const dateStr =
+            durationText !== "пакет генераций"
+              ? ` до ${date.toLocaleDateString("ru-RU")}`
+              : "";
+
+          await bot.api.sendMessage(
+            telegramId,
+            `✅ <b>Оплата прошла успешно!</b>\n\nПодписка активирована${dateStr}.\nПриятного использования! 🚀`,
+            { parse_mode: "HTML" }
+          );
+        } catch (e) {
+          console.error("Failed to send Telegram notification:", e);
+        }
+      }
+
       return NextResponse.json({ status: "success" });
     }
     return NextResponse.json({ error: "Processing failed" }, { status: 500 });

@@ -338,7 +338,8 @@ async function createYookassaPayment(
   amount: number,
   description: string,
   telegramId: string,
-  tariffSlug: string
+  tariffSlug: string,
+  messageId?: number
 ) {
   const shopId = process.env.YOOKASSA_SHOP_ID;
   const secretKey = process.env.YOOKASSA_SECRET_KEY;
@@ -373,6 +374,7 @@ async function createYookassaPayment(
         metadata: {
           telegram_id: telegramId,
           tariff_slug: tariffSlug,
+          message_id: messageId, // Store the ID of the message to delete
         },
         save_payment_method: true,
       }),
@@ -1404,7 +1406,8 @@ bot.on("callback_query:data", async (ctx) => {
       price,
       description,
       telegramId,
-      tariffSlug
+      tariffSlug,
+      ctx.msg?.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
@@ -1476,7 +1479,8 @@ bot.on("callback_query:data", async (ctx) => {
       price,
       description,
       telegramId,
-      tariffSlug
+      tariffSlug,
+      ctx.msg?.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
@@ -1519,7 +1523,8 @@ bot.on("callback_query:data", async (ctx) => {
       price,
       description,
       telegramId,
-      tariffSlug
+      tariffSlug,
+      ctx.msg?.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
@@ -1562,7 +1567,8 @@ bot.on("callback_query:data", async (ctx) => {
       price,
       description,
       telegramId,
-      tariffSlug
+      tariffSlug,
+      ctx.msg?.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
