@@ -978,12 +978,10 @@ export async function processSuccessfulPayment({
   telegramId,
   tariffSlug,
   paymentMethodId,
-  amount,
 }: {
   telegramId: string;
   tariffSlug: string;
   paymentMethodId?: string;
-  amount: string;
 }) {
   try {
     // 1. Find User
@@ -1001,9 +999,13 @@ export async function processSuccessfulPayment({
     // We'll try to find a tariff in the DB, or parse the slug for duration if using hardcoded logic
     // Common pattern: premium_1 (1 month), premium_12 (12 months)
     let durationDays = 30; // default
-    if (tariffSlug.endsWith("_12")) durationDays = 365;
-    else if (tariffSlug.endsWith("_6")) durationDays = 180;
-    else if (tariffSlug.endsWith("_3")) durationDays = 90;
+    if (tariffSlug.endsWith("_12")) {
+      durationDays = 365;
+    } else if (tariffSlug.endsWith("_6")) {
+      durationDays = 180;
+    } else if (tariffSlug.endsWith("_3")) {
+      durationDays = 90;
+    }
 
     // Also check Tariff table if you use it dynamically
     /*

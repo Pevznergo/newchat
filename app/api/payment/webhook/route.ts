@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       telegramId,
       tariffSlug,
       paymentMethodId,
-      amount: payment.amount.value,
+      // amount: payment.amount.value, // Removed as per signature update
     });
 
     if (success) {
