@@ -1,4 +1,17 @@
-import { and, count, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  not,
+  or,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/lib/db";
 import { user } from "@/lib/db/schema";
 
@@ -16,21 +29,34 @@ export async function getDailyStats(): Promise<DailyStats> {
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   // 1. Total Users
-  const [totalResult] = await db.select({ count: count() }).from(user);
+  const [totalResult] = await db
+    .select({ count: count() })
+    .from(user)
+    .where(or(isNull(user.email), not(like(user.email, "guest%"))));
   const totalUsers = totalResult?.count || 0;
 
   // 2. New Users (24h)
   const [newResult] = await db
     .select({ count: count() })
     .from(user)
-    .where(gte(user.createdAt, yesterday));
+    .where(
+      and(
+        gte(user.createdAt, yesterday),
+        or(isNull(user.email), not(like(user.email, "guest%")))
+      )
+    );
   const newUsers24h = newResult?.count || 0;
 
   // 3. Active Users (24h)
   const [activeResult] = await db
     .select({ count: count() })
     .from(user)
-    .where(gte(user.lastVisit, yesterday));
+    .where(
+      and(
+        gte(user.lastVisit, yesterday),
+        or(isNull(user.email), not(like(user.email, "guest%")))
+      )
+    );
   const activeUsers24h = activeResult?.count || 0;
 
   // 4. Growth History (Last 7 days)
@@ -41,7 +67,13 @@ export async function getDailyStats(): Promise<DailyStats> {
     const [dayResult] = await db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(user)
-      .where(and(gte(user.createdAt, dayStart), lt(user.createdAt, dayEnd)));
+      .where(
+        and(
+          gte(user.createdAt, dayStart),
+          lt(user.createdAt, dayEnd),
+          or(isNull(user.email), not(like(user.email, "guest%")))
+        )
+      );
     growthHistory.push(dayResult?.count || 0);
   }
 
@@ -49,19 +81,29 @@ export async function getDailyStats(): Promise<DailyStats> {
   const [paidResult] = await db
     .select({ count: sql<number>`cast(count(*) as integer)` })
     .from(user)
-    .where(eq(user.hasPaid, true));
+    .where(
+      and(
+        eq(user.hasPaid, true),
+        or(isNull(user.email), not(like(user.email, "guest%")))
+      )
+    );
   const premiumCount = paidResult?.count || 0;
   const freeCount = totalUsers - premiumCount;
 
-  // 6. Traffic Sources (QR Codes / Start Param)
+  // 6. Traffic Sources (QR Codes / UTM)
   const sourcesResult = await db
     .select({
-      source: user.startParam,
+      source: sql<string>`COALESCE(${user.startParam}, ${user.utmSource})`,
       count: sql<number>`cast(count(*) as integer)`,
     })
     .from(user)
-    .where(isNotNull(user.startParam))
-    .groupBy(user.startParam)
+    .where(
+      and(
+        or(isNotNull(user.startParam), isNotNull(user.utmSource)),
+        or(isNull(user.email), not(like(user.email, "guest%")))
+      )
+    )
+    .groupBy(sql`COALESCE(${user.startParam}, ${user.utmSource})`)
     .orderBy(desc(count()))
     .limit(5);
 
