@@ -972,15 +972,80 @@ export async function upsertAiModel(
   }
 }
 
-export async function updateAiModel(modelId: string, data: Partial<AiModel>) {
+// --- Payment Processing ---
+
+export async function processSuccessfulPayment({
+  telegramId,
+  tariffSlug,
+  paymentMethodId,
+  amount,
+}: {
+  telegramId: string;
+  tariffSlug: string;
+  paymentMethodId?: string;
+  amount: string;
+}) {
   try {
-    return await db
-      .update(aiModel)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(aiModel.modelId, modelId))
-      .returning();
+    // 1. Find User
+    const [userRecord] = await db
+      .select()
+      .from(user)
+      .where(eq(user.telegramId, telegramId));
+
+    if (!userRecord) {
+      console.error(`User with telegramId ${telegramId} not found`);
+      return false;
+    }
+
+    // 2. Find Tariff (if applicable) or determine duration from slug
+    // We'll try to find a tariff in the DB, or parse the slug for duration if using hardcoded logic
+    // Common pattern: premium_1 (1 month), premium_12 (12 months)
+    let durationDays = 30; // default
+    if (tariffSlug.endsWith("_12")) durationDays = 365;
+    else if (tariffSlug.endsWith("_6")) durationDays = 180;
+    else if (tariffSlug.endsWith("_3")) durationDays = 90;
+
+    // Also check Tariff table if you use it dynamically
+    /*
+    const [tariffRecord] = await db.select().from(tariff).where(eq(tariff.slug, tariffSlug));
+    if (tariffRecord && tariffRecord.durationDays) {
+       durationDays = tariffRecord.durationDays;
+    }
+    */
+
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(startDate.getDate() + durationDays);
+
+    // 3. Create Subscription
+    await db.insert(subscription).values({
+      userId: userRecord.id,
+      tariffSlug,
+      paymentMethodId, // Save the recurring token!
+      status: "active",
+      autoRenew: !!paymentMethodId, // If we have a token, auto-renew is possible
+      startDate,
+      endDate,
+    });
+
+    // 4. Update User Status
+    // Unlock premium features
+    await db
+      .update(user)
+      .set({
+        hasPaid: true,
+        // Optional: Reset request count on new subscription start?
+        // requestCount: 0,
+        // lastResetDate: new Date()
+      })
+      .where(eq(user.id, userRecord.id));
+
+    console.log(
+      `processed payment for user ${userRecord.id}, tariff ${tariffSlug}`
+    );
+    return true;
   } catch (error) {
-    console.error("Failed to update AI model", error);
-    throw new ChatSDKError("bad_request:database", "Failed to update AI model");
+    console.error("Failed to process payment", error);
+    return false;
   }
 }
