@@ -47,7 +47,6 @@ async function main() {
       telegramId: testTelegramId,
       tariffSlug,
       paymentMethodId,
-      amount: "750.00",
     });
 
     if (result) {
