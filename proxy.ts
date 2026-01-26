@@ -15,7 +15,8 @@ export async function proxy(request: NextRequest) {
 
   if (
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/telegram")
+    pathname.startsWith("/api/telegram") ||
+    pathname.startsWith("/api/payment")
   ) {
     return NextResponse.next();
   }
