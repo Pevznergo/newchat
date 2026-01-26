@@ -12,14 +12,14 @@ import {
   sql,
 } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { message, user } from "@/lib/db/schema";
+import { user } from "@/lib/db/schema";
 
 export interface DailyStats {
   totalUsers: number;
   newUsers24h: number;
   activeUsers24h: number;
-  messages24h: number;
-  messageHistory: number[];
+  clicks24h: number; // Users with source (startParam/utm)
+  clickHistory: number[];
   growthHistory: number[]; // Last 7 days new user counts
   tariffBreakdown: { free: number; premium: number };
   sources: { source: string; count: number }[];
@@ -60,9 +60,9 @@ export async function getDailyStats(): Promise<DailyStats> {
     );
   const activeUsers24h = activeResult?.count || 0;
 
-  // 4. Growth History (Last 7 days) & Message History
+  // 4. Growth History (Last 7 days) & Click History (Users with Source)
   const growthHistory: number[] = [];
-  const messageHistory: number[] = [];
+  const clickHistory: number[] = [];
 
   for (let i = 6; i >= 0; i--) {
     const dayStart = new Date(now.getTime() - (i + 1) * 24 * 60 * 60 * 1000);
@@ -81,22 +81,39 @@ export async function getDailyStats(): Promise<DailyStats> {
       );
     growthHistory.push(dayResult?.count || 0);
 
-    // Messages
-    const [msgResult] = await db
+    // Clicks (Users with source)
+    const [clickResult] = await db
       .select({ count: sql<number>`cast(count(*) as integer)` })
-      .from(message)
+      .from(user)
       .where(
-        and(gte(message.createdAt, dayStart), lt(message.createdAt, dayEnd))
+        and(
+          gte(user.createdAt, dayStart),
+          lt(user.createdAt, dayEnd),
+          or(
+            sql`NULLIF(${user.startParam}, '') IS NOT NULL`,
+            sql`NULLIF(${user.utmSource}, '') IS NOT NULL`
+          ),
+          or(isNull(user.email), not(like(user.email, "guest%")))
+        )
       );
-    messageHistory.push(msgResult?.count || 0);
+    clickHistory.push(clickResult?.count || 0);
   }
 
-  // 4.5 Messages 24h (Last entry in history is today/yesterday window, but let's be explicit)
-  const [messagesResult] = await db
+  // 4.5 Clicks 24h
+  const [clicksResult] = await db
     .select({ count: count() })
-    .from(message)
-    .where(gte(message.createdAt, yesterday));
-  const messages24h = messagesResult?.count || 0;
+    .from(user)
+    .where(
+      and(
+        gte(user.createdAt, yesterday),
+        or(
+          sql`NULLIF(${user.startParam}, '') IS NOT NULL`,
+          sql`NULLIF(${user.utmSource}, '') IS NOT NULL`
+        ),
+        or(isNull(user.email), not(like(user.email, "guest%")))
+      )
+    );
+  const clicks24h = clicksResult?.count || 0;
 
   // 5. Tariff Breakdown
   const [paidResult] = await db
@@ -142,8 +159,8 @@ export async function getDailyStats(): Promise<DailyStats> {
     totalUsers,
     newUsers24h,
     activeUsers24h,
-    messages24h,
-    messageHistory,
+    clicks24h,
+    clickHistory,
     growthHistory,
     tariffBreakdown: { free: freeCount, premium: premiumCount },
     sources,

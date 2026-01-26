@@ -11,13 +11,13 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
       totalUsers,
       newUsers24h,
       activeUsers24h,
-      messages24h,
-      messageHistory,
+      clicks24h,
+      clickHistory,
       growthHistory,
       tariffBreakdown,
     } = stats;
 
-    // Generate Chart URL (Dual Axis: Users & Messages)
+    // Generate Chart URL (Dual Axis: Users & Clicks)
     const chartConfig = {
       type: "bar",
       data: {
@@ -34,16 +34,16 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
           },
           {
             type: "bar",
-            label: "Messages",
+            label: "Clicks (Scan)",
             backgroundColor: "rgba(59, 130, 246, 0.5)",
-            data: messageHistory,
-            yAxisID: "y-messages",
+            data: clickHistory,
+            yAxisID: "y-clicks",
           },
         ],
       },
       options: {
         legend: { display: true },
-        title: { display: true, text: "Weekly Growth & Activity" },
+        title: { display: true, text: "Weekly Growth & Scans" },
         scales: {
           yAxes: [
             {
@@ -53,7 +53,7 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
               ticks: { beginAtZero: true, fontColor: "#10b981" },
             },
             {
-              id: "y-messages",
+              id: "y-clicks",
               type: "linear",
               position: "right",
               ticks: { beginAtZero: true, fontColor: "#3b82f6" },
@@ -90,8 +90,8 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
 
         <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 10px;">
            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #dbeafe;">
-             <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">${messages24h}</div>
-             <div style="font-size: 12px; color: #60a5fa;">Messages (Clicks) 24h</div>
+             <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">${clicks24h}</div>
+             <div style="font-size: 12px; color: #60a5fa;">QR/UTM Clicks (24h)</div>
           </div>
         </div>
 
