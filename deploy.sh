@@ -71,4 +71,18 @@ fi
 # Save PM2 list to serve on reboot (optional)
 # pm2 save
 
+# 7. Setup Cron
+echo "⏰ Setting up cron job..."
+CRON_CMD="curl -s http://localhost:3000/api/cron/stats >> /dev/null 2>&1"
+CRON_JOB="0 7,19 * * * $CRON_CMD"
+
+# Check if cron job already exists
+if crontab -l 2>/dev/null | grep -Fq "$CRON_CMD"; then
+    echo "✅ Cron job already exists. Skipping."
+else
+    # Append the new job to crontab
+    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+    echo "✅ Cron job added: $CRON_JOB"
+fi
+
 echo "✅ Deployment successfully completed!"
