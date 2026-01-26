@@ -11,29 +11,61 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
       totalUsers,
       newUsers24h,
       activeUsers24h,
+      messages24h,
+      messageHistory,
       growthHistory,
       tariffBreakdown,
     } = stats;
 
-    // Generate Chart URL
+    // Generate Chart URL (Dual Axis: Users & Messages)
     const chartConfig = {
       type: "bar",
       data: {
         labels: ["-6d", "-5d", "-4d", "-3d", "-2d", "Yesterday", "Today"],
         datasets: [
           {
-            label: "New Users",
+            type: "line",
+            label: "User Growth",
+            borderColor: "#10b981",
+            borderWidth: 2,
+            fill: false,
             data: growthHistory,
-            backgroundColor: "#10b981",
+            yAxisID: "y-users",
+          },
+          {
+            type: "bar",
+            label: "Messages",
+            backgroundColor: "rgba(59, 130, 246, 0.5)",
+            data: messageHistory,
+            yAxisID: "y-messages",
           },
         ],
       },
       options: {
-        legend: { display: false },
-        title: { display: true, text: "Weekly User Growth" },
+        legend: { display: true },
+        title: { display: true, text: "Weekly Growth & Activity" },
+        scales: {
+          yAxes: [
+            {
+              id: "y-users",
+              type: "linear",
+              position: "left",
+              ticks: { beginAtZero: true, fontColor: "#10b981" },
+            },
+            {
+              id: "y-messages",
+              type: "linear",
+              position: "right",
+              ticks: { beginAtZero: true, fontColor: "#3b82f6" },
+              gridLines: { drawOnChartArea: false },
+            },
+          ],
+        },
       },
     };
-    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=300`;
+    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+      JSON.stringify(chartConfig)
+    )}&w=500&h=300`;
 
     // Simple HTML content
     const htmlContent = `
@@ -56,8 +88,15 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
           </div>
         </div>
 
+        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 10px;">
+           <div style="background: #eff6ff; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #dbeafe;">
+             <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">${messages24h}</div>
+             <div style="font-size: 12px; color: #60a5fa;">Messages (Clicks) 24h</div>
+          </div>
+        </div>
+
         <div style="margin-top: 20px; text-align: center;">
-          <img src="${chartUrl}" alt="User Growth Chart" style="max-width: 100%; border-radius: 8px;" />
+          <img src="${chartUrl}" alt="Growth Chart" style="max-width: 100%; border-radius: 8px;" />
         </div>
 
           <h3 style="margin: 0 0 10px; font-size: 16px;">💎 Tariff Distribution</h3>
