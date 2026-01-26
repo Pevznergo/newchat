@@ -29,10 +29,11 @@ type YookassaEvent = {
 export async function POST(request: Request) {
   try {
     const body: YookassaEvent = await request.json();
+    console.log("💳 Webhook Received Body:", JSON.stringify(body, null, 2));
 
     // 1. Check Event Type
     if (body.type !== "notification" || body.event !== "payment.succeeded") {
-      // Ignore other events
+      console.log(`⚠️ Ignoring event: ${body.event} (Type: ${body.type})`);
       return NextResponse.json({ status: "ignored" });
     }
 
