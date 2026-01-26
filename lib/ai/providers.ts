@@ -73,8 +73,8 @@ export function getLanguageModel(modelId: string): LanguageModel {
     return xai(modelName);
   }
 
-   // Handle OpenRouter
-   if (modelId.startsWith("openrouter/")) {
+  // Handle OpenRouter
+  if (modelId.startsWith("openrouter/")) {
     // OpenRouter model IDs often contain slashes, so we join the rest
     const modelName = modelId.split("/").slice(1).join("/");
     return openrouter(modelName);
