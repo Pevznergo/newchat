@@ -20,10 +20,12 @@ import {
   createTelegramUser,
   createUserConsent,
   getAiModels,
+  getAllTariffs,
   getChatsByUserId,
   getLastActiveSubscription,
   getMessageCountByUserId,
   getMessagesByChatId,
+  getTariffBySlug,
   getUserByTelegramId,
   hasUserConsented,
   incrementUserRequestCount,
@@ -283,38 +285,6 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
   };
 }
 
-const PRICING_PLANS = {
-  premium: {
-    base: 750,
-    months_1: 750,
-    months_3: 1800, // 750 * 3 * 0.8
-    months_6: 2925, // 750 * 6 * 0.65
-    months_12: 4500, // 750 * 12 * 0.5
-  },
-  premium_x2: {
-    base: 1250,
-    months_1: 1250,
-    months_3: 3000,
-    months_6: 4875,
-    months_12: 7500,
-  },
-};
-
-const STAR_PRICING = {
-  premium: {
-    months_1: 500,
-    months_3: 1200,
-    months_6: 2000,
-    months_12: 3000,
-  },
-  premium_x2: {
-    months_1: 850,
-    months_3: 2000,
-    months_6: 3250,
-    months_12: 5000,
-  },
-};
-
 const MJ_PRICING = {
   50: 250,
   100: 450,
@@ -352,33 +322,57 @@ function getPremiumKeyboard() {
   };
 }
 
-function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
-  const prices = PRICING_PLANS[plan];
-  // const _label = plan === "premium" ? "Premium" : "Premium X2";
+async function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
+  const allTariffs = await getAllTariffs();
+
+  // Dictionary to store prices: { "1": price, "3": price }
+  const prices: Record<string, number> = {};
+
+  // Filter tariffs for this plan type
+  // Slug format: premium_1, premium_3, premium_x2_1, etc.
+  // Note: premium_x2_1 starts with premium_ but we need to distinguish
+  const prefix = `${plan}_`;
+
+  for (const t of allTariffs) {
+    if (t.slug.startsWith(prefix)) {
+      // Extract months from slug end
+      const parts = t.slug.split("_");
+      const months = parts.at(-1);
+      if (months) {
+        prices[months] = t.priceRub;
+      }
+    }
+  }
+
+  // Helpers to get price safely
+  const p1 = prices["1"] || 0;
+  const p3 = prices["3"] || 0;
+  const p6 = prices["6"] || 0;
+  const p12 = prices["12"] || 0;
 
   return {
     inline_keyboard: [
       [
         {
-          text: `1 месяц – ${prices.months_1}₽`,
+          text: `1 месяц – ${p1}₽`,
           callback_data: `pay_${plan}_1`,
         },
       ],
       [
         {
-          text: `3 месяца – ${prices.months_3}₽ (-20%)`,
+          text: `3 месяца – ${p3}₽ (-20%)`,
           callback_data: `pay_${plan}_3`,
         },
       ],
       [
         {
-          text: `6 месяцев – ${prices.months_6}₽ (-35%)`,
+          text: `6 месяцев – ${p6}₽ (-35%)`,
           callback_data: `pay_${plan}_6`,
         },
       ],
       [
         {
-          text: `12 месяцев – ${prices.months_12}₽ (-50%)`,
+          text: `12 месяцев – ${p12}₽ (-50%)`,
           callback_data: `pay_${plan}_12`,
         },
       ],
@@ -1368,14 +1362,14 @@ bot.on("callback_query:data", async (ctx) => {
   // Handle premium menu navigation
   if (data === "buy_premium") {
     await ctx.editMessageReplyMarkup({
-      reply_markup: getSubscriptionKeyboard("premium"),
+      reply_markup: await getSubscriptionKeyboard("premium"),
     });
     await safeAnswerCallbackQuery(ctx);
     return;
   }
   if (data === "buy_premium_x2") {
     await ctx.editMessageReplyMarkup({
-      reply_markup: getSubscriptionKeyboard("premium_x2"),
+      reply_markup: await getSubscriptionKeyboard("premium_x2"),
     });
     await safeAnswerCallbackQuery(ctx);
     return;
@@ -1405,17 +1399,23 @@ bot.on("callback_query:data", async (ctx) => {
       months = Number.parseInt(cleanArgs.replace("premium_", ""), 10);
     }
 
-    const durationKey =
-      `months_${months}` as keyof typeof PRICING_PLANS.premium;
     const tariffSlug = `${planKey}_${months}`;
-    const description = `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
+
+    // Fetch tariff from DB
+    const tariff = await getTariffBySlug(tariffSlug);
+    if (!tariff) {
+      await safeAnswerCallbackQuery(ctx, "Тариф не найден.", {
+        show_alert: true,
+      });
+      return;
+    }
+
+    const description = tariff.name; // or construct: `${planKey === "premium_x2" ? "Premium X2" : "Premium"} (${months} мес)`;
+    const priceRub = tariff.priceRub;
+    const priceStars = tariff.priceStars;
 
     if (isStars) {
-      // Safe cast or check
-      const starPlan = STAR_PRICING[planKey] as Record<string, number>;
-      const starsPrice = starPlan[durationKey];
-
-      if (!starsPrice) {
+      if (!priceStars) {
         await safeAnswerCallbackQuery(ctx, "Error: Price not found");
         return;
       }
@@ -1427,13 +1427,13 @@ bot.on("callback_query:data", async (ctx) => {
         `Оплата подписки ${description}`, // description
         tariffSlug, // payload
         "XTR", // currency
-        [{ label: description, amount: starsPrice }] // prices
+        [{ label: description, amount: priceStars }] // prices
       );
       return;
     }
 
     // Existing YooKassa Logic
-    const price = PRICING_PLANS[planKey][durationKey]; // e.g. 750
+    const price = priceRub; // From DB tariff
 
     if (!price) {
       await safeAnswerCallbackQuery(ctx, "Error: Invalid plan");

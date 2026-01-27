@@ -42,10 +42,27 @@ import { generateHashedPassword } from "./utils";
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 
-// biome-ignore lint: Forbidden non-null assertion.
 import { db } from "@/lib/db";
+import { tariff } from "@/lib/db/schema"; // Ensure tariff schema is imported
 
-export { db };
+export async function getAllTariffs() {
+  try {
+    return await db.select().from(tariff).where(eq(tariff.isActive, true));
+  } catch (error) {
+    console.error("Failed to get tariffs", error);
+    return [];
+  }
+}
+
+export async function getTariffBySlug(slug: string) {
+  try {
+    const [t] = await db.select().from(tariff).where(eq(tariff.slug, slug));
+    return t;
+  } catch (error) {
+    console.error(`Failed to get tariff by slug ${slug}`, error);
+    return null;
+  }
+}
 
 export async function getUser(email: string): Promise<User[]> {
   try {
