@@ -1059,7 +1059,7 @@ bot.command("start", async (ctx) => {
 
     // Sanitize URL and force HTTPS
     let baseUrl = (
-      process.env.NEXTAUTH_URL || "https://app.aporto.tech"
+      process.env.NEXTAUTH_URL || "https://aporto.tech/app"
     ).replace(/\/$/, "");
     if (
       !baseUrl.startsWith("https://") &&
