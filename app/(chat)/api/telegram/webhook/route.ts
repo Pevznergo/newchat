@@ -1111,12 +1111,6 @@ bot.command("clan", async (ctx) => {
 });
 
 bot.hears("⚔️ Мой клан", async (ctx) => {
-  try {
-    await ctx.deleteMessage();
-  } catch (e) {
-    console.error("Failed to delete message:", e);
-  }
-
   await ctx.reply("Откройте приложение клана:", {
     reply_markup: {
       inline_keyboard: [
