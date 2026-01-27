@@ -283,7 +283,7 @@ export const aiModel = pgTable("AiModel", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   modelId: varchar("model_id", { length: 255 }).unique().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  provider: varchar("provider", { length: 100 }).notNull(), // openai, openrouter, etc
+  provider: varchar("provider_id", { length: 100 }).notNull(), // openai, openrouter, etc
   type: varchar("type", { length: 50 }).notNull(), // text, image, video
   cost: integer("cost").notNull().default(1),
   isPremium: boolean("is_premium").default(false),
