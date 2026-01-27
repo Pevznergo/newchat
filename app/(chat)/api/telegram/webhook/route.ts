@@ -1070,18 +1070,23 @@ bot.command("start", async (ctx) => {
 
     // Debug command
     if (ctx.message?.text === "/debug") {
-      await ctx.reply(`Base URL: ${baseUrl}\nButton URL: ${baseUrl}?view=clan`);
+      await ctx.reply(
+        `Base URL: ${baseUrl}\nButton URL: https://t.me/aporto_bot/app?startapp=clan`
+      );
       return;
     }
-
-    const appUrl = baseUrl;
 
     await ctx.reply(welcomeMessage, {
       reply_markup: {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}?view=clan` } }],
+          [
+            {
+              text: "⚔️ Мой клан",
+              web_app: { url: "https://t.me/aporto_bot/app?startapp=clan" },
+            },
+          ],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,

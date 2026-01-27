@@ -19,7 +19,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api/payment") ||
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/clan") ||
-    request.nextUrl.searchParams.get("view") === "clan"
+    request.nextUrl.searchParams.get("view") === "clan" ||
+    request.nextUrl.searchParams.get("tgWebAppStartParam") === "clan"
   ) {
     return NextResponse.next();
   }

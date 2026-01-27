@@ -7,11 +7,14 @@ import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { generateUUID } from "@/lib/utils";
 
 export default async function Page(props: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; tgWebAppStartParam?: string }>;
 }) {
   const searchParams = await props.searchParams;
 
-  if (searchParams.view === "clan") {
+  if (
+    searchParams.view === "clan" ||
+    searchParams.tgWebAppStartParam === "clan"
+  ) {
     // Override: Render Clan Page if requested
     // This solves the issue where Telegram doesn't pass initData to non-root subpaths
     return <ClanPage />;
