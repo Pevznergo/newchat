@@ -1015,6 +1015,12 @@ bot.command("unsubscribe", async (ctx) => {
   }
 
   try {
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // ignore
+    }
+
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       await ctx.reply("❌ Пользователь не найден. Нажмите /start");
