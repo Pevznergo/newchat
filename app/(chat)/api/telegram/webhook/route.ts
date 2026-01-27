@@ -1906,8 +1906,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     }
 
     const sub = await getLastActiveSubscription(user.id);
+    console.log(
+      `[Unsubscribe Debug] User: ${user.id} (${telegramId}), Sub found:`,
+      sub ? sub.id : "None"
+    );
+
     if (!sub) {
-      await ctx.reply("❌ У вас нет активной подписки.");
+      await ctx.reply(`❌ У вас нет активной подписки. (Debug: ${user.id})`);
       return;
     }
 
