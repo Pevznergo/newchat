@@ -1071,7 +1071,7 @@ bot.command("start", async (ctx) => {
     // Debug command
     if (ctx.message?.text === "/debug") {
       await ctx.reply(
-        `Base URL: ${baseUrl}\nButton URL: https://t.me/aporto_bot/app?startapp=clan`
+        `Base URL: ${baseUrl}\nButton URL: https://t.me/aporto_bot/app?startapp=app`
       );
       return;
     }

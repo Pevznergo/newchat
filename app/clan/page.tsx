@@ -135,7 +135,7 @@ export default function ClanPage() {
       return;
     }
     navigator.clipboard.writeText(
-      `https://t.me/GPTaporto_bot?start=clan_${clan.inviteCode}`
+      `https://t.me/aporto_bot?start=clan_${clan.inviteCode}`
     );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -152,7 +152,7 @@ export default function ClanPage() {
         "channels",
       ]);
     } else {
-      const url = `https://t.me/share/url?url=https://t.me/GPTaporto_bot?start=clan_${clan.inviteCode}&text=Вступай в мой клан!`;
+      const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=Вступай в мой клан!`;
       window.open(url, "_blank");
     }
   };
@@ -548,7 +548,7 @@ export default function ClanPage() {
         <div className="max-w-md mx-auto space-y-3">
           <div className="bg-[#2c2c2e] p-1 rounded-xl flex items-center gap-2 pr-2">
             <div className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-300 truncate font-mono outline-none">
-              t.me/GPTaporto_bot?start=clan_{clan.inviteCode}
+              t.me/aporto_bot?start=clan_{clan.inviteCode}
             </div>
             {/* Circle Button for Copy */}
             <button
