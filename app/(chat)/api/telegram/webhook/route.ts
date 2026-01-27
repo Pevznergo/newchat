@@ -1130,9 +1130,13 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
           [
             {
               text: "⚔️ Мой клан",
+<<<<<<< HEAD
               web_app: {
                 url: "https://aporto.tech/app",
               },
+=======
+              web_app: { url: "https://aporto.tech/app" },
+>>>>>>> parent of d4983bb (Update route.ts)
             },
           ],
           ["🚀 Премиум", "👤 Мой профиль"],
@@ -1142,20 +1146,6 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
       },
     }
   );
-
-  // Send clan button as inline keyboard
-  await ctx.reply("Или откройте приложение клана:", {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "🏰 Открыть Клан",
-            url: "https://t.me/aporto_bot/app",
-          },
-        ],
-      ],
-    },
-  });
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {
