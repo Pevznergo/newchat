@@ -1103,16 +1103,17 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("clan", async (ctx) => {
-  await ctx.reply("Откройте приложение клана:", {
+  await ctx.reply("Откройте приложение клана через кнопку ниже:", {
     reply_markup: {
-      inline_keyboard: [
+      keyboard: [
         [
           {
-            text: "🏰 Открыть Клан",
+            text: "⚔️ Мой клан",
             web_app: { url: "https://aporto.tech/app" },
           },
         ],
       ],
+      resize_keyboard: true,
     },
   });
 });
@@ -2403,7 +2404,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
                     [
                       {
                         text: "🎡 Испытать удачу",
-                        web_app: { url: "https://aporto.tech/app" },
+                        callback_data: "spin_wheel",
                       },
                     ],
                   ],
