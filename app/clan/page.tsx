@@ -27,33 +27,33 @@ const LEVELS = [
   {
     level: 1,
     benefits: [
-      { text: "15 Free Requests / week", icon: "⚡" },
-      { text: "Basic Models Access", icon: "🤖" },
-      { text: "7 colors for clan name", icon: "🎨" },
+      { text: "15 бесплатных запросов / неделю", icon: "⚡" },
+      { text: "Доступ к базовым моделям", icon: "🤖" },
+      { text: "7 цветов для названия клана", icon: "🎨" },
     ],
   },
   {
     level: 2,
     benefits: [
-      { text: "30 Free Requests / week", icon: "⚡" },
-      { text: "Priority Queue", icon: "🚀" },
-      { text: "7 color schemes for links", icon: "🔗" },
+      { text: "30 бесплатных запросов / неделю", icon: "⚡" },
+      { text: "Приоритетная очередь", icon: "🚀" },
+      { text: "7 цветовых схем для ссылок", icon: "🔗" },
     ],
   },
   {
     level: 3,
     benefits: [
-      { text: "50 Free Requests / week", icon: "⚡" },
-      { text: "3 Image Generations", icon: "🎨" },
-      { text: "Auto-translate messages", icon: "🌐" },
+      { text: "50 бесплатных запросов / неделю", icon: "⚡" },
+      { text: "3 генерации изображений", icon: "🎨" },
+      { text: "Авто-перевод сообщений", icon: "🌐" },
     ],
   },
   {
     level: 5,
     benefits: [
-      { text: "Unlimited GPT-5 Nano", icon: "♾️" },
-      { text: "Unlimited Gemini Flash", icon: "♾️" },
-      { text: "10 Image Generations", icon: "🎨" },
+      { text: "Безлимит GPT-5 Nano", icon: "♾️" },
+      { text: "Безлимит Gemini Flash", icon: "♾️" },
+      { text: "10 генераций изображений", icon: "🎨" },
     ],
   },
 ];
@@ -121,7 +121,7 @@ export default function ClanPage() {
         }
       } catch (err) {
         console.error(err);
-        setError("Failed to load clan data.");
+        setError("Не удалось загрузить данные клана.");
       } finally {
         setLoading(false);
       }
@@ -152,7 +152,7 @@ export default function ClanPage() {
         "channels",
       ]);
     } else {
-      const url = `https://t.me/share/url?url=https://t.me/GPTaporto_bot?start=clan_${clan.inviteCode}&text=Join my clan!`;
+      const url = `https://t.me/share/url?url=https://t.me/GPTaporto_bot?start=clan_${clan.inviteCode}&text=Вступай в мой клан!`;
       window.open(url, "_blank");
     }
   };
@@ -183,7 +183,7 @@ export default function ClanPage() {
     const res = await createClanAction(initData, createName);
     setActionLoading(false);
 
-    if (res.success && res.clan) {
+    if (res.success && "clan" in res) {
       window.location.reload();
     } else {
       console.error(`Failed: ${res.error}`);
@@ -222,10 +222,12 @@ export default function ClanPage() {
           <Shield className="w-8 h-8 text-blue-400" />
         </div>
 
-        <h1 className="text-2xl font-bold mb-2 text-center">Join the Battle</h1>
+        <h1 className="text-2xl font-bold mb-2 text-center">
+          Присоединяйтесь к битве
+        </h1>
         <p className="text-gray-400 text-center mb-10 max-w-xs text-sm">
-          Create a clan to earn bonuses or join an existing one using an invite
-          code.
+          Создайте клан, чтобы получать бонусы, или вступите по коду
+          приглашения.
         </p>
 
         {/* Create Section */}
@@ -233,7 +235,7 @@ export default function ClanPage() {
           <input
             className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
             onChange={(e) => setCreateName(e.target.value)}
-            placeholder="Clan Name"
+            placeholder="Название клана"
             type="text"
             value={createName}
           />
@@ -248,14 +250,14 @@ export default function ClanPage() {
             ) : (
               <Plus className="w-5 h-5" />
             )}
-            Create Clan
+            Создать клан
           </button>
         </div>
 
         <div className="flex items-center gap-4 w-full max-w-sm mb-8">
           <div className="h-[1px] bg-[#2c2c2e] flex-1" />
           <span className="text-gray-500 text-xs uppercase font-medium">
-            OR
+            ИЛИ
           </span>
           <div className="h-[1px] bg-[#2c2c2e] flex-1" />
         </div>
@@ -266,7 +268,7 @@ export default function ClanPage() {
             <input
               className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500 transition-colors"
               onChange={(e) => setJoinCode(e.target.value)}
-              placeholder="Invite Code (e.g. CLAN-XYZ)"
+              placeholder="Код приглашения (например: CLAN-XYZ)"
               style={{ textTransform: "uppercase" }}
               type="text"
               value={joinCode}
@@ -283,14 +285,14 @@ export default function ClanPage() {
             ) : (
               <ArrowRight className="w-5 h-5" />
             )}
-            Join by Code
+            Вступить по коду
           </button>
         </div>
 
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-500">
-            Received a link? <br /> Open the link in Telegram to join
-            automatically.
+            Получили ссылку? <br /> Откройте ее в Telegram для автоматического
+            вступления.
           </p>
         </div>
       </div>
@@ -301,16 +303,16 @@ export default function ClanPage() {
     return (
       <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white p-4 text-center">
         <div>
-          <p className="mb-4 text-red-400">{error || "Something went wrong"}</p>
+          <p className="mb-4 text-red-400">{error || "Что-то пошло не так"}</p>
           <p className="text-gray-500 text-sm mb-4">
-            Are you opening this from Telegram?
+            Вы открываете это из Telegram?
           </p>
           <button
             className="bg-[#2c2c2e] px-4 py-2 rounded-lg text-sm"
             onClick={() => window.location.reload()}
             type="button"
           >
-            Retry
+            Повторить
           </button>
         </div>
       </div>
@@ -371,15 +373,15 @@ export default function ClanPage() {
         </div>
 
         <p className="text-gray-400 text-sm text-center max-w-xs mx-auto mb-8 leading-relaxed">
-          Clan members boost the group level and unlock additional
-          possibilities.
+          Участники клана повышают уровень группы и открывают дополнительные
+          возможности.
         </p>
 
         {/* Level Stats Bar */}
         <div className="w-full max-w-sm">
           <div className="flex justify-between text-xs text-blue-300 font-medium mb-2 px-1">
-            <span>Level {clan.level}</span>
-            <span>Level {clan.nextLevel}</span>
+            <span>Уровень {clan.level}</span>
+            <span>Уровень {clan.nextLevel}</span>
           </div>
 
           {/* Progress Track */}
@@ -393,7 +395,7 @@ export default function ClanPage() {
 
           <div className="flex justify-between items-center mt-2 text-[10px] text-gray-500 px-1">
             <div className="flex gap-3">
-              <span>{clan.membersCount} Members</span>
+              <span>{clan.membersCount} Участников</span>
               <span>{clan.proMembersCount} Pro</span>
             </div>
             <span>{clan.nextLevelRequirements}</span>
@@ -413,7 +415,7 @@ export default function ClanPage() {
           onClick={() => setActiveTab("overview")}
           type="button"
         >
-          Overview
+          Обзор
           {activeTab === "overview" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />
           )}
@@ -428,7 +430,7 @@ export default function ClanPage() {
           onClick={() => setActiveTab("members")}
           type="button"
         >
-          Members
+          Участники
           {activeTab === "members" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />
           )}
@@ -453,7 +455,7 @@ export default function ClanPage() {
                 <div className="flex items-center gap-4 mb-4">
                   <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#2c2c2e]" />
                   <div className="px-5 py-1.5 rounded-full bg-gradient-to-r from-[#7059e3] to-[#9c71e8] text-white text-xs font-bold shadow-lg shadow-purple-900/40">
-                    Available at Level {lvl.level}:
+                    Доступно на уровне {lvl.level}:
                   </div>
                   <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#2c2c2e]" />
                 </div>
@@ -541,7 +543,7 @@ export default function ClanPage() {
             type="button"
           >
             <Share2 className="w-5 h-5" />
-            Share Link
+            Поделиться
           </button>
         </div>
       </div>

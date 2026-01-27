@@ -48,19 +48,19 @@ function getNextLevelRequirements(
   proMembers: number
 ) {
   if (level >= 5) {
-    return "MAX LEVEL";
+    return "МАКС. УРОВЕНЬ";
   }
   if (level === 4) {
-    return `Need ${Math.max(0, 15 - totalMembers)} more Users & ${Math.max(0, 3 - proMembers)} more Pro`;
+    return `Нужно еще ${Math.max(0, 15 - totalMembers)} чел. и ${Math.max(0, 3 - proMembers)} Pro`;
   }
   if (level === 3) {
-    return `Need ${Math.max(0, 2 - proMembers)} more Pro Users`;
+    return `Нужно еще ${Math.max(0, 2 - proMembers)} Pro`;
   } // Lvl 3->4 needs 2 Pro
   if (level === 2) {
-    return `Need ${Math.max(0, 10 - totalMembers)} more Users & 1 Pro`;
+    return `Нужно еще ${Math.max(0, 10 - totalMembers)} чел. и 1 Pro`;
   }
   if (level === 1) {
-    return `Need ${Math.max(0, 2 - totalMembers)} more Users`;
+    return `Нужно еще ${Math.max(0, 2 - totalMembers)} чел.`;
   }
   return "";
 }
