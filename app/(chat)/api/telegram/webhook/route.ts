@@ -545,6 +545,7 @@ async function checkAndEnforceLimits(
   let limit = 0;
   let currentUsage = 0;
   let isUnlimited = false;
+  let effectiveCost = cost;
 
   // Determine if image request based on modelId or cost logic?
   // Ideally passed modelId helps.
@@ -607,7 +608,7 @@ async function checkAndEnforceLimits(
       // Let's use `weeklyImageUsage` as count.
       limit = config.benefits.weeklyImageGenerations;
       currentUsage = user.weeklyImageUsage || 0;
-      cost = 1; // 1 generation
+      effectiveCost = 1; // 1 generation
     } else {
       // Text
       limit = config.benefits.weeklyTextCredits;
@@ -619,13 +620,13 @@ async function checkAndEnforceLimits(
         config.benefits.unlimitedModels?.includes(modelId || "")
       ) {
         isUnlimited = true;
-        cost = 0;
+        effectiveCost = 0;
       }
     }
   }
 
   // Check Limit
-  if (!isUnlimited && currentUsage + cost > limit) {
+  if (!isUnlimited && currentUsage + effectiveCost > limit) {
     let message = "";
     let buttons: any[] = [];
 
@@ -674,13 +675,15 @@ async function checkAndEnforceLimits(
   // Increment Usage
   if (user.hasPaid) {
     // Paid uses requestCount
-    await incrementUserRequestCount(user.id, cost);
+    await incrementUserRequestCount(user.id, effectiveCost);
   } else if (isImage) {
     await incrementWeeklyImageUsage(user.id, 1); // Helper needed? Or manual update.
     // We can use incrementUserRequestCount logic but for weeklyImageUsage.
     // I'll need to create query helpers or do raw update here?
     // Better create helpers in queries.ts later.
-  } else if (cost > 0) await incrementWeeklyTextUsage(user.id, cost);
+  } else if (effectiveCost > 0) {
+    await incrementWeeklyTextUsage(user.id, effectiveCost);
+  }
 
   return true;
 }
@@ -1109,7 +1112,9 @@ bot.callbackQuery("clan_join", async (ctx) => {
 
 bot.callbackQuery("clan_leave", async (ctx) => {
   const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
-  if (!user) return;
+  if (!user) {
+    return;
+  }
   const result = await leaveClan(user.id);
   if (result.success) {
     await ctx.reply("Вы покинули клан.");
