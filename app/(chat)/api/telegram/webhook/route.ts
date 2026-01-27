@@ -1081,14 +1081,7 @@ bot.command("start", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [
-            {
-              text: "⚔️ Мой клан",
-              web_app: {
-                url: "https://aporto.tech/app",
-              },
-            },
-          ],
+          ["⚔️ Мой клан"],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
@@ -1103,45 +1096,33 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("clan", async (ctx) => {
-  await ctx.reply("Откройте приложение клана через кнопку ниже:", {
+  await ctx.reply("Откройте приложение клана:", {
     reply_markup: {
-      keyboard: [
+      inline_keyboard: [
         [
           {
-            text: "⚔️ Мой клан",
-            web_app: { url: "https://aporto.tech/app" },
+            text: "🏰 Открыть Клан",
+            url: "https://t.me/aporto_bot/app",
           },
         ],
       ],
-      resize_keyboard: true,
     },
   });
 });
 
 bot.hears("⚔️ Мой клан", async (ctx) => {
-  // If this handler triggers, it means the user clicked a text-only button (cached).
-  // We need to refresh their keyboard to the WebApp version.
-
-  await ctx.reply(
-    "Обновляю меню... Нажмите на кнопку еще раз, чтобы открыть приложение.",
-    {
-      reply_markup: {
-        keyboard: [
-          ["📝 Выбрать модель", "🎨 Создать картинку"],
-          ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [
-            {
-              text: "⚔️ Мой клан",
-              web_app: { url: "https://aporto.tech/app" },
-            },
-          ],
-          ["🚀 Премиум", "👤 Мой профиль"],
+  await ctx.reply("Откройте приложение клана:", {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "🏰 Открыть Клан",
+            url: "https://t.me/aporto_bot/app",
+          },
         ],
-        resize_keyboard: true,
-        is_persistent: true,
-      },
-    }
-  );
+      ],
+    },
+  });
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {
@@ -1161,6 +1142,22 @@ bot.callbackQuery("clan_join", async (ctx) => {
       reply_markup: { force_reply: true },
     }
   );
+  await safeAnswerCallbackQuery(ctx);
+});
+
+bot.callbackQuery("spin_wheel", async (ctx) => {
+  await ctx.reply("Откройте приложение клана:", {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "🏰 Открыть Клан",
+            url: "https://t.me/aporto_bot/app",
+          },
+        ],
+      ],
+    },
+  });
   await safeAnswerCallbackQuery(ctx);
 });
 
@@ -2642,7 +2639,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
                   [
                     {
                       text: "Колесо Фортуны",
-                      web_app: { url: "https://t.me/aporto_bot/app" },
+                      callback_data: "spin_wheel",
                     },
                   ],
                 ],
