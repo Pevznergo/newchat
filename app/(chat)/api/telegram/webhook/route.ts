@@ -1085,7 +1085,7 @@ bot.command("start", async (ctx) => {
             {
               text: "⚔️ Мой клан",
               web_app: {
-                url: "https://app.aporto.tech/?tgWebAppStartParam=clan",
+                url: "https://app.aporto.tech/app",
               },
             },
           ],
