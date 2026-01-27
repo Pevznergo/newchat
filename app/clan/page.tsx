@@ -303,7 +303,28 @@ export default function ClanPage() {
     return (
       <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white p-4 text-center">
         <div>
-          <p className="mb-4 text-red-400">{error || "Что-то пошло не так"}</p>
+          <p className="mb-4 text-red-400 font-bold">
+            {error || "Что-то пошло не так"}
+          </p>
+          <div className="text-xs text-gray-500 mb-4 bg-black/20 p-2 rounded text-left overflow-auto max-w-[300px] break-all">
+            <p>
+              URL:{" "}
+              {typeof window !== "undefined" ? window.location.href : "N/A"}
+            </p>
+            <p>
+              InitData Length:{" "}
+              {typeof window !== "undefined" &&
+              window.Telegram?.WebApp?.initData
+                ? window.Telegram.WebApp.initData.length
+                : 0}
+            </p>
+            <p>
+              Platform:{" "}
+              {typeof window !== "undefined"
+                ? window.Telegram?.WebApp?.platform || "Unknown"
+                : "N/A"}
+            </p>
+          </div>
           <p className="text-gray-500 text-sm mb-4">
             Вы открываете это из Telegram?
           </p>
@@ -559,6 +580,7 @@ declare global {
         initData: string;
         expand: () => void;
         switchInlineQuery: (query: string, types?: string[]) => void;
+        platform?: string;
       };
     };
   }

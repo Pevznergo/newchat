@@ -1057,8 +1057,24 @@ bot.command("start", async (ctx) => {
 
 🎸 МУЗЫКА: введите /suno, выберите жанр и добавьте текст песни.`;
 
-    const appUrl =
-      process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
+    // Sanitize URL and force HTTPS
+    let baseUrl = (
+      process.env.NEXTAUTH_URL || "https://app.aporto.tech"
+    ).replace(/\/$/, "");
+    if (
+      !baseUrl.startsWith("https://") &&
+      !baseUrl.startsWith("http://localhost")
+    ) {
+      baseUrl = baseUrl.replace(/^http:\/\//, "https://");
+    }
+
+    // Debug command
+    if (ctx.message?.text === "/debug") {
+      await ctx.reply(`Base URL: ${baseUrl}\nButton URL: ${baseUrl}/clan`);
+      return;
+    }
+
+    const appUrl = baseUrl;
 
     await ctx.reply(welcomeMessage, {
       reply_markup: {
