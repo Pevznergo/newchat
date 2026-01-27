@@ -1127,12 +1127,6 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [
-            {
-              text: "⚔️ Мой клан",
-              web_app: { url: "https://aporto.tech/app" },
-            },
-          ],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
@@ -1140,6 +1134,20 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
       },
     }
   );
+
+  // Send clan button as inline keyboard
+  await ctx.reply("Или откройте приложение клана:", {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "🏰 Открыть Клан",
+            url: "https://t.me/aporto_bot/app",
+          },
+        ],
+      ],
+    },
+  });
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {
