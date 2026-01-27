@@ -1,18 +1,26 @@
 "use client";
 
 import {
+  ArrowRight,
   Check,
   Copy,
   Crown,
   Loader2,
   Pencil,
+  Plus,
   Share2,
+  Shield,
   Star,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { fetchClanData, updateClanNameAction } from "./actions";
+import {
+  createClanAction,
+  fetchClanData,
+  joinClanAction,
+  updateClanNameAction,
+} from "./actions";
 
 // Levels Config (Frontend Display)
 const LEVELS = [
@@ -75,7 +83,9 @@ export default function ClanPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clan, setClan] = useState<ClanData | null>(null);
+  const [inClan, setInClan] = useState(false);
 
+  // UI State
   const [activeTab, setActiveTab] = useState<"overview" | "members">(
     "overview"
   );
@@ -83,31 +93,31 @@ export default function ClanPage() {
   const [editedName, setEditedName] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Creation / Join State
+  const [createName, setCreateName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
   useEffect(() => {
-    // Expand Telegram WebApp
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.expand();
     }
 
     const initData = window.Telegram?.WebApp?.initData;
 
-    // In dev, if no initData, we might want to mock for UI testing
-    // Or just show standard loading/error.
-    // For now, let's try to fetch even if empty (action will return error).
-
     async function load() {
       try {
-        // Pass "" if undefined, action handles it
         const res = await fetchClanData(initData || "");
 
         if (res.error) {
           setError(res.error);
         } else if (res.inClan && res.clan) {
+          setInClan(true);
           setClan(res.clan as ClanData);
           setEditedName(res.clan.name);
         } else {
-          // Not in clan - Redirect or Show Create/Join (not implemented fully in this view yet)
-          setError("You are not in a clan. use /clan menu to create one.");
+          // Not in clan, show No Clan UI
+          setInClan(false);
         }
       } catch (err) {
         console.error(err);
@@ -152,7 +162,6 @@ export default function ClanPage() {
       return;
     }
     const oldName = clan.name;
-    // Optimistic update
     setClan((prev) => (prev ? { ...prev, name: editedName } : null));
     setIsEditing(false);
 
@@ -160,9 +169,40 @@ export default function ClanPage() {
     const res = await updateClanNameAction(initData, editedName);
 
     if (!res.success) {
-      // Revert
       setClan((prev) => (prev ? { ...prev, name: oldName } : null));
       console.error(`Failed to update name: ${res.error || "Unknown error"}`);
+    }
+  };
+
+  const handleCreateClan = async () => {
+    if (!createName.trim()) {
+      return;
+    }
+    setActionLoading(true);
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const res = await createClanAction(initData, createName);
+    setActionLoading(false);
+
+    if (res.success && res.clan) {
+      window.location.reload();
+    } else {
+      console.error(`Failed: ${res.error}`);
+    }
+  };
+
+  const handleJoinClan = async () => {
+    if (!joinCode.trim()) {
+      return;
+    }
+    setActionLoading(true);
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const res = await joinClanAction(initData, joinCode);
+    setActionLoading(false);
+
+    if (res.success) {
+      window.location.reload();
+    } else {
+      console.error(`Failed: ${res.error}`);
     }
   };
 
@@ -174,19 +214,110 @@ export default function ClanPage() {
     );
   }
 
-  if (error || !clan) {
+  // --- No Clan View ---
+  if (!inClan && !error) {
     return (
-      <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white p-4 text-center">
-        <div>
-          <p className="mb-4 text-red-400">{error || "Something went wrong"}</p>
-          <p className="text-gray-500 text-sm">
-            Open this page from Telegram Bot
+      <div className="min-h-screen bg-[#1c1c1e] text-white font-sans overflow-x-hidden p-6 flex flex-col items-center justify-center">
+        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 ring-1 ring-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+          <Shield className="w-8 h-8 text-blue-400" />
+        </div>
+
+        <h1 className="text-2xl font-bold mb-2 text-center">Join the Battle</h1>
+        <p className="text-gray-400 text-center mb-10 max-w-xs text-sm">
+          Create a clan to earn bonuses or join an existing one using an invite
+          code.
+        </p>
+
+        {/* Create Section */}
+        <div className="w-full max-w-sm space-y-3 mb-8">
+          <input
+            className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+            onChange={(e) => setCreateName(e.target.value)}
+            placeholder="Clan Name"
+            type="text"
+            value={createName}
+          />
+          <button
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={actionLoading || !createName.trim()}
+            onClick={handleCreateClan}
+            type="button"
+          >
+            {actionLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+            Create Clan
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4 w-full max-w-sm mb-8">
+          <div className="h-[1px] bg-[#2c2c2e] flex-1" />
+          <span className="text-gray-500 text-xs uppercase font-medium">
+            OR
+          </span>
+          <div className="h-[1px] bg-[#2c2c2e] flex-1" />
+        </div>
+
+        {/* Join Section */}
+        <div className="w-full max-w-sm space-y-3">
+          <div className="relative">
+            <input
+              className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500 transition-colors"
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="Invite Code (e.g. CLAN-XYZ)"
+              style={{ textTransform: "uppercase" }}
+              type="text"
+              value={joinCode}
+            />
+          </div>
+          <button
+            className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+            disabled={actionLoading || !joinCode.trim()}
+            onClick={handleJoinClan}
+            type="button"
+          >
+            {actionLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <ArrowRight className="w-5 h-5" />
+            )}
+            Join by Code
+          </button>
+        </div>
+
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-500">
+            Received a link? <br /> Open the link in Telegram to join
+            automatically.
           </p>
         </div>
       </div>
     );
   }
 
+  if (error || !clan) {
+    return (
+      <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white p-4 text-center">
+        <div>
+          <p className="mb-4 text-red-400">{error || "Something went wrong"}</p>
+          <p className="text-gray-500 text-sm mb-4">
+            Are you opening this from Telegram?
+          </p>
+          <button
+            className="bg-[#2c2c2e] px-4 py-2 rounded-lg text-sm"
+            onClick={() => window.location.reload()}
+            type="button"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Clan View ---
   return (
     <div className="min-h-screen bg-[#1c1c1e] text-white font-sans overflow-x-hidden selection:bg-blue-500/30">
       {/* Header */}

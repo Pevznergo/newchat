@@ -148,3 +148,41 @@ export async function updateClanNameAction(initData: string, newName: string) {
   revalidatePath("/clan");
   return { success: true };
 }
+
+import { createClan, joinClan } from "@/lib/clan/actions";
+
+export async function createClanAction(initData: string, name: string) {
+  const telegramUser = parseInitData(initData);
+  if (!telegramUser || !telegramUser.id) {
+    return { success: false, error: "Invalid auth" };
+  }
+
+  const [user] = await getUserByTelegramId(telegramUser.id.toString());
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+
+  const res = await createClan(user.id, name);
+  if (res.success) {
+    revalidatePath("/clan");
+  }
+  return res;
+}
+
+export async function joinClanAction(initData: string, code: string) {
+  const telegramUser = parseInitData(initData);
+  if (!telegramUser || !telegramUser.id) {
+    return { success: false, error: "Invalid auth" };
+  }
+
+  const [user] = await getUserByTelegramId(telegramUser.id.toString());
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+
+  const res = await joinClan(user.id, code);
+  if (res.success) {
+    revalidatePath("/clan");
+  }
+  return res;
+}
