@@ -1085,7 +1085,7 @@ bot.command("start", async (ctx) => {
             {
               text: "⚔️ Мой клан",
               web_app: {
-                url: "https://t.me/aporto_bot/app",
+                url: "https://aporto.tech/app",
               },
             },
           ],
@@ -1109,7 +1109,7 @@ bot.command("clan", async (ctx) => {
         [
           {
             text: "🏰 Открыть Клан",
-            web_app: { url: "https://t.me/aporto_bot/app" },
+            web_app: { url: "https://aporto.tech/app" },
           },
         ],
       ],
@@ -1131,7 +1131,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
           [
             {
               text: "⚔️ Мой клан",
-              web_app: { url: "https://t.me/aporto_bot/app" },
+              web_app: { url: "https://aporto.tech/app" },
             },
           ],
           ["🚀 Премиум", "👤 Мой профиль"],
@@ -2403,7 +2403,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
                     [
                       {
                         text: "🎡 Испытать удачу",
-                        web_app: { url: "https://t.me/aporto_bot/app" },
+                        web_app: { url: "https://aporto.tech/app" },
                       },
                     ],
                   ],
