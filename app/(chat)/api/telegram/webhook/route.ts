@@ -1084,7 +1084,7 @@ bot.command("start", async (ctx) => {
           [
             {
               text: "⚔️ Мой клан",
-              web_app: { url: "https://app.aporto.tech/?view=clan" },
+              web_app: { url: "https://app.aporto.tech/clan" },
             },
           ],
           ["🚀 Премиум", "👤 Мой профиль"],
