@@ -1085,7 +1085,7 @@ bot.command("start", async (ctx) => {
             {
               text: "⚔️ Мой клан",
               web_app: {
-                url: "https://aporto.tech/?view=app",
+                url: "https://aporto.tech/app",
               },
             },
           ],
@@ -1109,7 +1109,7 @@ bot.command("clan", async (ctx) => {
         [
           {
             text: "🏰 Открыть Клан",
-            web_app: { url: "https://aporto.tech/?view=app" },
+            web_app: { url: "https://aporto.tech/app" },
           },
         ],
       ],
@@ -1131,7 +1131,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
           [
             {
               text: "⚔️ Мой клан",
-              web_app: { url: "https://aporto.tech/?view=app" },
+              web_app: { url: "https://aporto.tech/app" },
             },
           ],
           ["🚀 Премиум", "👤 Мой профиль"],
