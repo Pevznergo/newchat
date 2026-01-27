@@ -14,7 +14,7 @@ const SUBSCRIPTION_PRICES: Record<string, number> = {
   premium_x2_12: 5000,
 };
 
-async function getPriceForTariff(slug: string): Promise<number | null> {
+function getPriceForTariff(slug: string): number | null {
   // Simple lookup for now.
   // In a real app, you might query the Tariff table.
   return SUBSCRIPTION_PRICES[slug] || null;
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const price = await getPriceForTariff(sub.tariffSlug);
+      const price = getPriceForTariff(sub.tariffSlug);
       if (!price) {
         console.error(`Unknown price for tariff ${sub.tariffSlug}`);
         results.failed++;
