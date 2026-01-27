@@ -1092,16 +1092,26 @@ bot.command("clan", async (ctx) => {
 });
 
 bot.hears("⚔️ Мой клан", async (ctx) => {
-  // Fallback if web_app button didn't work (e.g. interpreted as text)
+  // If this handler triggers, it means the user clicked a text-only button (cached).
+  // We need to refresh their keyboard to the WebApp version.
   const appUrl =
     process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
-  await ctx.reply("Откройте приложение клана:", {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/clan` } }],
-      ],
-    },
-  });
+
+  await ctx.reply(
+    "Обновляю меню... Нажмите на кнопку еще раз, чтобы открыть приложение.",
+    {
+      reply_markup: {
+        keyboard: [
+          ["📝 Выбрать модель", "🎨 Создать картинку"],
+          ["🔎 Интернет-поиск", "🎬 Создать видео"],
+          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/clan` } }],
+          ["🚀 Премиум", "👤 Мой профиль"],
+        ],
+        resize_keyboard: true,
+        is_persistent: true,
+      },
+    }
+  );
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {
