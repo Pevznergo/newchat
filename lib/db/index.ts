@@ -3,6 +3,7 @@ import postgres from "postgres";
 import {
   aiModel,
   chat,
+  clan, // added
   document,
   message,
   messageDeprecated,
@@ -30,6 +31,7 @@ const schema = {
   userConsent,
   vote,
   voteDeprecated,
+  clan, // added
 };
 
 // Prevent multiple connections in development

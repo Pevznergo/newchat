@@ -12,12 +12,33 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+export const clan = pgTable("Clan", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: varchar("name", { length: 255 }).unique().notNull(),
+  inviteCode: varchar("invite_code", { length: 50 }).unique().notNull(),
+  level: integer("level").default(1).notNull(),
+  ownerId: uuid("ownerId").notNull(),
+  // Circular reference requires care or distinct table definition order/alter,
+  // but Drizzle often handles this if we handle relations later,
+  // or we can remove the FK constraint in definition if Circular dependency is an issue in TS
+  // For now, let's just store the ID. FK constraint might be redundant if User->Clan is the main one.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Clan = InferSelectModel<typeof clan>;
+
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   email: varchar("email", { length: 64 }), // nullable for Telegram users
   password: varchar("password", { length: 64 }),
   googleId: varchar("googleId", { length: 255 }),
   telegramId: varchar("telegramId", { length: 255 }),
+
+  // Clan fields
+  clanId: uuid("clanId").references(() => clan.id),
+  clanRole: varchar("clan_role", { enum: ["owner", "admin", "member"] })
+    .default("member")
+    .notNull(),
 
   // Tracking fields for QR codes and UTM
   startParam: varchar("start_param", { length: 50 }), // QR code source tracking
@@ -35,13 +56,17 @@ export const user = pgTable("User", {
   lastResetDate: timestamp("last_reset_date"), // Tracks when the weekly limit was last reset
   lastVisit: timestamp("last_visit").defaultNow(),
 
+  // Weekly Usage Tracking (New Limit System)
+  weeklyTextUsage: integer("weekly_text_usage").default(0),
+  weeklyImageUsage: integer("weekly_image_usage").default(0),
+
   // User status fields
   isActive: boolean("is_active").default(false),
   isAdmin: boolean("is_admin").default(false),
   hasPaid: boolean("has_paid").default(false),
   phone: varchar("phone", { length: 50 }),
   lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
-  requestCount: integer("request_count").default(0),
+  requestCount: integer("request_count").default(0), // Keeping for historical/total stats? Or deprecating? Let's keep for total.
 
   // Bot preferences
   selectedModel: varchar("selected_model", { length: 100 }).default(

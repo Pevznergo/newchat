@@ -26,8 +26,8 @@ const seed = async () => {
       priceRub: 750,
       priceStars: 500,
       durationDays: 30,
-      requestLimit: 100,
-      description: "100 запросов в день, все AI модели, без рекламы",
+      requestLimit: 3000,
+      description: "3000 кредитов, все AI модели, без рекламы",
     },
     {
       slug: "premium_3",
@@ -36,7 +36,7 @@ const seed = async () => {
       priceRub: 1800,
       priceStars: 1200,
       durationDays: 90,
-      requestLimit: 100,
+      requestLimit: 3000,
       description: "Скидка 20%",
     },
     {
@@ -46,7 +46,7 @@ const seed = async () => {
       priceRub: 2925,
       priceStars: 2000,
       durationDays: 180,
-      requestLimit: 100,
+      requestLimit: 3000,
       description: "Скидка 35%",
     },
     {
@@ -56,7 +56,7 @@ const seed = async () => {
       priceRub: 4500,
       priceStars: 3000,
       durationDays: 360,
-      requestLimit: 100,
+      requestLimit: 3000,
       description: "Скидка 50%",
     },
 
@@ -68,8 +68,8 @@ const seed = async () => {
       priceRub: 1250,
       priceStars: 850,
       durationDays: 30,
-      requestLimit: 200,
-      description: "200 запросов в день",
+      requestLimit: 6000,
+      description: "6000 кредитов",
     },
     {
       slug: "premium_x2_3",
@@ -78,7 +78,7 @@ const seed = async () => {
       priceRub: 3000,
       priceStars: 2000,
       durationDays: 90,
-      requestLimit: 200,
+      requestLimit: 6000,
       description: "Скидка 20%",
     },
     {
@@ -88,7 +88,7 @@ const seed = async () => {
       priceRub: 4875,
       priceStars: 3250,
       durationDays: 180,
-      requestLimit: 200,
+      requestLimit: 6000,
       description: "Скидка 35%",
     },
     {
@@ -98,7 +98,7 @@ const seed = async () => {
       priceRub: 7500,
       priceStars: 5000,
       durationDays: 360,
-      requestLimit: 200,
+      requestLimit: 6000,
       description: "Скидка 50%",
     },
   ];

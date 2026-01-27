@@ -43,7 +43,60 @@ import { generateHashedPassword } from "./utils";
 // https://authjs.dev/reference/adapter/drizzle
 
 import { db } from "@/lib/db";
-import { tariff } from "@/lib/db/schema"; // Ensure tariff schema is imported
+import { clan, tariff } from "@/lib/db/schema"; // Ensure tariff and clan schema is imported
+
+export async function getUserClan(userId: string) {
+  try {
+    const [u] = await db
+      .select({ clanId: user.clanId, clanRole: user.clanRole })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    if (!u || !u.clanId) {
+      return null;
+    }
+
+    const [c] = await db.select().from(clan).where(eq(clan.id, u.clanId));
+    return { ...c, role: u.clanRole };
+  } catch (error) {
+    console.error("Failed to get user clan", error);
+    return null;
+  }
+}
+
+export async function getClanById(clanId: string) {
+  try {
+    const [c] = await db.select().from(clan).where(eq(clan.id, clanId));
+    return c;
+  } catch (error) {
+    console.error("Failed to get clan by id", error);
+    return null;
+  }
+}
+
+export async function getClanMemberCounts(clanId: string) {
+  try {
+    // Count total members
+    const [totalRes] = await db
+      .select({ count: count(user.id) })
+      .from(user)
+      .where(eq(user.clanId, clanId));
+
+    // Count pro members (hasPaid = true)
+    const [proRes] = await db
+      .select({ count: count(user.id) })
+      .from(user)
+      .where(and(eq(user.clanId, clanId), eq(user.hasPaid, true)));
+
+    return {
+      totalMembers: totalRes?.count ?? 0,
+      proMembers: proRes?.count ?? 0,
+    };
+  } catch (error) {
+    console.error("Failed to get clan member counts", error);
+    return { totalMembers: 0, proMembers: 0 };
+  }
+}
 
 export async function getAllTariffs() {
   try {
@@ -733,6 +786,31 @@ export async function resetUserRequestCount(userId: string) {
       .where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to reset request count", error);
+  }
+}
+
+export async function incrementWeeklyTextUsage(userId: string, amount: number) {
+  try {
+    await db
+      .update(user)
+      .set({ weeklyTextUsage: sql`${user.weeklyTextUsage} + ${amount}` })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to increment weekly text usage", error);
+  }
+}
+
+export async function incrementWeeklyImageUsage(
+  userId: string,
+  amount: number
+) {
+  try {
+    await db
+      .update(user)
+      .set({ weeklyImageUsage: sql`${user.weeklyImageUsage} + ${amount}` })
+      .where(eq(user.id, userId));
+  } catch (error) {
+    console.error("Failed to increment weekly image usage", error);
   }
 }
 

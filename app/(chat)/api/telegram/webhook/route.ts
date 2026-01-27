@@ -14,6 +14,13 @@ import {
 import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { createClan, joinClan, leaveClan } from "@/lib/clan/actions";
+import { NANO_BANANA_ID } from "@/lib/clan/config";
+import {
+  calculateClanLevel,
+  getLevelConfig,
+  getNextLevelRequirements,
+} from "@/lib/clan/logic";
 import {
   cancelUserSubscription,
   createStarSubscription,
@@ -22,14 +29,16 @@ import {
   getAiModels,
   getAllTariffs,
   getChatsByUserId,
+  getClanMemberCounts, // added
   getLastActiveSubscription,
-  getMessageCountByUserId,
   getMessagesByChatId,
   getTariffBySlug,
   getUserByTelegramId,
+  getUserClan, // added
   hasUserConsented,
   incrementUserRequestCount,
-  resetUserRequestCount,
+  incrementWeeklyImageUsage, // added
+  incrementWeeklyTextUsage, // added
   saveChat,
   saveMessages,
   setLastMessageId,
@@ -107,12 +116,34 @@ const PROVIDER_MAP: Record<string, string> = {
   model_deepresearch: "openai/o3-deep-research-2025-06-26", // Placeholder matches o3
 };
 
-function getModelKeyboard(selectedModel: string, isPremium: boolean) {
-  const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
-  const isLocked = (id: string) =>
-    !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
-  const getLabel = (id: string, name: string) =>
-    `${isLocked(id)}${isSelected(id)}${name}`;
+function getModelKeyboard(
+  selectedModel: string,
+  isPremium: boolean,
+  clanLevel = 1
+) {
+  const config = getLevelConfig(clanLevel);
+  const unlimitedModels = config.benefits.unlimitedModels || [];
+
+  const getLabel = (id: string, name: string) => {
+    let prefix = "";
+    let suffix = "";
+
+    // Status
+    if (selectedModel === id) {
+      prefix = "✅ ";
+    } else if (!isPremium && !unlimitedModels.includes(id)) {
+      // Not selected, Not Premium, Not Unlimited in Clan
+      // Show Cost
+      const cost = MODEL_COSTS[id] || 1;
+      suffix = ` (💰${cost})`;
+    } else if (!isPremium && unlimitedModels.includes(id)) {
+      // Free via Clan
+      prefix = "🏰 ";
+      suffix = " (Free)";
+    }
+
+    return `${prefix}${name}${suffix}`;
+  };
 
   return {
     inline_keyboard: [
@@ -152,25 +183,30 @@ function getModelKeyboard(selectedModel: string, isPremium: boolean) {
       ],
       [
         {
-          text: getLabel("model_deepseek32", "DeepSeek-V3.2"),
-          callback_data: "model_deepseek32",
+          text: getLabel("model_gemini_pro", "Gemini 3 Pro"),
+          callback_data: "model_gemini_pro",
         },
         {
-          text: getLabel("model_deepseek32thinking", "DeepSeek-V3.2 Thinking"),
-          callback_data: "model_deepseek32thinking",
+          text: getLabel("model_gemini_flash", "Gemini 3 Flash"),
+          callback_data: "model_gemini_flash",
         },
       ],
       [
         {
-          text: getLabel("model_gemini3pro", "Gemini 3 Pro"),
-          callback_data: "model_gemini3pro",
+          text: getLabel("model_deepseek_v3", "DeepSeek V3"),
+          callback_data: "model_deepseek_v3",
         },
         {
-          text: getLabel("model_gemini3flash", "Gemini 3 Flash"),
-          callback_data: "model_gemini3flash",
+          text: getLabel("model_deepseek_r1", "DeepSeek R1"),
+          callback_data: "model_deepseek_r1",
         },
       ],
-      [{ text: "⬅️ Назад", callback_data: "menu_start" }],
+      [
+        {
+          text: "🔙 Назад",
+          callback_data: "menu_start", // or delete message
+        },
+      ],
     ],
   };
 }
@@ -503,75 +539,127 @@ async function calculateRequestCost(
 async function checkAndEnforceLimits(
   ctx: any,
   user: any,
-  cost: number
+  cost: number,
+  modelId?: string
 ): Promise<boolean> {
-  const _isPremium = user.hasPaid; // Premium or Pro (needs distinction via tariff normally, but let's assume hasPaid covers both for now, or check detailed subscription)
-  // We need to know if user is Free or Paid. Querying subscription details or trusting `hasPaid`.
-  // Ideally `user` object has `subscription` info joined. If not, we might need to fetch it or rely on `hasPaid`.
-  // For now: if !hasPaid -> Free.
+  let limit = 0;
+  let currentUsage = 0;
+  let isUnlimited = false;
+  const limitType = "text"; // "text" or "image"
 
-  let limit = SUBSCRIPTION_LIMITS.free;
-  let currentCount = user.requestCount || 0;
+  // Determine if image request based on modelId or cost logic?
+  // Ideally passed modelId helps.
+  // We can assume image if cost > some threshold OR check known IDs?
+  // Better: check model type if possible. But we don't have dbModel here easily.
+  // Quick hack: NANO_BANANA_ID or other image models.
+  // For now, let's track separately.
+  // We need to know if it's image to check image usage.
+  const isImage =
+    modelId === NANO_BANANA_ID ||
+    modelId?.includes("image") ||
+    modelId?.includes("midjourney") ||
+    modelId?.includes("ideogram");
 
   if (user.hasPaid) {
-    // Determine if Premium or Pro?
-    // User schema doesn't have "tier". We might need to look at `tariffSlug` from subscription.
-    // However, existing code might not fetch subscription.
-    // For simplicity/MVP: If `hasPaid` is true, we assume at least Premium.
-    // If we can't easily distinguish, we might default to Premium limit (2500) or Pro (7500).
-    // Let's assume hitting 2500 is rare for now or try to fetch sub.
-    limit = SUBSCRIPTION_LIMITS.premium; // Default paid limit.
-    // real logic: check subscription table.
-  }
+    // 1. Paid User Logic
+    limit = 3000; // Default Premium
+    // Try to find tariff limit.
+    // Ideally we fetch subscription -> tariff -> requestLimit.
+    // For MVP, we use hardcoded 3000/6000 logic or simply fetch User.requestCount < User.limit ?
+    // But User table doesn't have custom limit column.
+    // Let's rely on checking `user.balance`? No, using credits.
+    // Actually, plan says: "Use Tariff Limit (3000/6000)".
+    // We assume 3000 unless we detect 'premium_x2' in tariff slug?
+    // Since we don't have tariff slug readily available on `user`, we might need a query `getLastActiveSubscription`.
+    // Existing code has `getLastActiveSubscription`.
+    const sub = await getLastActiveSubscription(user.id);
+    if (sub && sub.tariffSlug.includes("x2")) {
+      limit = 6000;
+    }
 
-  // Free Tier Reset Logic
-  if (!user.hasPaid) {
-    const lastReset = user.lastResetDate ? new Date(user.lastResetDate) : null;
-    const now = new Date();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    currentUsage = user.requestCount || 0; // Usage is stored in requestCount for Paid? Yes.
+  } else {
+    // 2. Free User Logic
+    if (
+      modelId &&
+      (modelId.includes("video") ||
+        modelId.includes("sora") ||
+        modelId.includes("kling"))
+    ) {
+      await ctx.reply("🔒 Видео-модели доступны только в Premium подписке.");
+      return false;
+    }
 
-    // If never reset or older than 7 days -> Reset
-    if (!lastReset || now.getTime() - lastReset.getTime() > sevenDaysMs) {
-      await resetUserRequestCount(user.id);
-      currentCount = 0; // Local update
+    const clanData = await getUserClan(user.id);
+    let clanLevel = 1;
+
+    if (clanData) {
+      const counts = await getClanMemberCounts(clanData.id);
+      clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
+    }
+
+    const config = getLevelConfig(clanLevel);
+
+    if (isImage) {
+      limit = config.benefits.weeklyImageGenerations * 15; // Convert image limit to "Credits" or just Count?
+      // Plan: "Weekly Image Limits: 3 Gen".
+      // User table has `weeklyImageUsage`.
+      // We count Items, not Cost? "3 Gen".
+      // Let's use `weeklyImageUsage` as count.
+      limit = config.benefits.weeklyImageGenerations;
+      currentUsage = user.weeklyImageUsage || 0;
+      cost = 1; // 1 generation
+    } else {
+      // Text
+      limit = config.benefits.weeklyTextCredits;
+      currentUsage = user.weeklyTextUsage || 0;
+
+      // Check L5 Unlimited
+      if (
+        clanLevel === 5 &&
+        config.benefits.unlimitedModels?.includes(modelId || "")
+      ) {
+        isUnlimited = true;
+        cost = 0;
+      }
     }
   }
 
   // Check Limit
-  if (currentCount + cost > limit) {
+  if (!isUnlimited && currentUsage + cost > limit) {
     let message = "";
     let buttons: any[] = [];
 
     if (user.hasPaid) {
-      // Premium user hit limit
-      message = `🚧 <b>Лимит исчерпан!</b>
-      
-Вы достигли дневного лимита запросов для вашей подписки (${limit}).
-
-Что делать?
-• Купить доп. пакет запросов (скоро)
-• Подождать до завтра (сброс в 00:00 UTC)
-• Пригласить друзей для бонусов`;
-
+      message = `🚧 <b>Лимит исчерпан! (${limit})</b>\n\nПригласите друзей или обновите подписку.`;
       buttons = [
-        // [{ text: "📦 Купить пакет запросов", callback_data: "buy_requests_pack" }], // Placeholder
-        [{ text: "🎡 Испытать удачу", callback_data: "spin_wheel" }],
         [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
       ];
     } else {
-      // Free user
-      message = `🚧 <b>Лимит исчерпан!</b>
+      // Free Logic Upsell
+      const clanData = await getUserClan(user.id);
+      let upsellText = "";
 
-Вы достигли лимита запросов.
-Free: раз в неделю (${limit}).
+      if (clanData) {
+        const counts = await getClanMemberCounts(clanData.id);
+        const currentLvl = calculateClanLevel(
+          counts.totalMembers,
+          counts.proMembers
+        );
+        const nextReq = getNextLevelRequirements(
+          currentLvl,
+          counts.totalMembers,
+          counts.proMembers
+        );
+        if (nextReq) {
+          upsellText = `\n\n🏰 Уровень клана: ${currentLvl}\n${nextReq.description} для уровня ${nextReq.nextLevel} (даст больше лимитов!)`;
+        }
+      } else {
+        upsellText = "\n\nВступите в Клан, чтобы увеличить лимиты!";
+      }
 
-Что делать?
-• Испытайте удачу в колесе фортуны
-• Подключите Премиум / Pro (до 100-200 в день)
-• Пригласите друзей`;
-
+      message = `🚧 <b>Лимит исчерпан!</b>\nПотрачено: ${currentUsage}/${limit}${upsellText}`;
       buttons = [
-        [{ text: "🎡 Испытать удачу", callback_data: "spin_wheel" }],
         [{ text: "💎 Подключить Премиум", callback_data: "open_premium" }],
         [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
       ];
@@ -579,12 +667,21 @@ Free: раз в неделю (${limit}).
 
     await ctx.reply(message, {
       parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: buttons,
-      },
+      reply_markup: { inline_keyboard: buttons },
     });
     return false;
   }
+
+  // Increment Usage
+  if (user.hasPaid) {
+    // Paid uses requestCount
+    await incrementUserRequestCount(user.id, cost);
+  } else if (isImage) {
+    await incrementWeeklyImageUsage(user.id, 1); // Helper needed? Or manual update.
+    // We can use incrementUserRequestCount logic but for weeklyImageUsage.
+    // I'll need to create query helpers or do raw update here?
+    // Better create helpers in queries.ts later.
+  } else if (cost > 0) await incrementWeeklyTextUsage(user.id, cost);
 
   return true;
 }
@@ -785,15 +882,54 @@ function getProfileKeyboard() {
 
 async function showAccountInfo(ctx: any, user: any) {
   const isPremium = !!user.hasPaid;
-  const entitlements = entitlementsByUserType[isPremium ? "pro" : "regular"];
+  // New Credit System Logic
+  let usageText = "";
+  let clanInfoText = "";
 
-  // Fetch message count for 24h (Daily Usage)
-  const messageCount = await getMessageCountByUserId({
-    id: user.id,
-    differenceInHours: 24,
-  });
+  // Get Plan Name
+  let planName = isPremium ? "Премиум 🚀" : "Стандартный";
 
-  const dailyLimit = entitlements.maxMessagesPerDay || 10;
+  if (isPremium) {
+    // Paid: Track credits (requestCount) vs Subscription Limit (Default 3000)
+    const sub = await getLastActiveSubscription(user.id);
+    const limit = sub && sub.tariffSlug.includes("x2") ? 6000 : 3000;
+    const used = user.requestCount || 0;
+    usageText = `${used}/${limit} кредитов`;
+
+    if (user.selectedModel?.includes("video")) {
+      usageText += "\n(Видео: отдельные пакеты)";
+    }
+  } else {
+    // Free: Track weekly text usage vs Clan Level Limit
+    const clanData = await getUserClan(user.id);
+    let clanLevel = 1;
+    let role = "";
+
+    if (clanData) {
+      // Need to calculate current level dynamically or trust DB?
+      // DB `clan.level` field exists. Ideally we update it periodically?
+      // Or calculate on fly.
+      // Plan says "Progression based on members".
+      // Let's calculate on fly to be accurate.
+      const counts = await getClanMemberCounts(clanData.id);
+      clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
+      role =
+        clanData.role === "owner"
+          ? "Глава"
+          : clanData.role === "admin"
+            ? "Админ"
+            : "Участник";
+
+      clanInfoText = `\n🏰 Клан: ${clanData.name} (Ур. ${clanLevel})\nРоль: ${role}`;
+    }
+
+    const config = getLevelConfig(clanLevel);
+    const textLimit = config.benefits.weeklyTextCredits;
+    const used = user.weeklyTextUsage || 0;
+
+    usageText = `${used}/${textLimit} кредитов (нед.)`;
+    planName = `Free (Клан Ур. ${clanLevel})`;
+  }
 
   // Get neat model name
   const currentModelKey = user.selectedModel || "model_gpt4omini";
@@ -801,37 +937,21 @@ async function showAccountInfo(ctx: any, user: any) {
 
   const text = `👤 <b>Мой профиль</b>:
 ID: ${user.telegramId || "N/A"}
-Подписка: ${isPremium ? "Премиум 🚀" : "Стандартная ✔"}
-Выбрана модель: ${currentModelName} /model
+Подписка: ${planName}
+Выбрана модель: ${currentModelName} /model${clanInfoText}
 
 📊 <b>Статистика использования</b>
+${usageText}
 
-Запросов сегодня: ${messageCount}/${dailyLimit}
- └ GPT-5 nano | GPT-4o mini
- └ DeepSeek-V3.2 | Gemini 3 Flash
- └ картинки Nano Banana
- └ ИИ-фотошоп Nano Banana
-
-Нужно больше? Подключите /premium
+Нужно больше? Подключите /premium или развивайте Клан!
 
 🚀 <b>Подписка Премиум</b>:
- └ 100-200 запросов в день
- └ GPT-5.2 | GPT-4.1 | OpenAI o3
- └ Gemini 3 Pro | Claude 4.5
- └ Nano Banana Pro 🔥
- └ работа с документами
-
-🌅 <b>Пакет Midjourney</b>: 0/0
- └ Midjourney | Flux 2
- └ Midjourney Video
-
-🎬 <b>Пакет видео</b>: 0/0
- └ Veo 3.1 | Sora 2 | Kling | Hailuo | Pika
- └ видео на основе изображений
-
-🎸 <b>Песни Suno</b>: 0/0
-
-� Поддержка: @GoPevzner`;
+ └ 3000/6000 кредитов
+ └ Доступ ко всем моделям
+ └ Приоритетная скорость
+ 
+🏰 <b>Мой Клан</b>: /clan
+`;
 
   await ctx.reply(text, {
     parse_mode: "HTML",
@@ -886,7 +1006,7 @@ bot.command("start", async (ctx) => {
       { command: "deletecontext", description: "💬 Очистить контекст" },
       { command: "photo", description: "🌅 Создать изображение" },
       { command: "video", description: "🎬 Создать видео" },
-      { command: "suno", description: "🎸 Создать песню" },
+      { command: "video", description: "🎬 Создать видео" },
       { command: "s", description: "🔎 Поиск в интернете" },
       { command: "model", description: "📝 Выбрать модель" },
       { command: "settings", description: "⚙️ Настройки" },
@@ -940,13 +1060,7 @@ bot.command("start", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [
-            {
-              text: "🎁 Колесо Фортуны",
-              web_app: { url: "https://aporto.tech/app" },
-            },
-            { text: "🎸 Создать песню" },
-          ],
+          ["⚔️ Мой клан"],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
@@ -959,6 +1073,126 @@ bot.command("start", async (ctx) => {
     await ctx.reply("Sorry, I encountered an error. Please try again later.");
   }
 });
+
+bot.command("clan", async (ctx) => {
+  const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
+  if (user) await showClanMenu(ctx, user);
+});
+
+bot.hears("⚔️ Мой клан", async (ctx) => {
+  const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
+  if (user) await showClanMenu(ctx, user);
+});
+
+bot.callbackQuery("clan_create", async (ctx) => {
+  await ctx.reply(
+    "Введите название для нового клана в ответ на это сообщение:",
+    {
+      reply_markup: { force_reply: true },
+    }
+  );
+  await safeAnswerCallbackQuery(ctx);
+});
+
+bot.callbackQuery("clan_join", async (ctx) => {
+  await ctx.reply(
+    "Введите код приглашения (например CLAN-X1Y2Z3) в ответ на это сообщение:",
+    {
+      reply_markup: { force_reply: true },
+    }
+  );
+  await safeAnswerCallbackQuery(ctx);
+});
+
+bot.callbackQuery("clan_leave", async (ctx) => {
+  const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
+  if (!user) return;
+  const result = await leaveClan(user.id);
+  if (result.success) {
+    await ctx.reply("Вы покинули клан.");
+    await showClanMenu(ctx, user);
+  } else {
+    await ctx.reply(`Ошибка: ${result.error}`);
+  }
+  await safeAnswerCallbackQuery(ctx);
+});
+
+bot.callbackQuery("clan_invite_link", async (ctx) => {
+  const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
+  const clanData = await getUserClan(user?.id);
+  if (clanData) {
+    const link = `https://t.me/${ctx.me.username}?start=clan_${clanData.inviteCode}`;
+    await ctx.reply(
+      `Ваша ссылка для приглашения:\n${link}\n\nКод: ${clanData.inviteCode}`
+    );
+  }
+  await safeAnswerCallbackQuery(ctx);
+});
+
+async function showClanMenu(ctx: any, user: any) {
+  const clanData = await getUserClan(user.id);
+
+  if (clanData) {
+    // In Clan
+    const counts = await getClanMemberCounts(clanData.id);
+    const level = calculateClanLevel(counts.totalMembers, counts.proMembers);
+    const config = getLevelConfig(level);
+    const nextReq = getNextLevelRequirements(
+      level,
+      counts.totalMembers,
+      counts.proMembers
+    );
+
+    let nextLevelText = "Максимальный уровень!";
+    if (nextReq) {
+      nextLevelText = `До уровня ${nextReq.nextLevel}: ${nextReq.description}`;
+    }
+
+    const roleName =
+      clanData.role === "owner"
+        ? "Глава"
+        : clanData.role === "admin"
+          ? "Админ"
+          : "Участник";
+
+    const text = `🏰 <b>${clanData.name}</b>\n
+Уровень: ${level}
+Участников: ${counts.totalMembers} (Pro: ${counts.proMembers})
+Ваша роль: ${roleName}
+
+🏆 <b>Бонусы уровня ${level}</b>:
+• ${config.benefits.weeklyTextCredits} кредитов/неделю каждому
+• ${config.benefits.weeklyImageGenerations} картинок
+${level === 5 ? "• Безлимит на GPT-5 Nano, Gemini Flash\n" : ""}
+📈 <b>Прогресс</b>:
+${nextLevelText}
+
+Код приглашения: <code>${clanData.inviteCode}</code>`;
+
+    const buttons: any[] = [
+      [{ text: "📨 Пригласить друзей", callback_data: "clan_invite_link" }],
+      [{ text: "🚪 Покинуть клан", callback_data: "clan_leave" }],
+    ];
+
+    await ctx.reply(text, {
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: buttons },
+    });
+  } else {
+    // No Clan
+    const text =
+      "🏰 <b>Кланеры</b>\n\nВступайте в Клан или создайте свой, чтобы получать бонусы!\n\n💎 Бонусы клана:\n• Больше бесплатных кредитов\n• Доступ к GPT-4o mini, Gemini Flash безлимитно (на 5 уровне)\n• Генерация картинок";
+    await ctx.reply(text, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "✨ Создать клан", callback_data: "clan_create" }],
+          [{ text: "🛡 Вступить по коду", callback_data: "clan_join" }],
+        ],
+      },
+    });
+  }
+}
 
 bot.command("clear", async (ctx) => {
   const telegramId = ctx.from?.id.toString();
@@ -1128,10 +1362,6 @@ bot.command("video", async (ctx) => {
   if (user) {
     await showVideoMenu(ctx, user);
   }
-});
-
-bot.command("suno", async (ctx) => {
-  await showMusicMenu(ctx);
 });
 
 bot.command("s", async (ctx) => {
@@ -1751,6 +1981,41 @@ bot.on("message:text", async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const text = ctx.message.text;
 
+  // --- Clan Inputs Handler ---
+  const replyText = ctx.message.reply_to_message?.text;
+  if (replyText) {
+    if (replyText.includes("Введите название для нового клана")) {
+      const [user] = await getUserByTelegramId(telegramId);
+      if (user) {
+        const result = await createClan(user.id, text.trim());
+        if (result.success) {
+          await ctx.reply(`Клан "${text}" создан!`);
+          await showClanMenu(ctx, user);
+        } else {
+          await ctx.reply(
+            `Ошибка: ${result.error === "name_taken" ? "Имя занято" : result.error}`
+          );
+        }
+      }
+      return;
+    }
+    if (replyText.includes("Введите код приглашения")) {
+      const [user] = await getUserByTelegramId(telegramId);
+      if (user) {
+        const result = await joinClan(user.id, text.trim().toUpperCase()); // codes usually uppercase
+        if (result.success) {
+          await ctx.reply("Вы вступили в клан!");
+          await showClanMenu(ctx, user);
+        } else {
+          await ctx.reply(
+            `Ошибка: ${result.error === "clan_not_found" ? "Клан не найден" : result.error}`
+          );
+        }
+      }
+      return;
+    }
+  }
+
   // Helper for button handling
   const handleButton = async (action: (user: any) => Promise<void>) => {
     try {
@@ -1982,7 +2247,12 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       user.selectedModel || "model_gpt4omini",
       text.length
     );
-    const allowed = await checkAndEnforceLimits(ctx, user, cost);
+    const allowed = await checkAndEnforceLimits(
+      ctx,
+      user,
+      cost,
+      user.selectedModel || "model_gpt4omini"
+    );
     if (!allowed) {
       return;
     }
@@ -2408,7 +2678,12 @@ bot.on("message:photo", async (ctx) => {
       cost = FEATURE_COSTS.image_recognition || 10;
     }
 
-    const allowed = await checkAndEnforceLimits(ctx, user, cost);
+    const allowed = await checkAndEnforceLimits(
+      ctx,
+      user,
+      cost,
+      selectedModelId
+    );
     if (!allowed) {
       return;
     }
