@@ -1070,7 +1070,7 @@ bot.command("start", async (ctx) => {
 
     // Debug command
     if (ctx.message?.text === "/debug") {
-      await ctx.reply(`Base URL: ${baseUrl}\nButton URL: ${baseUrl}/clan`);
+      await ctx.reply(`Base URL: ${baseUrl}\nButton URL: ${baseUrl}?view=clan`);
       return;
     }
 
@@ -1081,7 +1081,7 @@ bot.command("start", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/clan` } }],
+          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}?view=clan` } }],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,

@@ -1,11 +1,22 @@
 import { cookies } from "next/headers";
 import { Suspense } from "react";
+import ClanPage from "@/app/clan/page";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { generateUUID } from "@/lib/utils";
 
-export default function Page() {
+export default async function Page(props: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+
+  if (searchParams.view === "clan") {
+    // Override: Render Clan Page if requested
+    // This solves the issue where Telegram doesn't pass initData to non-root subpaths
+    return <ClanPage />;
+  }
+
   return (
     <Suspense fallback={<div className="flex h-dvh" />}>
       <NewChatPage />
