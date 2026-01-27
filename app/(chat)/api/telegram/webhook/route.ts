@@ -1085,7 +1085,7 @@ bot.command("start", async (ctx) => {
             {
               text: "⚔️ Мой клан",
               web_app: {
-                url: "https://app.aporto.tech/clan",
+                url: "https://app.aporto.tech/app",
               },
             },
           ],
@@ -1103,12 +1103,11 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("clan", async (ctx) => {
-  const appUrl =
-    process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
+  const appUrl = process.env.NEXTAUTH_URL || "https://app.aporto.tech";
   await ctx.reply("Откройте приложение клана:", {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/clan` } }],
+        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/app` } }],
       ],
     },
   });
@@ -1117,8 +1116,7 @@ bot.command("clan", async (ctx) => {
 bot.hears("⚔️ Мой клан", async (ctx) => {
   // If this handler triggers, it means the user clicked a text-only button (cached).
   // We need to refresh their keyboard to the WebApp version.
-  const appUrl =
-    process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
+  const appUrl = process.env.NEXTAUTH_URL || "https://app.aporto.tech";
 
   await ctx.reply(
     "Обновляю меню... Нажмите на кнопку еще раз, чтобы открыть приложение.",
@@ -1127,7 +1125,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/clan` } }],
+          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/app` } }],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,

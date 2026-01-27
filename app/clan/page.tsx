@@ -319,6 +319,12 @@ export default function ClanPage() {
                 : 0}
             </p>
             <p>
+              User ID:{" "}
+              {(typeof window !== "undefined" &&
+                window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
+                "Missing"}
+            </p>
+            <p>
               Platform:{" "}
               {typeof window !== "undefined"
                 ? window.Telegram?.WebApp?.platform || "Unknown"
@@ -578,6 +584,10 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData: string;
+        initDataUnsafe: {
+          user?: { id: number; first_name: string; username?: string };
+          start_param?: string;
+        };
         expand: () => void;
         switchInlineQuery: (query: string, types?: string[]) => void;
         platform?: string;
