@@ -1085,7 +1085,7 @@ bot.command("start", async (ctx) => {
             {
               text: "⚔️ Мой клан",
               web_app: {
-                url: "https://app.aporto.tech/app",
+                url: "https://app.aporto.tech/?view=clan",
               },
             },
           ],
@@ -1107,7 +1107,7 @@ bot.command("clan", async (ctx) => {
   await ctx.reply("Откройте приложение клана:", {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/app` } }],
+        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/?view=clan` } }],
       ],
     },
   });
@@ -1125,7 +1125,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/app` } }],
+          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/?view=clan` } }],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
