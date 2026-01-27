@@ -845,6 +845,28 @@ export async function getUserSubscription(userId: string) {
   }
 }
 
+export async function getLastActiveSubscription(userId: string) {
+  try {
+    const [sub] = await db
+      .select()
+      .from(subscription)
+      .where(
+        and(
+          eq(subscription.userId, userId),
+          eq(subscription.status, "active")
+          // We intentionally do NOT check date here, so we can manage expired but still "active" (renewing) subs
+        )
+      )
+      .orderBy(desc(subscription.createdAt))
+      .limit(1);
+
+    return sub;
+  } catch (error) {
+    console.error("Failed to get last active subscription", error);
+    return null;
+  }
+}
+
 export async function cancelUserSubscription(userId: string) {
   try {
     await db
@@ -1092,6 +1114,21 @@ export async function processSuccessfulPayment({
     const startDate = new Date();
     const endDate = new Date();
     endDate.setDate(startDate.getDate() + durationDays);
+
+    // 2.5 Cancel Previous Active Subscriptions (to avoid duplicates)
+    await db
+      .update(subscription)
+      .set({
+        status: "cancelled",
+        autoRenew: false,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(subscription.userId, userRecord.id),
+          eq(subscription.status, "active")
+        )
+      );
 
     // 3. Create Subscription
     await db.insert(subscription).values({

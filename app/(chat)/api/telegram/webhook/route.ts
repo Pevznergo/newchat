@@ -21,6 +21,7 @@ import {
   createUserConsent,
   getAiModels,
   getChatsByUserId,
+  getLastActiveSubscription,
   getMessageCountByUserId,
   getMessagesByChatId,
   getUserByTelegramId,
@@ -540,25 +541,48 @@ async function checkAndEnforceLimits(
 
   // Check Limit
   if (currentCount + cost > limit) {
-    const message = `🚧 <b>Лимит исчерпан!</b>
+    let message = "";
+    let buttons: any[] = [];
+
+    if (user.hasPaid) {
+      // Premium user hit limit
+      message = `🚧 <b>Лимит исчерпан!</b>
+      
+Вы достигли дневного лимита запросов для вашей подписки (${limit}).
+
+Что делать?
+• Купить доп. пакет запросов (скоро)
+• Подождать до завтра (сброс в 00:00 UTC)
+• Пригласить друзей для бонусов`;
+
+      buttons = [
+        // [{ text: "📦 Купить пакет запросов", callback_data: "buy_requests_pack" }], // Placeholder
+        [{ text: "🎡 Испытать удачу", callback_data: "spin_wheel" }],
+        [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
+      ];
+    } else {
+      // Free user
+      message = `🚧 <b>Лимит исчерпан!</b>
 
 Вы достигли лимита запросов.
-Free: раз в неделю.
-Premium/Pro: раз в месяц.
+Free: раз в неделю (${limit}).
 
 Что делать?
 • Испытайте удачу в колесе фортуны
-• Подключите Премиум / Pro
+• Подключите Премиум / Pro (до 100-200 в день)
 • Пригласите друзей`;
+
+      buttons = [
+        [{ text: "🎡 Испытать удачу", callback_data: "spin_wheel" }],
+        [{ text: "💎 Подключить Премиум", callback_data: "open_premium" }],
+        [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
+      ];
+    }
 
     await ctx.reply(message, {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: [
-          [{ text: "🎡 Испытать удачу", callback_data: "spin_wheel" }], // ensuring callback exists
-          [{ text: "💎 Подключить Премиум", callback_data: "open_premium" }],
-          [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }], // ensuring handler exists
-        ],
+        inline_keyboard: buttons,
       },
     });
     return false;
@@ -1136,7 +1160,7 @@ bot.on("callback_query:data", async (ctx) => {
       return;
     }
 
-    const sub = await getUserSubscription(user.id);
+    const sub = await getLastActiveSubscription(user.id);
     if (!sub) {
       await ctx.editMessageText("❌ Подписка не найдена.");
       return;
@@ -1881,8 +1905,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       return;
     }
 
-    const sub = await getUserSubscription(user.id);
-
+    const sub = await getLastActiveSubscription(user.id);
     if (!sub) {
       await ctx.reply("❌ У вас нет активной подписки.");
       return;
