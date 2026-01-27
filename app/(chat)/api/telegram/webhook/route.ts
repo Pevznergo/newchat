@@ -25,7 +25,6 @@ import {
   getMessageCountByUserId,
   getMessagesByChatId,
   getUserByTelegramId,
-  getUserSubscription,
   hasUserConsented,
   incrementUserRequestCount,
   resetUserRequestCount,
@@ -1022,23 +1021,50 @@ bot.command("unsubscribe", async (ctx) => {
       return;
     }
 
-    const sub = await getUserSubscription(user.id);
+    const sub = await getLastActiveSubscription(user.id);
+
+    // Debug logging to help trace if needed
+    console.log(`[Unsubscribe Command] User: ${user.id}, Sub: ${sub?.id}`);
+
     if (!sub) {
-      await ctx.reply("⚠️ У вас нет активной подписки.");
+      await ctx.reply("❌ У вас нет активной подписки.");
       return;
     }
 
-    const success = await cancelUserSubscription(user.id);
-    if (success) {
-      const date = sub.endDate.toLocaleDateString("ru-RU");
+    if (!sub.autoRenew) {
+      const dateStr = sub.endDate.toLocaleDateString("ru-RU");
       await ctx.reply(
-        `✅ Автопродление подписки отключено.\nПодписка действует до ${date}.`
+        `✅ Автопродление уже отключено.\nВаша подписка действует до ${dateStr}.`
       );
-    } else {
-      await ctx.reply(
-        "❌ Ошибка при отмене. Свяжитесь с поддержкой @GoPevzner."
-      );
+      return;
     }
+
+    const tariffName = sub.tariffSlug.includes("premium_x2")
+      ? "Premium X2"
+      : "Premium";
+
+    await ctx.reply(
+      `Вы хотите отменить автоматическое списание по подписке <b>${tariffName}</b>?`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "✅ Подтвердить",
+                callback_data: "unsubscribe_confirm",
+              },
+            ],
+            [
+              {
+                text: "🔙 Назад",
+                callback_data: "unsubscribe_back",
+              },
+            ],
+          ],
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in /unsubscribe:", error);
     await ctx.reply("Произошла ошибка. Попробуйте позже.");
@@ -1894,64 +1920,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     return;
   }
 
-  // Handle /unsubscribe command
-  if (text === "/unsubscribe") {
-    // Check for active subscription
-    const [user] = await getUserByTelegramId(telegramId); // Ensure user is fetched for this command
-    if (!user) {
-      await ctx.reply(
-        "Пожалуйста, начните взаимодействие с ботом, чтобы использовать эту команду."
-      );
-      return;
-    }
-
-    const sub = await getLastActiveSubscription(user.id);
-    console.log(
-      `[Unsubscribe Debug] User: ${user.id} (${telegramId}), Sub found:`,
-      sub ? sub.id : "None"
-    );
-
-    if (!sub) {
-      await ctx.reply(`❌ У вас нет активной подписки. (Debug: ${user.id})`);
-      return;
-    }
-
-    if (!sub.autoRenew) {
-      const dateStr = sub.endDate.toLocaleDateString("ru-RU");
-      await ctx.reply(
-        `✅ Автопродление уже отключено.\nВаша подписка подписка действует до ${dateStr}.`
-      );
-      return;
-    }
-
-    const tariffName = sub.tariffSlug.includes("premium_x2")
-      ? "Premium X2"
-      : "Premium";
-
-    await ctx.reply(
-      `Вы хотите отменить автоматическое списание по подписке <b>${tariffName}</b>?`,
-      {
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "✅ Подтвердить",
-                callback_data: "unsubscribe_confirm",
-              },
-            ],
-            [
-              {
-                text: "🔙 Назад",
-                callback_data: "unsubscribe_back",
-              },
-            ],
-          ],
-        },
-      }
-    );
-    return;
-  }
+  // Handle /unsubscribe is done via bot.command("unsubscribe")
 
   // Regular message processing
   // Regular message processing
