@@ -1057,12 +1057,15 @@ bot.command("start", async (ctx) => {
 
 🎸 МУЗЫКА: введите /suno, выберите жанр и добавьте текст песни.`;
 
+    const appUrl =
+      process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
+
     await ctx.reply(welcomeMessage, {
       reply_markup: {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          ["⚔️ Мой клан"],
+          [{ text: "⚔️ Мой клан", web_app: { url: `${appUrl}/clan` } }],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
@@ -1077,17 +1080,28 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("clan", async (ctx) => {
-  const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
-  if (user) {
-    await showClanMenu(ctx, user);
-  }
+  const appUrl =
+    process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
+  await ctx.reply("Откройте приложение клана:", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/clan` } }],
+      ],
+    },
+  });
 });
 
 bot.hears("⚔️ Мой клан", async (ctx) => {
-  const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
-  if (user) {
-    await showClanMenu(ctx, user);
-  }
+  // Fallback if web_app button didn't work (e.g. interpreted as text)
+  const appUrl =
+    process.env.NEXTAUTH_URL || "https://ai-chatbot-xi-liard.vercel.app";
+  await ctx.reply("Откройте приложение клана:", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🏰 Открыть Клан", web_app: { url: `${appUrl}/clan` } }],
+      ],
+    },
+  });
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {
