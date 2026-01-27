@@ -1401,13 +1401,20 @@ bot.on("callback_query:data", async (ctx) => {
     }
 
     await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // ignore
+    }
+
+    const placeholder = await ctx.reply("⏳ Создаю платеж...");
 
     const payment = await createYookassaPayment(
       price,
       description,
       telegramId,
       tariffSlug,
-      ctx.msg?.message_id
+      placeholder.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
@@ -1426,24 +1433,31 @@ bot.on("callback_query:data", async (ctx) => {
 
 Если у вас есть вопросы по подписке или оплате, напишите нам @GoPevzner .`;
 
-      await ctx.reply(messageText, {
-        parse_mode: "HTML",
-        link_preview_options: { is_disabled: true },
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "Карта 💳", url: payUrl }],
-            [{ text: "СБП 🏛", url: payUrl }],
-            [
-              {
-                text: "Оплатить Telegram Stars",
-                callback_data: `pay_stars_${planKey}_${months}`,
-              },
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        messageText,
+        {
+          parse_mode: "HTML",
+          link_preview_options: { is_disabled: true },
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Карта 💳", url: payUrl }],
+              [{ text: "СБП 🏛", url: payUrl }],
+              [
+                {
+                  text: "Оплатить Telegram Stars",
+                  callback_data: `pay_stars_${planKey}_${months}`,
+                },
+              ],
             ],
-          ],
-        },
-      });
+          },
+        }
+      );
     } else {
-      await ctx.reply(
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
         "❌ Ошибка создания платежа. Попробуйте позже или свяжитесь с поддержкой."
       );
     }
@@ -1473,6 +1487,13 @@ bot.on("callback_query:data", async (ctx) => {
     const tariffSlug = `midjourney_${count}`; // No duration, it's a pack
 
     await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // ignore
+    }
+
+    const placeholder = await ctx.reply("⏳ Создаю платеж...");
 
     // Create Payment
     const payment = await createYookassaPayment(
@@ -1480,17 +1501,26 @@ bot.on("callback_query:data", async (ctx) => {
       description,
       telegramId,
       tariffSlug,
-      ctx.msg?.message_id
+      placeholder.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
       const payUrl = payment.confirmation.confirmation_url;
 
-      await ctx.reply("Выберите способ оплаты:", {
-        reply_markup: getPaymentMethodKeyboard(payUrl),
-      });
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "Выберите способ оплаты:",
+        {
+          reply_markup: getPaymentMethodKeyboard(payUrl),
+        }
+      );
     } else {
-      await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже.");
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "❌ Ошибка создания платежа. Попробуйте позже."
+      );
     }
     return;
   }
@@ -1518,23 +1548,39 @@ bot.on("callback_query:data", async (ctx) => {
     const tariffSlug = `video_${count}`;
 
     await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // ignore
+    }
+
+    const placeholder = await ctx.reply("⏳ Создаю платеж...");
 
     const payment = await createYookassaPayment(
       price,
       description,
       telegramId,
       tariffSlug,
-      ctx.msg?.message_id
+      placeholder.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
       const payUrl = payment.confirmation.confirmation_url;
 
-      await ctx.reply("Выберите способ оплаты:", {
-        reply_markup: getPaymentMethodKeyboard(payUrl),
-      });
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "Выберите способ оплаты:",
+        {
+          reply_markup: getPaymentMethodKeyboard(payUrl),
+        }
+      );
     } else {
-      await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже.");
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "❌ Ошибка создания платежа. Попробуйте позже."
+      );
     }
     return;
   }
@@ -1562,23 +1608,39 @@ bot.on("callback_query:data", async (ctx) => {
     const tariffSlug = `suno_${count}`;
 
     await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // ignore
+    }
+
+    const placeholder = await ctx.reply("⏳ Создаю платеж...");
 
     const payment = await createYookassaPayment(
       price,
       description,
       telegramId,
       tariffSlug,
-      ctx.msg?.message_id
+      placeholder.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
       const payUrl = payment.confirmation.confirmation_url;
 
-      await ctx.reply("Выберите способ оплаты:", {
-        reply_markup: getPaymentMethodKeyboard(payUrl),
-      });
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "Выберите способ оплаты:",
+        {
+          reply_markup: getPaymentMethodKeyboard(payUrl),
+        }
+      );
     } else {
-      await ctx.reply("❌ Ошибка создания платежа. Попробуйте позже.");
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "❌ Ошибка создания платежа. Попробуйте позже."
+      );
     }
     return;
   }

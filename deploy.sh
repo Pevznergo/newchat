@@ -73,12 +73,17 @@ fi
 
 # 7. Setup Cron
 echo "⏰ Setting up cron job..."
-CRON_CMD="curl -s http://localhost:3000/api/cron/stats >> /dev/null 2>&1"
+# Use cookie jar to handle redirects (e.g. to /api/auth/guest and back)
+# And add Authorization header for security/bypass if applicable
+CRON_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer a7ab21860984bcb13fbe46841168132b' -s http://localhost:3000/api/cron/stats >> /dev/null 2>&1"
 CRON_JOB="0 7,19 * * * $CRON_CMD"
 
-# Check if cron job already exists
-if crontab -l 2>/dev/null | grep -Fq "$CRON_CMD"; then
-    echo "✅ Cron job already exists. Skipping."
+# Check if cron job already exists (checking the command part only)
+if crontab -l 2>/dev/null | grep -Fq "api/cron/stats"; then
+    echo "✅ Cron job already exists. Removing old one and adding new one..."
+    # Remove old job(s) matching the URL pattern and add new one
+    (crontab -l 2>/dev/null | grep -v "api/cron/stats"; echo "$CRON_JOB") | crontab -
+    echo "✅ Cron job updated."
 else
     # Append the new job to crontab
     (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
