@@ -76,18 +76,20 @@ echo "⏰ Setting up cron job..."
 # Use cookie jar to handle redirects (e.g. to /api/auth/guest and back)
 # And add Authorization header for security/bypass if applicable
 CRON_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer a7ab21860984bcb13fbe46841168132b' -s http://localhost:3000/api/cron/stats >> /dev/null 2>&1"
+RENEWAL_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer a7ab21860984bcb13fbe46841168132b' -s http://localhost:3000/api/cron/subscription-renewal >> /dev/null 2>&1"
+
 CRON_JOB="0 7,19 * * * $CRON_CMD"
+RENEWAL_JOB="0 9 * * * $RENEWAL_CMD"
+
+# Combine jobs (newline separated)
+ALL_JOBS="$CRON_JOB
+$RENEWAL_JOB"
 
 # Check if cron job already exists (checking the command part only)
-if crontab -l 2>/dev/null | grep -Fq "api/cron/stats"; then
-    echo "✅ Cron job already exists. Removing old one and adding new one..."
-    # Remove old job(s) matching the URL pattern and add new one
-    (crontab -l 2>/dev/null | grep -v "api/cron/stats"; echo "$CRON_JOB") | crontab -
-    echo "✅ Cron job updated."
-else
-    # Append the new job to crontab
-    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-    echo "✅ Cron job added: $CRON_JOB"
-fi
+# Check if cron job already exists (checking the command part only)
+# We wipe our specific jobs and re-add them to ensure they are up to date
+echo "🔄 Updating crontab..."
+(crontab -l 2>/dev/null | grep -v "api/cron/"; echo "$ALL_JOBS") | crontab -
+echo "✅ Cron jobs updated."
 
 echo "✅ Deployment successfully completed!"

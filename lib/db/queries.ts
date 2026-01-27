@@ -11,6 +11,7 @@ import {
   inArray,
   isNull,
   lt,
+  lte,
   or,
   type SQL,
   sql,
@@ -850,7 +851,8 @@ export async function cancelUserSubscription(userId: string) {
       .update(subscription)
       .set({
         autoRenew: false,
-        status: "cancelled",
+        // status: "cancelled", // Don't cancel immediately, just stop auto-renew
+        updatedAt: new Date(),
       })
       .where(
         and(eq(subscription.userId, userId), eq(subscription.status, "active"))
@@ -881,13 +883,85 @@ export async function createStarSubscription(
       endDate,
     });
 
-    // Set has_paid to true for user
-    await db.update(user).set({ hasPaid: true }).where(eq(user.id, userId));
-
     return true;
   } catch (error) {
     console.error("Failed to create star subscription", error);
     return false;
+  }
+}
+
+export async function getExpiringSubscriptions(withinHours = 24) {
+  try {
+    const checkDate = new Date();
+    checkDate.setHours(checkDate.getHours() + withinHours);
+
+    // Get active subscriptions that are auto-renewing and expiring soon
+    // We strictly check endDate <= checkDate AND endDate > now (to avoid retrying old ones too far back, or we handle them differently)
+    // For simplicity, let's just get everything active & auto-renewing that expires before checkDate.
+    // Real-world logic might need to filter out ones already tried today.
+    return await db
+      .select()
+      .from(subscription)
+      .where(
+        and(
+          eq(subscription.status, "active"),
+          eq(subscription.autoRenew, true),
+          lte(subscription.endDate, checkDate)
+        )
+      );
+  } catch (error) {
+    console.error("Failed to get expiring subscriptions", error);
+    return [];
+  }
+}
+
+export async function extendSubscription(
+  subscriptionId: string,
+  durationDays: number
+) {
+  try {
+    // 1. Get current subscription to know the current endDate
+    const [sub] = await db
+      .select()
+      .from(subscription)
+      .where(eq(subscription.id, subscriptionId));
+
+    if (!sub) {
+      return false;
+    }
+
+    // 2. Calculate new end date
+    // If it's already expired, extend from NOW? Or from old endDate?
+    // Usually extending from old endDate allows keeping the streak, but if it expired a month ago, we don't want to charge for past time.
+    // Let's assume we run this daily, so it's close to expiration.
+    const baseDate = sub.endDate < new Date() ? new Date() : sub.endDate;
+    const newEndDate = new Date(baseDate);
+    newEndDate.setDate(newEndDate.getDate() + durationDays);
+
+    await db
+      .update(subscription)
+      .set({
+        endDate: newEndDate,
+        updatedAt: new Date(),
+        status: "active", // Ensure it stays active
+      })
+      .where(eq(subscription.id, subscriptionId));
+
+    return true;
+  } catch (error) {
+    console.error("Failed to extend subscription", error);
+    return false;
+  }
+}
+
+export async function disableAutoRenew(subscriptionId: string) {
+  try {
+    await db
+      .update(subscription)
+      .set({ autoRenew: false })
+      .where(eq(subscription.id, subscriptionId));
+  } catch (error) {
+    console.error("Failed to disable auto renew", error);
   }
 }
 

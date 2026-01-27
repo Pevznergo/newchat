@@ -35,6 +35,7 @@ import {
   updateUserSelectedModel,
   upsertAiModel,
 } from "@/lib/db/queries";
+import { createYookassaPayment } from "@/lib/payment";
 import { generateUUID } from "@/lib/utils";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -333,65 +334,6 @@ const SUNO_PRICING = {
   50: 500,
   100: 900,
 };
-
-async function createYookassaPayment(
-  amount: number,
-  description: string,
-  telegramId: string,
-  tariffSlug: string,
-  messageId?: number
-) {
-  const shopId = process.env.YOOKASSA_SHOP_ID;
-  const secretKey = process.env.YOOKASSA_SECRET_KEY;
-
-  if (!shopId || !secretKey) {
-    console.error("Missing YooKassa credentials");
-    return null;
-  }
-
-  const auth = Buffer.from(`${shopId}:${secretKey}`).toString("base64");
-  const idempotencyKey = generateUUID();
-
-  try {
-    const response = await fetch("https://api.yookassa.ru/v3/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`,
-        "Idempotence-Key": idempotencyKey,
-      },
-      body: JSON.stringify({
-        amount: {
-          value: amount.toFixed(2),
-          currency: "RUB",
-        },
-        capture: true,
-        confirmation: {
-          type: "redirect",
-          return_url: "https://aporto.tech/api/payment/return",
-        },
-        description,
-        metadata: {
-          telegram_id: telegramId,
-          tariff_slug: tariffSlug,
-          message_id: messageId, // Store the ID of the message to delete
-        },
-        save_payment_method: true,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("YooKassa Error:", errorText);
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("YooKassa Fetch Error:", error);
-    return null;
-  }
-}
 
 function getPremiumKeyboard() {
   return {
@@ -1184,6 +1126,48 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
+  // Handle Unsubscribe Confirm
+  if (data === "unsubscribe_confirm") {
+    await safeAnswerCallbackQuery(ctx, "Отменяю подписку...");
+
+    const [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      await ctx.editMessageText("❌ Пользователь не найден.");
+      return;
+    }
+
+    const sub = await getUserSubscription(user.id);
+    if (!sub) {
+      await ctx.editMessageText("❌ Подписка не найдена.");
+      return;
+    }
+
+    await cancelUserSubscription(user.id);
+
+    // Create detailed success message
+    const dateStr = sub.endDate.toLocaleDateString("ru-RU");
+    const successMsg = `✅ <b>Автопродление отключено</b>
+    
+Ваша подписка остается активной до <b>${dateStr}</b>.
+После этой даты списаний не будет.`;
+
+    await ctx.editMessageText(successMsg, { parse_mode: "HTML" });
+    return;
+  }
+
+  // Handle Unsubscribe Back
+  if (data === "unsubscribe_back") {
+    await safeAnswerCallbackQuery(ctx);
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // Ignore delete errors
+    }
+    // Optionally return to profile or main menu, or just delete.
+    // User requested "Back", usually means "Cancel the action".
+    return;
+  }
+
   // Handle model selection
   if (data.startsWith("model_")) {
     const [user] = await getUserByTelegramId(telegramId);
@@ -1883,6 +1867,61 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 
   if (text === "👤 Мой профиль") {
     await handleButton((user) => showAccountInfo(ctx, user));
+    return;
+  }
+
+  // Handle /unsubscribe command
+  if (text === "/unsubscribe") {
+    // Check for active subscription
+    const [user] = await getUserByTelegramId(telegramId); // Ensure user is fetched for this command
+    if (!user) {
+      await ctx.reply(
+        "Пожалуйста, начните взаимодействие с ботом, чтобы использовать эту команду."
+      );
+      return;
+    }
+
+    const sub = await getUserSubscription(user.id);
+
+    if (!sub) {
+      await ctx.reply("❌ У вас нет активной подписки.");
+      return;
+    }
+
+    if (!sub.autoRenew) {
+      const dateStr = sub.endDate.toLocaleDateString("ru-RU");
+      await ctx.reply(
+        `✅ Автопродление уже отключено.\nВаша подписка подписка действует до ${dateStr}.`
+      );
+      return;
+    }
+
+    const tariffName = sub.tariffSlug.includes("premium_x2")
+      ? "Premium X2"
+      : "Premium";
+
+    await ctx.reply(
+      `Вы хотите отменить автоматическое списание по подписке <b>${tariffName}</b>?`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "✅ Подтвердить",
+                callback_data: "unsubscribe_confirm",
+              },
+            ],
+            [
+              {
+                text: "🔙 Назад",
+                callback_data: "unsubscribe_back",
+              },
+            ],
+          ],
+        },
+      }
+    );
     return;
   }
 
