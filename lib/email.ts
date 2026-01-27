@@ -1,9 +1,7 @@
 import { Resend } from "resend";
 import type { DailyStats } from "./stats";
 
-const resend = new Resend(
-  process.env.RESEND_API_KEY || "re_6wsXoaT7_3Bju3UzLcsxxN88CkqcRWojs"
-); // Use env or fallback provided by user
+const resend = new Resend(process.env.RESEND_API_KEY); // Use env or fallback provided by user
 
 export async function sendDailyStatsEmail(stats: DailyStats) {
   try {
