@@ -1059,7 +1059,7 @@ bot.command("start", async (ctx) => {
 
     // Sanitize URL and force HTTPS
     let baseUrl = (
-      process.env.NEXTAUTH_URL || "https://app.aporto.tech/clan"
+      process.env.NEXTAUTH_URL || "https://app.aporto.tech"
     ).replace(/\/$/, "");
     if (
       !baseUrl.startsWith("https://") &&
@@ -1085,7 +1085,7 @@ bot.command("start", async (ctx) => {
             {
               text: "⚔️ Мой клан",
               web_app: {
-                url: "https://app.aporto.tech/clan",
+                url: "https://app.aporto.tech?view=clan",
               },
             },
           ],
@@ -1109,7 +1109,7 @@ bot.command("clan", async (ctx) => {
         [
           {
             text: "🏰 Открыть Клан",
-            web_app: { url: "https://app.aporto.tech/clan" },
+            web_app: { url: "https://app.aporto.tech?view=clan" },
           },
         ],
       ],
@@ -1131,7 +1131,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
           [
             {
               text: "⚔️ Мой клан",
-              web_app: { url: "https://app.aporto.tech/clan" },
+              web_app: { url: "https://app.aporto.tech?view=clan" },
             },
           ],
           ["🚀 Премиум", "👤 Мой профиль"],
@@ -2403,7 +2403,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
                     [
                       {
                         text: "🎡 Испытать удачу",
-                        web_app: { url: "https://app.aporto.tech/clan" },
+                        web_app: { url: "https://app.aporto.tech?view=clan" },
                       },
                     ],
                   ],
