@@ -1,6 +1,6 @@
 import { registerOTel } from "@vercel/otel";
 
-export async function register() {
+export function register() {
   registerOTel({ serviceName: "ai-chatbot" });
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
