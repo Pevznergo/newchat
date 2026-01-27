@@ -512,7 +512,7 @@ async function calculateRequestCost(
   // Find in DB cache
   const dbModel = CACHED_MODELS?.find((m) => m.modelId === modelId);
 
-  let cost = dbModel ? dbModel.cost : MODEL_COSTS[modelId] || 1;
+  let finalCost = dbModel ? dbModel.cost : MODEL_COSTS[modelId] || 1;
 
   // Heuristic for Feature/Special costs if not found in DB or using FEATURE_COSTS directly
   // logic: if modelId is a "feature key" like "image_recognition", logic below handles it?
@@ -526,13 +526,13 @@ async function calculateRequestCost(
     // If base is 1, and we have 1 block over, we want x2.
     // logic: multiplier = 1 + extraBlocks
     const multiplier = CONTEXT_COST_RUBRIC.baseMultiplier + extraBlocks;
-    cost *= multiplier;
+    finalCost *= multiplier;
   }
 
   // Video/Image Special Logic overrides
   // (Ideally precise logic maps specific internal model IDs to cost features)
 
-  return cost;
+  return finalCost;
 }
 
 // Check limits and return true if allowed, false if blocked (and sends message)
@@ -545,7 +545,6 @@ async function checkAndEnforceLimits(
   let limit = 0;
   let currentUsage = 0;
   let isUnlimited = false;
-  const limitType = "text"; // "text" or "image"
 
   // Determine if image request based on modelId or cost logic?
   // Ideally passed modelId helps.
@@ -573,7 +572,7 @@ async function checkAndEnforceLimits(
     // Since we don't have tariff slug readily available on `user`, we might need a query `getLastActiveSubscription`.
     // Existing code has `getLastActiveSubscription`.
     const sub = await getLastActiveSubscription(user.id);
-    if (sub && sub.tariffSlug.includes("x2")) {
+    if (sub?.tariffSlug.includes("x2")) {
       limit = 6000;
     }
 
@@ -892,7 +891,7 @@ async function showAccountInfo(ctx: any, user: any) {
   if (isPremium) {
     // Paid: Track credits (requestCount) vs Subscription Limit (Default 3000)
     const sub = await getLastActiveSubscription(user.id);
-    const limit = sub && sub.tariffSlug.includes("x2") ? 6000 : 3000;
+    const limit = sub?.tariffSlug.includes("x2") ? 6000 : 3000;
     const used = user.requestCount || 0;
     usageText = `${used}/${limit} кредитов`;
 
@@ -1076,12 +1075,16 @@ bot.command("start", async (ctx) => {
 
 bot.command("clan", async (ctx) => {
   const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
-  if (user) await showClanMenu(ctx, user);
+  if (user) {
+    await showClanMenu(ctx, user);
+  }
 });
 
 bot.hears("⚔️ Мой клан", async (ctx) => {
   const [user] = await getUserByTelegramId(ctx.from?.id.toString() || "");
-  if (user) await showClanMenu(ctx, user);
+  if (user) {
+    await showClanMenu(ctx, user);
+  }
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {

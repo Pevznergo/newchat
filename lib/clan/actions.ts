@@ -22,8 +22,7 @@ export async function createClan(userId: string, name: string) {
       return { success: false, error: "name_taken" };
     }
 
-    const inviteCode =
-      "CLAN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const inviteCode = `CLAN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     const [newClan] = await db
       .insert(clan)
@@ -96,7 +95,9 @@ export async function leaveClan(userId: string) {
       columns: { clanId: true, clanRole: true },
     });
 
-    if (!u || !u.clanId) return { success: false, error: "not_in_clan" };
+    if (!u || !u.clanId) {
+      return { success: false, error: "not_in_clan" };
+    }
 
     if (u.clanRole === "owner") {
       // Cannot leave if owner (simple logic: transfer or disband first).

@@ -8,13 +8,10 @@ export function calculateClanLevel(
   totalMembers: number,
   proMembers: number
 ): number {
-  const level = 1;
-
   // Iterate from Level 5 down to 2. If meets requirements, return that level.
   // Check Level 5
   if (checkRequirements(5, totalMembers, proMembers)) {
     // Check specific L5 ratio rule
-    const ratio = totalMembers / (proMembers || 1); // Avoid div 0
     // Max Free:Paid ratio 5:1.
     // Total includes Paid. Free = Total - Paid.
     // Ratio = (Total - Paid) / Paid <= 5.
@@ -28,13 +25,19 @@ export function calculateClanLevel(
   }
 
   // Check Level 4
-  if (checkRequirements(4, totalMembers, proMembers)) return 4;
+  if (checkRequirements(4, totalMembers, proMembers)) {
+    return 4;
+  }
 
   // Check Level 3
-  if (checkRequirements(3, totalMembers, proMembers)) return 3;
+  if (checkRequirements(3, totalMembers, proMembers)) {
+    return 3;
+  }
 
   // Check Level 2
-  if (checkRequirements(2, totalMembers, proMembers)) return 2;
+  if (checkRequirements(2, totalMembers, proMembers)) {
+    return 2;
+  }
 
   return 1;
 }
@@ -45,7 +48,9 @@ function checkRequirements(
   proMembers: number
 ) {
   const req = CLAN_LEVELS[level]?.requirements;
-  if (!req) return false;
+  if (!req) {
+    return false;
+  }
   return totalMembers >= req.minUsers && proMembers >= req.minPro;
 }
 
@@ -54,7 +59,9 @@ export function getNextLevelRequirements(
   totalMembers: number,
   proMembers: number
 ) {
-  if (currentLevel >= 5) return null;
+  if (currentLevel >= 5) {
+    return null;
+  }
 
   const nextLevel = currentLevel + 1;
   const req = CLAN_LEVELS[nextLevel].requirements;

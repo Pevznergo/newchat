@@ -1,5 +1,4 @@
 import { config } from "dotenv";
-import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { MODEL_COSTS } from "@/lib/ai/cost-models";
@@ -23,14 +22,7 @@ const seedModels = async () => {
   // The AiModel table has `modelId` column.
 
   for (const [id, cost] of Object.entries(MODEL_COSTS)) {
-    // Try to update existing model
-    const result = await db
-      .update(aiModel)
-      .set({ cost })
-      .where(eq(aiModel.modelId, id));
-
-    // If we wanted to insert missing models, we could, but let's assume models exist or are upserted dynamically.
-    // However, if we want to ensure they exist with cost:
+    // Upsert model cost
     await db
       .insert(aiModel)
       .values({
