@@ -335,6 +335,11 @@ async function getSubscriptionKeyboard(plan: "premium" | "premium_x2") {
 
   for (const t of allTariffs) {
     if (t.slug.startsWith(prefix)) {
+      // Correctly filter out "premium_x2" if we are looking for just "premium"
+      if (plan === "premium" && t.slug.includes("premium_x2")) {
+        continue;
+      }
+
       // Extract months from slug end
       const parts = t.slug.split("_");
       const months = parts.at(-1);
