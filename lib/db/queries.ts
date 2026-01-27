@@ -98,6 +98,27 @@ export async function getClanMemberCounts(clanId: string) {
   }
 }
 
+export async function getClanMembers(clanId: string) {
+  try {
+    const members = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        telegramId: user.telegramId,
+        role: user.clanRole,
+        hasPaid: user.hasPaid,
+      })
+      .from(user)
+      .where(eq(user.clanId, clanId))
+      .orderBy(desc(user.hasPaid), desc(user.clanRole)); // List paid/owners first
+
+    return members;
+  } catch (error) {
+    console.error("Failed to get clan members", error);
+    return [];
+  }
+}
+
 export async function getAllTariffs() {
   try {
     return await db.select().from(tariff).where(eq(tariff.isActive, true));
@@ -1255,5 +1276,19 @@ export async function processSuccessfulPayment({
   } catch (error) {
     console.error("Failed to process payment", error);
     return false;
+  }
+}
+
+export async function updateClanName(clanId: string, name: string) {
+  try {
+    const [updatedClan] = await db
+      .update(clan)
+      .set({ name })
+      .where(eq(clan.id, clanId))
+      .returning();
+    return updatedClan;
+  } catch (error) {
+    console.error("Failed to update clan name", error);
+    throw error;
   }
 }
