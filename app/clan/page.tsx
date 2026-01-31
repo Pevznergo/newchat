@@ -74,7 +74,7 @@ type ClanMember = {
 };
 
 type ClanData = {
-  id: string;
+  id: number;
   name: string;
   level: number;
   membersCount: number;

@@ -10,7 +10,7 @@ async function main() {
   if (process.env.POSTGRES_URL) {
     try {
       console.log("DB Host:", new URL(process.env.POSTGRES_URL).hostname);
-    } catch (e) {
+    } catch (e: any) {
       console.log("DB Host: invalid URL");
     }
   }
@@ -31,18 +31,11 @@ async function main() {
   `);
   console.log("Users with clan_id:", JSON.stringify(usersWithClanInt, null, 2));
 
-  // 8. Check if clanId (UUID) has data
-  console.log("Checking for users with clanId (UUID):");
-  const usersWithClanUuid = await db.execute(sql`
-    SELECT id, "clanId" FROM "User" WHERE "clanId" IS NOT NULL LIMIT 5
-  `);
-  console.log("Users with clanId:", JSON.stringify(usersWithClanUuid, null, 2));
-
   // 2. Count in "Clan" (as defined in schema)
   try {
     const countClan = await db.execute(sql`SELECT count(*) FROM "Clan"`);
     console.log('Count in "Clan":', countClan[0].count);
-  } catch (e) {
+  } catch (e: any) {
     console.log('Error querying "Clan":', e.message);
   }
 
@@ -50,7 +43,7 @@ async function main() {
   try {
     const countClans = await db.execute(sql`SELECT count(*) FROM "clans"`);
     console.log('Count in "clans":', countClans[0].count);
-  } catch (e) {
+  } catch (e: any) {
     console.log('Error querying "clans":', e.message);
   }
 
@@ -58,7 +51,7 @@ async function main() {
   try {
     const countClansLower = await db.execute(sql`SELECT count(*) FROM "clan"`);
     console.log('Count in "clan":', countClansLower[0].count);
-  } catch (e) {
+  } catch (e: any) {
     console.log('Error querying "clan":', e.message);
   }
 

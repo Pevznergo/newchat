@@ -33,7 +33,7 @@ export const user = pgTable("User", {
   telegramId: varchar("telegramId", { length: 255 }),
 
   // Clan fields
-  clanId: uuid("clanId").references(() => clan.id),
+  clanId: integer("clan_id").references(() => clan.id),
   clanRole: varchar("clan_role", { enum: ["owner", "admin", "member"] })
     .default("member")
     .notNull(),

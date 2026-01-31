@@ -67,7 +67,7 @@ export async function getUserClan(userId: string) {
   }
 }
 
-export async function getClanById(id: string) {
+export async function getClanById(id: number) {
   return await db.query.clan.findFirst({
     where: and(eq(clan.id, id), eq(clan.isDeleted, false)),
   });
@@ -79,7 +79,7 @@ export async function getClanByInviteCode(code: string) {
   });
 }
 
-export async function getClanMemberCounts(clanId: string) {
+export async function getClanMemberCounts(clanId: number) {
   try {
     // Count total members
     const [totalRes] = await db
@@ -103,7 +103,7 @@ export async function getClanMemberCounts(clanId: string) {
   }
 }
 
-export async function getClanMembers(clanId: string) {
+export async function getClanMembers(clanId: number) {
   try {
     const members = await db
       .select({
@@ -1314,7 +1314,7 @@ export async function processSuccessfulPayment({
   }
 }
 
-export async function updateClanName(clanId: string, name: string) {
+export async function updateClanName(clanId: number, name: string) {
   try {
     const [updatedClan] = await db
       .update(clan)

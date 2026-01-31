@@ -2,7 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clan, user } from "@/lib/db/schema";
 
-async function handleUserDeparture(userId: string, currentClanId: string) {
+async function handleUserDeparture(userId: string, currentClanId: number) {
   // Check if owner
   const userRecord = await db.query.user.findFirst({
     where: eq(user.id, userId),
