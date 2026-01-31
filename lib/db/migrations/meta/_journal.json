@@ -120,6 +120,13 @@
       "when": 1769501218771,
       "tag": "0016_supreme_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1769889898480,
+      "tag": "0017_outstanding_king_cobra",
+      "breakpoints": true
     }
   ]
 }
