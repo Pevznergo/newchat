@@ -1096,6 +1096,29 @@ bot.command("start", async (ctx) => {
       },
     });
     console.log("Welcome message sent");
+
+    // Auto-Pin Clan Message
+    try {
+      const pinMsg = await ctx.reply(
+        "👑 <b>Вступайте в кланы!</b>\n\nСоздавайте свои сообщества, приглашайте друзей и получайте уникальные бонусы:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жмите кнопку ниже, чтобы открыть приложение!",
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🏰 Открыть Клан",
+                  url: "https://t.me/aporto_bot/app",
+                },
+              ],
+            ],
+          },
+        }
+      );
+      await ctx.api.pinChatMessage(ctx.chat.id, pinMsg.message_id);
+    } catch (e) {
+      console.error("Failed to auto-pin clan message:", e);
+    }
   } catch (error) {
     console.error("Error in /start command:", error);
     await ctx.reply("Sorry, I encountered an error. Please try again later.");
