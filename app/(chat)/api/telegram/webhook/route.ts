@@ -1052,7 +1052,7 @@ bot.command("start", async (ctx) => {
     }
 
     // CLAN INVITE HANDLING
-    if (startParam && startParam.startsWith("clan_")) {
+    if (startParam?.startsWith("clan_")) {
       const inviteCode = startParam.replace("clan_", "").trim();
       if (inviteCode) {
         const clan = await getClanByInviteCode(inviteCode);
@@ -1230,11 +1230,15 @@ bot.callbackQuery(/^join_clan_(.+)$/, async (ctx) => {
       // Try to pin clan message?
     } else {
       let errorMsg = "Не удалось вступить в клан.";
-      if (res.error === "clan_not_found") errorMsg = "Клан не найден.";
-      if (res.error === "already_in_this_clan")
+      if (res.error === "clan_not_found") {
+        errorMsg = "Клан не найден.";
+      }
+      if (res.error === "already_in_this_clan") {
         errorMsg = "Вы уже в этом клане.";
-      if (res.error === "clan_full_redirect")
+      }
+      if (res.error === "clan_full_redirect") {
         errorMsg = "Этот клан переполнен.";
+      }
 
       await ctx.answerCallbackQuery(errorMsg);
       await ctx.reply(errorMsg);
@@ -1248,7 +1252,7 @@ bot.callbackQuery(/^join_clan_(.+)$/, async (ctx) => {
 bot.callbackQuery("delete_message", async (ctx) => {
   try {
     await ctx.deleteMessage();
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 });
