@@ -64,14 +64,16 @@ export async function getUserClan(userId: string) {
   }
 }
 
-export async function getClanById(clanId: string) {
-  try {
-    const [c] = await db.select().from(clan).where(eq(clan.id, clanId));
-    return c;
-  } catch (error) {
-    console.error("Failed to get clan by id", error);
-    return null;
-  }
+export async function getClanById(id: string) {
+  return await db.query.clan.findFirst({
+    where: eq(clan.id, id),
+  });
+}
+
+export async function getClanByInviteCode(code: string) {
+  return await db.query.clan.findFirst({
+    where: eq(clan.inviteCode, code),
+  });
 }
 
 export async function getClanMemberCounts(clanId: string) {
@@ -192,7 +194,7 @@ export async function createTelegramUser(
 ) {
   try {
     const finalEmail = email || `telegram-${telegramId}@telegram.bot`;
-    return await db
+    const createdUsers = await db
       .insert(user)
       .values({
         email: finalEmail,
@@ -200,6 +202,36 @@ export async function createTelegramUser(
         startParam: startParam || null, // Save QR code source
       })
       .returning();
+
+    const newUser = createdUsers[0];
+
+    // Auto-Create Clan
+    try {
+      const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
+      const clanName = `My Clan ${randomSuffix}`;
+      const inviteCode = Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase();
+
+      const [newClan] = await db
+        .insert(clan)
+        .values({
+          name: clanName,
+          inviteCode,
+          ownerId: newUser.id, // UUID
+        })
+        .returning();
+
+      await db
+        .update(user)
+        .set({ clanId: newClan.id, clanRole: "owner" })
+        .where(eq(user.id, newUser.id));
+    } catch (e) {
+      console.error("Failed to auto-create clan for new user", e);
+    }
+
+    return createdUsers;
   } catch (_error) {
     throw new ChatSDKError(
       "bad_request:database",

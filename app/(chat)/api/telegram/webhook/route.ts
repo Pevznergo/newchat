@@ -29,6 +29,7 @@ import {
   getAiModels,
   getAllTariffs,
   getChatsByUserId,
+  getClanByInviteCode,
   getClanMemberCounts, // added
   getLastActiveSubscription,
   getMessagesByChatId,
@@ -1043,20 +1044,43 @@ bot.command("start", async (ctx) => {
 
     const userIdStr = telegramId.toString();
 
-    // Track Bot Start
-    trackBackendEvent("Bot: Start", userIdStr, {
-      source_type: sourceType,
-      start_param: startParam || "",
-      username: ctx.from?.username || "",
-      first_name: ctx.from?.first_name || "",
-      is_premium: ctx.from?.is_premium || false,
-    });
-
-    // Create user in DB ...
+    // Create user in DB FIRST if not exists (Critical for Join Clan)
     let [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       [user] = await createTelegramUser(telegramId, undefined, startParam);
       trackBackendEvent("User: Register", userIdStr, { source: sourceType });
+    }
+
+    // CLAN INVITE HANDLING
+    if (startParam && startParam.startsWith("clan_")) {
+      const inviteCode = startParam.replace("clan_", "").trim();
+      if (inviteCode) {
+        const clan = await getClanByInviteCode(inviteCode);
+        if (clan) {
+          await ctx.reply(
+            `🏰 <b>Приглашение в клан</b>\n\nВы были приглашены в клан <b>${clan.name}</b>.\nВступите, чтобы получать бонусы и доступ к новым моделям!`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: `✅ Вступить в ${clan.name}`,
+                      callback_data: `join_clan_${inviteCode}`,
+                    },
+                  ],
+                  [{ text: "❌ Отмена", callback_data: "delete_message" }],
+                ],
+              },
+            }
+          );
+          // We do NOT return here, we let the welcome message trigger too, or maybe we should return to focus on the invite?
+          // User request: "updated everything in bot".
+          // Let's allow the welcome message to follow, so they have the menu too.
+        } else {
+          await ctx.reply("❌ Клан с таким кодом не найден.");
+        }
+      }
     }
 
     // Reset model to default on start
@@ -1167,6 +1191,65 @@ bot.command("pin_clan", async (ctx) => {
   } catch (error) {
     console.error("Error pinning clan message:", error);
     await ctx.reply("Не удалось закрепить сообщение.");
+  }
+});
+
+// --- Clan Callbacks ---
+bot.callbackQuery(/^join_clan_(.+)$/, async (ctx) => {
+  const inviteCode = ctx.match[1];
+  const telegramId = ctx.from.id.toString();
+
+  try {
+    const [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      await ctx.answerCallbackQuery("Пользователь не найден. Нажмите /start");
+      return;
+    }
+
+    const res = await joinClan(user.id, inviteCode);
+
+    if (res.success) {
+      await ctx.answerCallbackQuery("Вы успешно вступили в клан! 🎉");
+      await ctx.editMessageText(
+        `✅ <b>Поздравляем!</b>\n\nВы вступили в клан <b>${res.clan?.name}</b>.\nТеперь вам доступны новые возможности! отправьте /start в бот чтобы обновить меню`,
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🏰 Открыть Клан",
+                  url: "https://t.me/aporto_bot/app?startapp=clan",
+                },
+              ], // Deep link to clan? Or main app
+            ],
+          },
+        }
+      );
+
+      // Try to pin clan message?
+    } else {
+      let errorMsg = "Не удалось вступить в клан.";
+      if (res.error === "clan_not_found") errorMsg = "Клан не найден.";
+      if (res.error === "already_in_this_clan")
+        errorMsg = "Вы уже в этом клане.";
+      if (res.error === "clan_full_redirect")
+        errorMsg = "Этот клан переполнен.";
+
+      await ctx.answerCallbackQuery(errorMsg);
+      await ctx.reply(errorMsg);
+    }
+  } catch (e) {
+    console.error("Join clan callback error", e);
+    await ctx.answerCallbackQuery("Произошла ошибка.");
+  }
+});
+
+bot.callbackQuery("delete_message", async (ctx) => {
+  try {
+    await ctx.deleteMessage();
+  } catch (e) {
+    // ignore
   }
 });
 
