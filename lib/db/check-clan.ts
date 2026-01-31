@@ -10,7 +10,7 @@ async function main() {
   if (process.env.POSTGRES_URL) {
     try {
       console.log("DB Host:", new URL(process.env.POSTGRES_URL).hostname);
-    } catch (e: any) {
+    } catch (_e: any) {
       console.log("DB Host: invalid URL");
     }
   }
