@@ -1109,7 +1109,7 @@ bot.command("clan", async (ctx) => {
         [
           {
             text: "🏰 Открыть Клан",
-            url: "https://t.me/aporto_bot/app",
+            web_app: { url: "https://aporto.tech/app" },
           },
         ],
       ],
@@ -1150,7 +1150,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
         [
           {
             text: "🏰 Открыть Клан",
-            url: "https://t.me/aporto_bot/app",
+            web_app: { url: "https://aporto.tech/app" },
           },
         ],
       ],
@@ -1185,7 +1185,7 @@ bot.callbackQuery("spin_wheel", async (ctx) => {
         [
           {
             text: "🏰 Открыть Клан",
-            url: "https://t.me/aporto_bot/app",
+            web_app: { url: "https://aporto.tech/app" },
           },
         ],
       ],
