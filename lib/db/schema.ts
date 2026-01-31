@@ -23,6 +23,7 @@ export const clan = pgTable("Clan", {
   // or we can remove the FK constraint in definition if Circular dependency is an issue in TS
   // For now, let's just store the ID. FK constraint might be redundant if User->Clan is the main one.
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
 });
 
 export type Clan = InferSelectModel<typeof clan>;

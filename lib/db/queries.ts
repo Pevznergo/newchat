@@ -56,7 +56,10 @@ export async function getUserClan(userId: string) {
       return null;
     }
 
-    const [c] = await db.select().from(clan).where(eq(clan.id, u.clanId));
+    const [c] = await db
+      .select()
+      .from(clan)
+      .where(and(eq(clan.id, u.clanId), eq(clan.isDeleted, false)));
     return { ...c, role: u.clanRole };
   } catch (error) {
     console.error("Failed to get user clan", error);
@@ -66,13 +69,13 @@ export async function getUserClan(userId: string) {
 
 export async function getClanById(id: string) {
   return await db.query.clan.findFirst({
-    where: eq(clan.id, id),
+    where: and(eq(clan.id, id), eq(clan.isDeleted, false)),
   });
 }
 
 export async function getClanByInviteCode(code: string) {
   return await db.query.clan.findFirst({
-    where: eq(clan.inviteCode, code),
+    where: and(eq(clan.inviteCode, code), eq(clan.isDeleted, false)),
   });
 }
 

@@ -1,6 +1,56 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clan, user } from "@/lib/db/schema";
+
+async function handleUserDeparture(userId: string, currentClanId: string) {
+  // Check if owner
+  const userRecord = await db.query.user.findFirst({
+    where: eq(user.id, userId),
+    columns: { clanRole: true },
+  });
+
+  if (userRecord?.clanRole === "owner") {
+    // Find other members
+    const otherMembers = await db.query.user.findMany({
+      where: and(eq(user.clanId, currentClanId), ne(user.id, userId)),
+    });
+
+    if (otherMembers.length === 0) {
+      // Mark clan deleted
+      await db
+        .update(clan)
+        .set({ isDeleted: true })
+        .where(eq(clan.id, currentClanId));
+    } else {
+      // Pick new owner
+      // Priority: Pro members, then any.
+      const proMembers = otherMembers.filter((m) => m.hasPaid);
+      // Randomly pick from candidates
+      const candidates = proMembers.length > 0 ? proMembers : otherMembers;
+      const newOwner =
+        candidates[Math.floor(Math.random() * candidates.length)];
+
+      // Transfer ownership
+      await db
+        .update(clan)
+        .set({ ownerId: newOwner.id })
+        .where(eq(clan.id, currentClanId));
+      await db
+        .update(user)
+        .set({ clanRole: "owner" })
+        .where(eq(user.id, newOwner.id));
+    }
+  }
+
+  // Remove current user from clan
+  await db
+    .update(user)
+    .set({
+      clanId: null,
+      clanRole: "member", // Reset role to member
+    })
+    .where(eq(user.id, userId));
+}
 
 export async function createClan(userId: string, name: string) {
   try {
@@ -69,7 +119,8 @@ export async function joinClan(userId: string, inviteCode: string) {
       if (existingUser.clanId === targetClan.id) {
         return { success: false, error: "already_in_this_clan" };
       }
-      return { success: false, error: "already_in_other_clan" };
+      // User is in another clan -> Switch Clan
+      await handleUserDeparture(userId, existingUser.clanId);
     }
 
     // Update user
@@ -99,22 +150,16 @@ export async function leaveClan(userId: string) {
       return { success: false, error: "not_in_clan" };
     }
 
-    if (u.clanRole === "owner") {
-      // Cannot leave if owner (simple logic: transfer or disband first).
-      // For MVP: block leaving or auto-disband if 1 member.
-      // Check member count
-      // If strictly owner, maybe allow disbanding?
-      // "Cannot leave as owner. Promote someone else or disband."
-      return { success: false, error: "owner_cannot_leave" };
-    }
+    // ALLOW owners to leave now, triggering transfer/delete logic
+    await handleUserDeparture(userId, u.clanId);
 
-    await db
-      .update(user)
-      .set({
-        clanId: null,
-        clanRole: "member", // Reset role? Or keep default.
-      })
-      .where(eq(user.id, userId));
+    /* 
+    // OLD LOGIC
+    if (u.clanRole === "owner") {
+       return { success: false, error: "owner_cannot_leave" };
+    }
+    await db.update(user)... 
+    */
 
     return { success: true };
   } catch (error) {
