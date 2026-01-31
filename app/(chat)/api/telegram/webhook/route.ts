@@ -1076,23 +1076,7 @@ bot.command("start", async (ctx) => {
       return;
     }
 
-    await ctx.reply(welcomeMessage, {
-      reply_markup: {
-        keyboard: [
-          ["📝 Выбрать модель", "🎨 Создать картинку"],
-          ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          ["🚀 Премиум", "👤 Мой профиль"],
-        ],
-        resize_keyboard: true,
-        is_persistent: true,
-      },
-    });
-    console.log("Welcome message sent");
-
-    // Add delay to ensure order (Welcome -> Clan)
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Auto-Pin Clan Message
+    // Auto-Pin Clan Message (FIRST)
     try {
       const pinMsg = await ctx.reply(
         "👑 <b>Вступайте в кланы!</b>\n\nСоздавайте свои сообщества, приглашайте друзей и получайте уникальные бонусы:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жмите кнопку ниже, чтобы открыть приложение!",
@@ -1114,6 +1098,22 @@ bot.command("start", async (ctx) => {
     } catch (e) {
       console.error("Failed to auto-pin clan message:", e);
     }
+
+    // Add delay to ensure order (Clan -> Welcome)
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    await ctx.reply(welcomeMessage, {
+      reply_markup: {
+        keyboard: [
+          ["📝 Выбрать модель", "🎨 Создать картинку"],
+          ["🔎 Интернет-поиск", "🎬 Создать видео"],
+          ["🚀 Премиум", "👤 Мой профиль"],
+        ],
+        resize_keyboard: true,
+        is_persistent: true,
+      },
+    });
+    console.log("Welcome message sent");
   } catch (error) {
     console.error("Error in /start command:", error);
     await ctx.reply("Sorry, I encountered an error. Please try again later.");
