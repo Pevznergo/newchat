@@ -6,24 +6,21 @@ import {
   json,
   pgTable,
   primaryKey,
+  serial,
   text,
   timestamp,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const clan = pgTable("Clan", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
+export const clan = pgTable("clans", {
+  id: serial("id").primaryKey(), // Integer ID
   name: varchar("name", { length: 255 }).unique().notNull(),
   inviteCode: varchar("invite_code", { length: 50 }).unique().notNull(),
   level: integer("level").default(1).notNull(),
-  ownerId: uuid("ownerId").notNull(),
-  // Circular reference requires care or distinct table definition order/alter,
-  // but Drizzle often handles this if we handle relations later,
-  // or we can remove the FK constraint in definition if Circular dependency is an issue in TS
-  // For now, let's just store the ID. FK constraint might be redundant if User->Clan is the main one.
+  ownerId: uuid("owner_id").notNull(), // Mapped to owner_id
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  isDeleted: boolean("is_deleted").default(false).notNull(),
+  isDeleted: boolean("is_deleted").default(false).notNull(), // Migrated column
 });
 
 export type Clan = InferSelectModel<typeof clan>;
