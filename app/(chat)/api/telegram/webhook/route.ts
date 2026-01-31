@@ -48,6 +48,7 @@ import {
 } from "@/lib/db/queries";
 import { createYookassaPayment } from "@/lib/payment";
 import { generateUUID } from "@/lib/utils";
+import { trackBackendEvent } from "../../../../../lib/mixpanel";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -1016,24 +1017,46 @@ bot.command("start", async (ctx) => {
       { command: "privacy", description: "📄 Условия использования" },
     ]);
 
+    // ... inside bot.command("start")
+
     // Extract payload from /start command (QR code source)
     const payload = ctx.match;
     const startParam =
       payload && typeof payload === "string" ? payload.trim() : undefined;
 
-    // Create user in DB (queries.ts uses ON CONFLICT DO NOTHING usually, or we should check)
-    // Actually queries.ts createTelegramUser uses INSERT which might throw if exists, need check
-    // Checked createTelegramUser: it uses .insert().values().returning(). It does NOT have ON CONFLICT.
-    // So we should check existence first or wrap in try/catch (which it is in queries.ts, but throws ChatSDKError)
-    // Current usage in code checks if user exists?
-    // In original code: `const [user] = await createTelegramUser(...)`. If user exists, this throws unique constraint error probably.
-    // Let's check `createTelegramUser` implementation again if possible or trust existing logic.
-    // Existing logic in `message:text` does `getUser` then `createUser`.
-    // Here we should do the same.
+    // Analytics: Determine Source
+    let sourceType = "Organic";
+    if (startParam) {
+      if (startParam.startsWith("qr_")) {
+        sourceType = "QR Code";
+      } else if (startParam.startsWith("sticker_")) {
+        sourceType = "Sticker";
+      } else if (
+        startParam.startsWith("clan_") ||
+        startParam.startsWith("ref_")
+      ) {
+        sourceType = "Referral";
+      } else {
+        sourceType = "Other Ref";
+      }
+    }
 
+    const userIdStr = telegramId.toString();
+
+    // Track Bot Start
+    trackBackendEvent("Bot: Start", userIdStr, {
+      source_type: sourceType,
+      start_param: startParam || "",
+      username: ctx.from?.username || "",
+      first_name: ctx.from?.first_name || "",
+      is_premium: ctx.from?.is_premium || false,
+    });
+
+    // Create user in DB ...
     let [user] = await getUserByTelegramId(telegramId);
     if (!user) {
       [user] = await createTelegramUser(telegramId, undefined, startParam);
+      trackBackendEvent("User: Register", userIdStr, { source: sourceType });
     }
 
     // Reset model to default on start
@@ -1079,14 +1102,14 @@ bot.command("start", async (ctx) => {
     // Auto-Pin Clan Message (FIRST)
     try {
       const pinMsg = await ctx.reply(
-        "👑 <b>Вступайте в кланы!</b>\n\nСоздавайте свои сообщества, приглашайте друзей и получайте уникальные бонусы:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жмите кнопку ниже, чтобы открыть приложение!",
+        "👑 <b>Объединяйтесь в кланы!</b>\n\nРазвивайте своё комьюнити вместе с друзьями и забирайте крутые привилегии для каждого участника:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жми кнопку ниже, чтобы войти в игру и создать свой клан!",
         {
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [
               [
                 {
-                  text: "🏰 Открыть Клан",
+                  text: "🏰 Мой Клан",
                   url: "https://t.me/aporto_bot/app",
                 },
               ],
@@ -1123,14 +1146,14 @@ bot.command("start", async (ctx) => {
 bot.command("pin_clan", async (ctx) => {
   try {
     const message = await ctx.reply(
-      "👑 <b>Вступайте в кланы!</b>\n\nСоздавайте свои сообщества, приглашайте друзей и получайте уникальные бонусы:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жмите кнопку ниже, чтобы открыть приложение!",
+      "👑 <b>Объединяйтесь в кланы!</b>\n\nРазвивайте своё комьюнити вместе с друзьями и забирайте крутые привилегии для каждого участника:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жми кнопку ниже, чтобы войти в игру и создать свой клан!",
       {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
             [
               {
-                text: "🏰 Открыть Клан",
+                text: "🏰 Мой Клан",
                 url: "https://t.me/aporto_bot/app",
               },
             ],
@@ -2503,6 +2526,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       await ctx.replyWithChatAction("upload_photo");
       await ctx.reply(`🎨 Генерирую (${imageModelConfig.name}): "${text}"...`);
 
+      trackBackendEvent("Model: Request", telegramId, {
+        model: selectedModelId,
+        type: "image",
+        status: "attempt",
+        prompt_length: text.length,
+      });
+
       try {
         // SWITCH PROVIDER LOGIC
         switch (imageModelConfig.provider) {
@@ -2674,6 +2704,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
 
     await ctx.replyWithChatAction("typing");
+
+    trackBackendEvent("Model: Request", telegramId, {
+      model: realModelId,
+      type: "text",
+      status: "attempt",
+      prompt_length: text.length,
+    });
 
     const response = await generateText({
       model: getLanguageModel(realModelId),
@@ -2850,6 +2887,13 @@ bot.on("message:photo", async (ctx) => {
 
       // 2. Prepare context
       const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
+
+      trackBackendEvent("Model: Request", telegramId, {
+        model: realModelId,
+        type: "vision",
+        status: "attempt",
+        caption_length: caption.length,
+      });
 
       // 3. Generate Text with Vision
       try {
