@@ -1081,14 +1081,6 @@ bot.command("start", async (ctx) => {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
           ["🔎 Интернет-поиск", "🎬 Создать видео"],
-          [
-            {
-              text: "⚔️ Мой клан",
-              web_app: {
-                url: "https://aporto.tech/app",
-              },
-            },
-          ],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
@@ -1096,6 +1088,9 @@ bot.command("start", async (ctx) => {
       },
     });
     console.log("Welcome message sent");
+
+    // Add delay to ensure order (Welcome -> Clan)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Auto-Pin Clan Message
     try {
