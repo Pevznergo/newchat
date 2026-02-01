@@ -1051,6 +1051,8 @@ bot.command("start", async (ctx) => {
       trackBackendEvent("User: Register", userIdStr, { source: sourceType });
     }
 
+    trackBackendEvent("Bot: Launch", userIdStr, { source: sourceType });
+
     // CLAN INVITE HANDLING
     if (startParam?.startsWith("clan_")) {
       const inviteCode = startParam.replace("clan_", "").trim();
@@ -2545,15 +2547,23 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 
     await incrementUserRequestCount(user.id, cost);
 
+    // 5. Generate Response using selected model
+    const selectedModelId = user.selectedModel || "model_gpt4omini";
+
+    // Track Request (Now safe to use selectedModelId)
+    trackBackendEvent("Request: Chat", user.id.toString(), {
+      param_model: selectedModelId,
+      param_type: "text",
+      param_cost: cost,
+      param_length: text.length,
+    });
+
     // 4. Fetch History
     const history = await getMessagesByChatId({ id: chatId });
     const aiMessages: any[] = history.map((m) => ({
       role: m.role,
       content: (m.parts as any[]).map((p) => p.text).join("\n"),
     }));
-
-    // 5. Generate Response using selected model
-    const selectedModelId = user.selectedModel || "model_gpt4omini";
 
     // --- Image Generation Flow ---
     if (selectedModelId?.startsWith("model_image_")) {

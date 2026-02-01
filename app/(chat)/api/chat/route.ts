@@ -287,6 +287,16 @@ export async function POST(request: Request) {
     // We do this after setting up the stream to not block response
     incrementUserRequestCount(session.user.id);
 
+    // Track Request (fire and forget)
+    if (process.env.MIXPANEL_TOKEN) {
+      const { trackBackendEvent } = await import("@/lib/mixpanel");
+      trackBackendEvent("Request: Chat", session.user.id, {
+        param_model: selectedChatModel,
+        param_type: "text", // Web chat is currently text-focused
+        param_source: "web",
+      });
+    }
+
     return createUIMessageStreamResponse({
       stream,
       async consumeSseStream({ stream: sseStream }) {

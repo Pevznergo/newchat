@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { processSuccessfulPayment } from "@/lib/db/queries";
+import { trackBackendEvent } from "@/lib/mixpanel";
 
 // Define simplified types for YooKassa event
 type YookassaEvent = {
@@ -61,6 +62,13 @@ export async function POST(request: Request) {
     });
 
     if (success) {
+      trackBackendEvent("Payment: Success", telegramId, {
+        amount: Number(payment.amount.value),
+        currency: payment.amount.currency,
+        tariff: tariffSlug,
+        method: body.object.payment_method?.type,
+      });
+
       if (process.env.TELEGRAM_BOT_TOKEN) {
         try {
           const { Bot } = await import("grammy");
