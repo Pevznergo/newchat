@@ -23,6 +23,7 @@ import {
 } from "@/lib/clan/logic";
 import { SCENARIOS } from "@/lib/content/scenarios";
 import {
+  addExtraRequests,
   cancelUserSubscription,
   consumeExtraRequests,
   createStarSubscription,
