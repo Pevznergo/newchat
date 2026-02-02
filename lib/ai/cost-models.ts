@@ -191,6 +191,8 @@ export function getKlingVideoEditingCost(durationSec: number) {
   // 3s=165, steps of +55 per sec
   const k = 55;
   const base = 165;
-  if (durationSec <= 3) return base;
+  if (durationSec <= 3) {
+    return base;
+  }
   return base + (durationSec - 3) * k;
 }
