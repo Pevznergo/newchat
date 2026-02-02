@@ -59,6 +59,9 @@ export const user = pgTable("User", {
   weeklyImageUsage: integer("weekly_image_usage").default(0),
 
   // Purchased Extra Requests
+  extraRequests: integer("extra_requests").default(0),
+
+  // Purchased Extra Requests
 
   // User status fields
   isActive: boolean("is_active").default(false),

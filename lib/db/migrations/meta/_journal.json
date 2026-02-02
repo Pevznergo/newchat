@@ -134,6 +134,13 @@
       "when": 1769890850681,
       "tag": "0018_concerned_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1770041578549,
+      "tag": "0019_tricky_betty_brant",
+      "breakpoints": true
     }
   ]
 }
