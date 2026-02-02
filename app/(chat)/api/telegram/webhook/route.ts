@@ -6,6 +6,7 @@ import {
   CONTEXT_COST_RUBRIC,
   FEATURE_COSTS,
   MODEL_COSTS,
+  MODEL_LIMITS,
 } from "@/lib/ai/cost-models";
 import {
   entitlementsByUserType,
@@ -1776,6 +1777,19 @@ bot.on("callback_query:data", async (ctx) => {
       visibility: "private",
     });
 
+    // Notify about high cost models
+    const cost = MODEL_COSTS[data] || 1;
+    if (cost > 1 && !isFreeModel) {
+      const modelName = MODEL_NAMES[data] || "Модель";
+      // Determine wording based on model type?
+      // User requested: "Видео с моделью VEO 3.1 расходует 2 генерации".
+      // We use generic: "Модель ... расходует X генерации"
+      await ctx.reply(
+        `ℹ️ <b>${modelName}</b>\n💰 Расход: <b>${cost} генераций</b> за запрос.`,
+        { parse_mode: "HTML" }
+      );
+    }
+
     // Special handling for Nano Banana (Free)
     if (data === "model_image_nano_banana") {
       try {
@@ -2509,9 +2523,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     const entitlements = entitlementsByUserType[userType];
 
     // A. Character Limit
-    if (text.length > entitlements.charLimit) {
+    // Use Model Limit if defined, otherwise fallback to entitlement
+    const selectedId = user.selectedModel || "model_gpt4omini";
+    const modelLimit = MODEL_LIMITS[selectedId] || entitlements.charLimit;
+
+    if (text.length > modelLimit) {
       await ctx.reply(
-        `⚠️ Сообщение слишком длинное. Ваш лимит: ${entitlements.charLimit} символов.`
+        `⚠️ Сообщение слишком длинное. Лимит модели: ${modelLimit} символов.`
       );
       return;
     }
