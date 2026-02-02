@@ -1327,3 +1327,17 @@ export async function updateClanName(clanId: number, name: string) {
     throw error;
   }
 }
+
+export const resetWeeklyLimits = async () => {
+  const result = await db
+    .update(user)
+    .set({
+      weeklyTextUsage: 0,
+      weeklyImageUsage: 0,
+      lastResetDate: new Date(),
+    })
+    .where(eq(user.hasPaid, false))
+    .returning({ id: user.id });
+
+  return result.length;
+};

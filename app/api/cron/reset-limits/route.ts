@@ -1,3 +1,5 @@
+import { resetWeeklyLimits } from "@/lib/db/queries";
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (
@@ -8,7 +10,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { resetWeeklyLimits } = await import("@/lib/db/queries");
     const count = await resetWeeklyLimits();
 
     return Response.json({ status: "ok", updated_count: count });
