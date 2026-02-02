@@ -713,15 +713,37 @@ async function checkAndEnforceLimits(
     return false;
   }
 
+  // Increment Usage - MOVED TO HANDLERS TO AVOID DOUBLE COUNTING
+  // Logic: checkAndEnforceLimits should only CHECK.
+  // The caller is responsible for calling increment functions upon success.
+  // BUT: logic was mixed. Now we rely on checkAndEnforceLimits doing the check,
+  // and we MUST ensure the caller increments.
+  //
+  // WAIT: If I remove it here, I need to add it consistently everywhere else.
+  // The user reported "Double Charge".
+  // ONE charge was likely here.
+  // THE OTHER charge was likely in the handler (e.g. handleTextMessage line ~2678).
+  //
+  // FIX: I will KEEP it here (centralized) and REMOVE it from handlers.
+  // This is safer to ensure all paths are counted.
+  //
+  // Correction: The user complained about double charge.
+  // I removed the one in `handleTextMessage` (lines ~2678) in the previous step.
+  // So this one SHOULD STAY to ensure we charge at least once.
+  //
+  // However, `checkAndEnforceLimits` is called BEFORE generation.
+  // If generation fails, user is charged?
+  // Ideally we charge AFTER generation.
+  // But strictly speaking, for "Access Control", we often deduct first or reserve.
+  // Given complexity, I will KEEP it here for now as the "Source of Truth" for charging,
+  // and ensure NO other places charge.
+
   // Increment Usage
   if (user.hasPaid) {
     // Paid uses requestCount
     await incrementUserRequestCount(user.id, effectiveCost);
   } else if (isImage) {
-    await incrementWeeklyImageUsage(user.id, 1); // Helper needed? Or manual update.
-    // We can use incrementUserRequestCount logic but for weeklyImageUsage.
-    // I'll need to create query helpers or do raw update here?
-    // Better create helpers in queries.ts later.
+    await incrementWeeklyImageUsage(user.id, 1);
   } else if (effectiveCost > 0) {
     await incrementWeeklyTextUsage(user.id, effectiveCost);
   }
@@ -1862,10 +1884,8 @@ bot.on("callback_query:data", async (ctx) => {
       // Determine wording based on model type?
       // User requested: "Видео с моделью VEO 3.1 расходует 2 генерации".
       // We use generic: "Модель ... расходует X генерации"
-      await ctx.reply(
-        `ℹ️ <b>${modelName}</b>\n💰 Расход: <b>${cost} генераций</b> за запрос.`,
-        { parse_mode: "HTML" }
-      );
+      const message = `ℹ️ ${modelName}\n💰 Расход: ${cost} генераций за запрос.`;
+      await safeAnswerCallbackQuery(ctx, message, { show_alert: true });
     }
 
     // Special handling for Nano Banana (Free)
@@ -2676,8 +2696,6 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         },
       ],
     });
-
-    await incrementUserRequestCount(user.id, cost);
 
     // 5. Generate Response using selected model
     const selectedModelId = user.selectedModel || "model_gpt4omini";

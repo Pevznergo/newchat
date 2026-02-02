@@ -47,7 +47,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_gpt41",
@@ -107,7 +107,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_deepseek_v3",
@@ -179,7 +179,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_perplexity",
@@ -255,7 +255,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_video_sora",
@@ -267,7 +267,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_video_kling",
@@ -279,7 +279,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_video_pika",
@@ -291,7 +291,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
     {
       modelId: "model_video_hailuo",
@@ -303,7 +303,7 @@ async function seedAiModels() {
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
-      isPro: true,
+      isPro: false,
     },
   ];
 
@@ -332,9 +332,8 @@ async function seedAiModels() {
     `\n   🆓 Free models: ${models.filter((m) => !m.isPremium).length}`
   );
   console.log(
-    `   ⭐ Premium models: ${models.filter((m) => m.isPremium && !m.isPro).length}`
+    `   ⭐ Premium models: ${models.filter((m) => m.isPremium).length}`
   );
-  console.log(`   💎 Pro models: ${models.filter((m) => m.isPro).length}`);
 }
 
 seedAiModels()

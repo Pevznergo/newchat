@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { deleteModel, getModels, upsertModel } from "../actions";
 
@@ -129,16 +130,18 @@ export default function AdminModelsPage() {
                   <button
                     className="text-indigo-600 hover:text-indigo-900 mr-4"
                     onClick={() => handleEdit(model)}
+                    title="Изменить"
                     type="button"
                   >
-                    Изменить
+                    <Pencil size={18} />
                   </button>
                   <button
                     className="text-red-600 hover:text-red-900"
                     onClick={() => handleDelete(model.id)}
+                    title="Удалить"
                     type="button"
                   >
-                    Удалить
+                    <Trash2 size={18} />
                   </button>
                 </td>
               </tr>
@@ -167,7 +170,11 @@ export default function AdminModelsPage() {
             <h2 className="text-xl font-bold mb-4">
               {editingModel.id ? "Edit Model" : "Add Model"}
             </h2>
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form
+              className="space-y-4"
+              key={editingModel.id || "new"}
+              onSubmit={handleSubmit}
+            >
               <div>
                 <label
                   className="block text-sm font-medium text-gray-700"
