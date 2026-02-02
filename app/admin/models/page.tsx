@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { deleteModel, getModels, upsertModel } from "../actions";
 
+// Disable static generation for this page
+export const dynamic = "force-dynamic";
+
 export default function AdminModelsPage() {
   const [models, setModels] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
