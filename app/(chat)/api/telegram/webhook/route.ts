@@ -1167,7 +1167,8 @@ bot.command("start", async (ctx) => {
       reply_markup: {
         keyboard: [
           ["📝 Выбрать модель", "🎨 Создать картинку"],
-          ["🔎 Интернет-поиск", "🎬 Создать видео"],
+          ["� Готовые сценарии"],
+          ["�🔎 Интернет-поиск", "🎬 Создать видео"],
           ["🚀 Премиум", "👤 Мой профиль"],
         ],
         resize_keyboard: true,
@@ -1438,6 +1439,130 @@ ${nextLevelText}
     });
   }
 }
+
+// --- Scenarios Handlers ---
+
+// 1. Show Scenarios Menu
+bot.hears("📂 Готовые сценарии", async (ctx) => {
+  const buttons: any[][] = [];
+
+  // Group by 2
+  for (let i = 0; i < SCENARIOS.length; i += 2) {
+    const row = SCENARIOS.slice(i, i + 2).map((cat) => ({
+      text: `${cat.emoji} ${cat.title}`,
+      callback_data: `scenarios_cat_${cat.id}`,
+    }));
+    buttons.push(row);
+  }
+
+  // Add "Close" or "Back"
+  buttons.push([{ text: "🔙 Закрыть", callback_data: "menu_close" }]);
+
+  await ctx.reply("🛠 <b>Готовые сценарии</b>\n\nВыберите категорию:", {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: buttons,
+    },
+  });
+});
+
+// 2. Handle Category Selection
+bot.callbackQuery(/^scenarios_cat_(.+)$/, async (ctx) => {
+  const catId = ctx.match[1];
+  const category = SCENARIOS.find((c) => c.id === catId);
+
+  if (!category) {
+    await ctx.answerCallbackQuery("Категория не найдена");
+    return;
+  }
+
+  const buttons = category.items.map((item) => [
+    {
+      text: item.title,
+      callback_data: `scenario_item_${item.id}`,
+    },
+  ]);
+
+  buttons.push([
+    { text: "🔙 Назад к категориям", callback_data: "scenarios_back" },
+  ]);
+
+  await ctx.editMessageText(
+    `<b>${category.emoji} ${category.title}</b>\n\nВыберите сценарий:`,
+    {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    }
+  );
+  await safeAnswerCallbackQuery(ctx);
+});
+
+// 3. Handle Item Selection (Show Prompt)
+bot.callbackQuery(/^scenario_item_(.+)$/, async (ctx) => {
+  const itemId = ctx.match[1];
+
+  // Flatten search
+  let foundItem: any = null;
+  let category: any = null;
+
+  for (const cat of SCENARIOS) {
+    const item = cat.items.find((i) => i.id === itemId);
+    if (item) {
+      foundItem = item;
+      category = cat;
+      break;
+    }
+  }
+
+  if (!foundItem) {
+    await ctx.answerCallbackQuery("Сценарий не найден");
+    return;
+  }
+
+  const instruction = foundItem.description
+    ? `\nℹ️ <i>${foundItem.description}</i>`
+    : "";
+
+  const responseText = `<b>${foundItem.title}</b>${instruction}\n\nНажмите на текст ниже, чтобы скопировать, и отправьте боту:\n\n<code>${foundItem.prompt}</code>`;
+
+  // We send a NEW message so user can see it easily and copy.
+  // We can also edit the current one but then context is lost?
+  // User asked to "fill input", we simulate this by making it easy to copy.
+  // We keep the menu open? Or better, send new message and keep menu?
+  // Let's Edit if it's navigation, but here it's "Result".
+  // If we Edit, user might lose the menu.
+  // Let's send a new message and answer callback.
+
+  await ctx.reply(responseText, { parse_mode: "HTML" });
+  await safeAnswerCallbackQuery(ctx, "Скопируйте текст и отправьте боту");
+});
+
+// 4. Back Button Handler
+bot.callbackQuery("scenarios_back", async (ctx) => {
+  // Re-render main categories
+  const buttons: any[][] = [];
+  for (let i = 0; i < SCENARIOS.length; i += 2) {
+    const row = SCENARIOS.slice(i, i + 2).map((cat) => ({
+      text: `${cat.emoji} ${cat.title}`,
+      callback_data: `scenarios_cat_${cat.id}`,
+    }));
+    buttons.push(row);
+  }
+  buttons.push([{ text: "🔙 Закрыть", callback_data: "menu_close" }]);
+
+  await ctx.editMessageText(
+    "🛠 <b>Готовые сценарии</b>\n\nВыберите категорию:",
+    {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    }
+  );
+  await safeAnswerCallbackQuery(ctx);
+});
 
 bot.command("clear", async (ctx) => {
   const telegramId = ctx.from?.id.toString();
