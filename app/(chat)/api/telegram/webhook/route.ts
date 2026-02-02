@@ -776,7 +776,7 @@ async function showImageMenu(ctx: any, user: any) {
 
   const currentModel = user.selectedModel?.startsWith("model_image_")
     ? user.selectedModel
-    : "model_image_nano_banana";
+    : undefined;
 
   await ctx.reply("Выберите модель для создания изображений:", {
     reply_markup: getImageModelKeyboard(currentModel, user?.hasPaid),
@@ -1094,11 +1094,11 @@ bot.command("start", async (ctx) => {
     // Reset model to default on start
     await updateUserSelectedModel(user.id, "model_gpt5nano");
 
-    const welcomeMessage = `Привет! ИИ-бот №1 открывает вам доступ к лучшим нейросетям для создания текста, изображений, видео и песен.
+    const welcomeMessage = `Привет! ИИ-бот №1 открывает вам доступ к лучшим нейросетям для создания текста, изображений и видео.
 
-БЕСПЛАТНО – 100 вопросов в неделю: ChatGPT, DeepSeek, Perplexity, Gemini, ИИ-фотошоп Nano Banana Pro и GPT Image 1.5.
+БЕСПЛАТНО – 100 вопросов в неделю (Для клана уровня 5): ChatGPT, DeepSeek, Perplexity, Gemini, ИИ-фотошоп Nano Banana Pro и GPT Image 1.5.
 
-В /PREMIUM доступны GPT-5.2, Gemini Pro, Claude, картинки /Midjourney и Flux 2, видео Veo 3.1, Sora 2, Hailuo, Kling, музыка /Suno.
+В /PREMIUM доступны GPT-5.2, Gemini Pro, Claude, картинки /Midjourney и Flux 2, видео Veo 3.1, Sora 2, Hailuo, Kling.
 
 Как пользоваться ботом?
 
@@ -1108,9 +1108,7 @@ bot.command("start", async (ctx) => {
 
 🌅 ИЗОБРАЖЕНИЯ: нажмите /photo, чтобы создать или редактировать картинку.
 
-🎬 ВИДЕО: нажмите /video, чтобы начать создание ролика.
-
-🎸 МУЗЫКА: введите /suno, выберите жанр и добавьте текст песни.`;
+🎬 ВИДЕО: нажмите /video, чтобы начать создание ролика.`;
 
     // Sanitize URL and force HTTPS
     let baseUrl = (
