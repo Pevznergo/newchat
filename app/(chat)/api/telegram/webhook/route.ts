@@ -2091,6 +2091,49 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
+  // Handle Subscription Selection (sub_pro_*)
+  if (data.startsWith("sub_")) {
+    const slug = data;
+    const tariff = await getTariffBySlug(slug);
+
+    if (!tariff) {
+      await safeAnswerCallbackQuery(ctx, "Тариф не найден");
+      return;
+    }
+
+    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
+
+    const placeholder = await ctx.reply("⏳ Создаю платеж...");
+    const payment = await createYookassaPayment(
+      tariff.priceRub,
+      tariff.description || tariff.name,
+      telegramId,
+      tariff.slug,
+      placeholder.message_id
+    );
+
+    if (payment?.confirmation?.confirmation_url) {
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        `Подписка: <b>${tariff.name}</b>\nСумма: ${tariff.priceRub}₽`,
+        {
+          parse_mode: "HTML",
+          reply_markup: getPaymentMethodKeyboard(
+            payment.confirmation.confirmation_url
+          ),
+        }
+      );
+    } else {
+      await ctx.api.editMessageText(
+        placeholder.chat.id,
+        placeholder.message_id,
+        "Ошибка платежа."
+      );
+    }
+    return;
+  }
+
   // Handle Premium Sub-menu
   if (data === "open_premium_subs") {
     await ctx.editMessageText("Выберите период подписки:", {
