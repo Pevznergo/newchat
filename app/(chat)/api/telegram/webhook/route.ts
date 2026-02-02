@@ -489,6 +489,78 @@ async function calculateRequestCost(
   return finalCost;
 }
 
+// Check if user's clan meets model's clan level requirement
+async function checkClanLevelRequirement(
+  ctx: any,
+  user: any,
+  modelId: string
+): Promise<boolean> {
+  // Premium users bypass clan level requirement
+  if (user.hasPaid) {
+    return true;
+  }
+
+  const dbModel = CACHED_MODELS?.find((m) => m.modelId === modelId);
+  const requiredLevel = dbModel?.requiredClanLevel || 1;
+
+  if (requiredLevel <= 1) {
+    return true; // No special requirement
+  }
+
+  const clanData = await getUserClan(user.id);
+  if (!clanData) {
+    // User not in clan, but model requires clan level > 1
+    await ctx.reply(
+      `🔒 Эта модель требует клан уровня ${requiredLevel}.\n\nСоздайте или вступите в клан, чтобы получить доступ!\nИли перейдите на Премиум.`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🏰 Мой Клан",
+                web_app: { url: "https://aporto.tech/app" },
+              },
+              {
+                text: "⭐ Премиум",
+                callback_data: "premium_menu",
+              },
+            ],
+          ],
+        },
+      }
+    );
+    return false;
+  }
+
+  const counts = await getClanMemberCounts(clanData.id);
+  const clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
+
+  if (clanLevel < requiredLevel) {
+    await ctx.reply(
+      `🔒 Эта модель требует клан уровня ${requiredLevel}, а у вас уровень ${clanLevel}.\n\nПовысьте уровень клана, чтобы отправить запрос.\nИли перейдите на Премиум.`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🏰 Мой Клан",
+                web_app: { url: "https://aporto.tech/app" },
+              },
+              {
+                text: "⭐ Премиум",
+                callback_data: "premium_menu",
+              },
+            ],
+          ],
+        },
+      }
+    );
+    return false;
+  }
+
+  return true;
+}
+
 // Check limits and return true if allowed, false if blocked (and sends message)
 async function checkAndEnforceLimits(
   ctx: any,
@@ -2539,6 +2611,17 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       user.selectedModel || "model_gpt4omini",
       text.length
     );
+
+    // Check clan level requirement first
+    const hasAccess = await checkClanLevelRequirement(
+      ctx,
+      user,
+      user.selectedModel || "model_gpt4omini"
+    );
+    if (!hasAccess) {
+      return;
+    }
+
     const allowed = await checkAndEnforceLimits(
       ctx,
       user,
@@ -2616,6 +2699,16 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         await ctx.reply(
           "⚠️ Эта модель пока недоступна или находится в разработке."
         );
+        return;
+      }
+
+      // Check clan level requirement first
+      const hasAccess = await checkClanLevelRequirement(
+        ctx,
+        user,
+        selectedModelId
+      );
+      if (!hasAccess) {
         return;
       }
 

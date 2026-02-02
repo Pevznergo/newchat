@@ -25,6 +25,7 @@ import {
   aiModel,
   type Chat,
   chat,
+  clanLevel,
   type DBMessage,
   document,
   message,
@@ -1216,6 +1217,30 @@ export async function upsertAiModel(
   } catch (error) {
     console.error("Failed to upsert AI model", error);
     throw new ChatSDKError("bad_request:database", "Failed to upsert AI model");
+  }
+}
+
+// --- Clan Levels ---
+
+export async function getClanLevels() {
+  try {
+    return await db.select().from(clanLevel).orderBy(asc(clanLevel.level));
+  } catch (error) {
+    console.error("Failed to get clan levels", error);
+    throw new ChatSDKError("bad_request:database", "Failed to get clan levels");
+  }
+}
+
+export async function getClanLevelByLevel(level: number) {
+  try {
+    const [result] = await db
+      .select()
+      .from(clanLevel)
+      .where(eq(clanLevel.level, level));
+    return result;
+  } catch (error) {
+    console.error("Failed to get clan level", error);
+    throw new ChatSDKError("bad_request:database", "Failed to get clan level");
   }
 }
 

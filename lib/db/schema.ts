@@ -299,3 +299,22 @@ export const aiModel = pgTable("AiModel", {
 });
 
 export type AiModel = InferSelectModel<typeof aiModel>;
+
+export const clanLevel = pgTable("ClanLevel", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  level: integer("level").unique().notNull(),
+  minUsers: integer("min_users").notNull().default(1),
+  minPro: integer("min_pro").notNull().default(0),
+  maxFreeToPaidRatio: integer("max_free_to_paid_ratio"), // null = unlimited
+  weeklyTextCredits: integer("weekly_text_credits").notNull().default(15),
+  weeklyImageGenerations: integer("weekly_image_generations")
+    .notNull()
+    .default(1),
+  unlimitedModels: text("unlimited_models").array(), // Array of model IDs
+  description: text("description"),
+  isEnabled: boolean("is_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ClanLevel = InferSelectModel<typeof clanLevel>;
