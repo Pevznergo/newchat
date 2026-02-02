@@ -21,6 +21,7 @@ import {
   getLevelConfig,
   getNextLevelRequirements,
 } from "@/lib/clan/logic";
+import { SCENARIOS } from "@/lib/content/scenarios";
 import {
   cancelUserSubscription,
   createStarSubscription,
@@ -1505,13 +1506,11 @@ bot.callbackQuery(/^scenario_item_(.+)$/, async (ctx) => {
 
   // Flatten search
   let foundItem: any = null;
-  let category: any = null;
 
   for (const cat of SCENARIOS) {
     const item = cat.items.find((i) => i.id === itemId);
     if (item) {
       foundItem = item;
-      category = cat;
       break;
     }
   }
