@@ -2778,6 +2778,11 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
                 await ctx.replyWithPhoto(imageUrl, {
                   caption: "Сделано в @aporto_bot",
                 });
+                if (cost > 0) {
+                  await ctx.reply(`💸 Списано: ${cost} кр.`, {
+                    disable_notification: true,
+                  });
+                }
               } else {
                 await ctx.reply(
                   `Could not extract image. Response:\n\n${content.substring(0, 200)}...`
@@ -2809,7 +2814,11 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     }
 
     // --- Text Generation Flow ---
-    const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
+    // Resolve API Model ID from DB if available
+    const dbModel = CACHED_MODELS?.find((m) => m.modelId === selectedModelId);
+    const apiModelId =
+      dbModel?.apiModelId || PROVIDER_MAP[selectedModelId] || selectedModelId;
+    const realModelId = apiModelId;
 
     await ctx.replyWithChatAction("typing");
 
@@ -2939,6 +2948,12 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         },
       ],
     });
+
+    if (cost > 0) {
+      await ctx.reply(`💸 Списано: ${cost} кр.`, {
+        disable_notification: true,
+      });
+    }
   } catch (error) {
     console.error("Telegram Webhook Error:", error);
     await ctx.reply("Sorry, something went wrong processing your message.");

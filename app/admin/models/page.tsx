@@ -9,6 +9,7 @@ export default function AdminModelsPage() {
   const [editingModel, setEditingModel] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: loadModels is stable
   useEffect(() => {
     loadModels();
   }, []);
@@ -31,6 +32,7 @@ export default function AdminModelsPage() {
   }
 
   async function handleDelete(id: string) {
+    // biome-ignore lint/suspicious/noAlert: Admin tool
     if (confirm("Are you sure?")) {
       await deleteModel(id);
       loadModels();
@@ -53,6 +55,7 @@ export default function AdminModelsPage() {
     };
 
     if (!data.modelId || !data.name || !data.type) {
+      // biome-ignore lint/suspicious/noAlert: Admin tool
       alert("Please fill required fields");
       return;
     }
@@ -69,6 +72,7 @@ export default function AdminModelsPage() {
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           onClick={handleAddNew}
+          type="button"
         >
           Add New Model
         </button>
@@ -128,12 +132,14 @@ export default function AdminModelsPage() {
                   <button
                     className="text-indigo-600 hover:text-indigo-900 mr-4"
                     onClick={() => handleEdit(model)}
+                    type="button"
                   >
                     Edit
                   </button>
                   <button
                     className="text-red-600 hover:text-red-900"
                     onClick={() => handleDelete(model.id)}
+                    type="button"
                   >
                     Delete
                   </button>
@@ -166,36 +172,48 @@ export default function AdminModelsPage() {
             </h2>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  className="block text-sm font-medium text-gray-700"
+                  htmlFor="modelId"
+                >
                   Internal Model ID (Unique)
                 </label>
                 <input
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   defaultValue={editingModel.modelId}
+                  id="modelId"
                   name="modelId"
                   placeholder="e.g. model_gpt5nano"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  className="block text-sm font-medium text-gray-700"
+                  htmlFor="name"
+                >
                   Display Name
                 </label>
                 <input
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   defaultValue={editingModel.name}
+                  id="name"
                   name="name"
                   placeholder="e.g. GPT-5 Nano"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  className="block text-sm font-medium text-gray-700"
+                  htmlFor="type"
+                >
                   Type
                 </label>
                 <select
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   defaultValue={editingModel.type || "text"}
+                  id="type"
                   name="type"
                 >
                   <option value="text">Text</option>
@@ -204,12 +222,16 @@ export default function AdminModelsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  className="block text-sm font-medium text-gray-700"
+                  htmlFor="provider"
+                >
                   Service Provider
                 </label>
                 <select
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   defaultValue={editingModel.provider || "openai"}
+                  id="provider"
                   name="provider"
                 >
                   <option value="openai">OpenAI</option>
@@ -221,12 +243,16 @@ export default function AdminModelsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  className="block text-sm font-medium text-gray-700"
+                  htmlFor="apiModelId"
+                >
                   API Model ID (Real Provider ID)
                 </label>
                 <input
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   defaultValue={editingModel.apiModelId}
+                  id="apiModelId"
                   name="apiModelId"
                   placeholder="e.g. openai/gpt-5-nano-2025-08-07"
                 />
@@ -237,24 +263,32 @@ export default function AdminModelsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    className="block text-sm font-medium text-gray-700"
+                    htmlFor="cost"
+                  >
                     Cost (Credits)
                   </label>
                   <input
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     defaultValue={editingModel.cost || 1}
+                    id="cost"
                     name="cost"
                     required
                     type="number"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    className="block text-sm font-medium text-gray-700"
+                    htmlFor="requiredClanLevel"
+                  >
                     Required Clan Level
                   </label>
                   <input
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     defaultValue={editingModel.requiredClanLevel || 1}
+                    id="requiredClanLevel"
                     max="10"
                     min="1"
                     name="requiredClanLevel"
@@ -267,10 +301,11 @@ export default function AdminModelsPage() {
               <div className="flex items-center gap-2">
                 <input
                   defaultChecked={editingModel.isEnabled ?? true}
+                  id="isEnabled"
                   name="isEnabled"
                   type="checkbox"
                 />
-                <label>Enabled</label>
+                <label htmlFor="isEnabled">Enabled</label>
               </div>
 
               <div className="flex justify-end gap-2 mt-6">

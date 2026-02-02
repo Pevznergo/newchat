@@ -292,6 +292,8 @@ export const aiModel = pgTable("AiModel", {
   isPremium: boolean("is_premium").default(false),
   isPro: boolean("is_pro").default(false),
   isEnabled: boolean("is_enabled").default(true),
+  apiModelId: varchar("api_model_id", { length: 255 }),
+  requiredClanLevel: integer("required_clan_level").default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
