@@ -3,10 +3,24 @@
  * Run with: pnpm tsx lib/db/seed-ai-models.ts
  */
 
-import { db } from ".";
+import { config } from "dotenv";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { aiModel } from "./schema";
 
+config({
+  path: ".env.local",
+});
+
 async function seedAiModels() {
+  if (!process.env.POSTGRES_URL) {
+    console.log("⏭️  POSTGRES_URL not defined, cannot seed models");
+    process.exit(1);
+  }
+
+  const connection = postgres(process.env.POSTGRES_URL, { max: 1 });
+  const db = drizzle(connection);
+
   console.log("🌱 Seeding AI models from bot configuration...");
 
   const models = [
