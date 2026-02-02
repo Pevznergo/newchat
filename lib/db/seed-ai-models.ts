@@ -96,8 +96,8 @@ async function seedAiModels() {
       isPro: true,
     },
     {
-      modelId: "model_deepseek32",
-      name: "DeepSeek-V3",
+      modelId: "model_deepseek_v3",
+      name: "DeepSeek V3",
       provider: "openrouter",
       type: "text",
       cost: 1,
@@ -108,8 +108,8 @@ async function seedAiModels() {
       isPro: false,
     },
     {
-      modelId: "model_deepseek32thinking",
-      name: "DeepSeek-R1",
+      modelId: "model_deepseek_r1",
+      name: "DeepSeek R1",
       provider: "openrouter",
       type: "text",
       cost: 10,
@@ -120,8 +120,8 @@ async function seedAiModels() {
       isPro: false,
     },
     {
-      modelId: "model_gemini3pro",
-      name: "Gemini 1.5 Pro",
+      modelId: "model_gemini_pro",
+      name: "Gemini 3 Pro",
       provider: "openrouter",
       type: "text",
       cost: 15,
@@ -132,7 +132,7 @@ async function seedAiModels() {
       isPro: false,
     },
     {
-      modelId: "model_gemini3flash",
+      modelId: "model_gemini_flash",
       name: "Gemini 3 Flash",
       provider: "openrouter",
       type: "text",
@@ -166,6 +166,18 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: true,
+    },
+    {
+      modelId: "model_perplexity",
+      name: "Perplexity",
+      provider: "perplexity",
+      type: "text",
+      cost: 20,
+      apiModelId: "perplexity/sonar-pro",
+      requiredClanLevel: 1,
+      isEnabled: true,
+      isPremium: true,
+      isPro: false,
     },
 
     // Image Models

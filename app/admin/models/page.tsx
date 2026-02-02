@@ -86,25 +86,22 @@ export default function AdminModelsPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Internal ID
+                Название (кнопка в боте)
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                Провайдер
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+                API ID
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                API ID (Real)
+                Уровень клана
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cost
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Clan Lvl
+                Стоимость
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                Действия
               </th>
             </tr>
           </thead>
@@ -112,13 +109,10 @@ export default function AdminModelsPage() {
             {models.map((model) => (
               <tr key={model.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {model.modelId}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {model.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {model.type}
+                  {model.provider || "-"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {model.apiModelId || (
@@ -126,10 +120,10 @@ export default function AdminModelsPage() {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {model.cost}
+                  {model.requiredClanLevel ?? 1}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {model.requiredClanLevel ?? 1}
+                  {model.cost}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
@@ -137,14 +131,14 @@ export default function AdminModelsPage() {
                     onClick={() => handleEdit(model)}
                     type="button"
                   >
-                    Edit
+                    Изменить
                   </button>
                   <button
                     className="text-red-600 hover:text-red-900"
                     onClick={() => handleDelete(model.id)}
                     type="button"
                   >
-                    Delete
+                    Удалить
                   </button>
                 </td>
               </tr>
@@ -152,14 +146,14 @@ export default function AdminModelsPage() {
             {models.length === 0 && !loading && (
               <tr>
                 <td className="px-6 py-4 text-center text-gray-500" colSpan={6}>
-                  No models found.
+                  Модели не найдены.
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
                 <td className="px-6 py-4 text-center text-gray-500" colSpan={6}>
-                  Loading...
+                  Загрузка...
                 </td>
               </tr>
             )}

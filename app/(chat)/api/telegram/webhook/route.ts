@@ -70,10 +70,9 @@ export const maxDuration = 60;
 const FREE_MODELS = [
   "model_gpt5nano",
   "model_gpt4omini",
-  "model_gemini3flash",
-  "model_gemini3flash",
-  "model_image_nano_banana", // Nano Banana
-  "model_deepseek32",
+  "model_gemini_flash",
+  "model_image_nano_banana",
+  "model_deepseek_v3",
 ];
 
 const MODEL_NAMES: Record<string, string> = {
@@ -84,16 +83,22 @@ const MODEL_NAMES: Record<string, string> = {
   model_gpt4omini: "GPT-4o Mini",
   model_claude45sonnet: "Claude 3.5 Sonnet",
   model_claude45thinking: "Claude 3.7 Sonnet Thinking",
-  model_deepseek32: "DeepSeek-V3",
-  model_deepseek32thinking: "DeepSeek-R1",
-  model_gemini3pro: "Gemini 1.5 Pro",
-  model_gemini3flash: "Gemini 3 Flash",
+  model_deepseek_v3: "DeepSeek V3",
+  model_deepseek_r1: "DeepSeek R1",
+  model_gemini_pro: "Gemini 3 Pro",
+  model_gemini_flash: "Gemini 3 Flash",
+  model_grok41: "Grok 4.1",
+  model_deepresearch: "Deep Research",
+  model_perplexity: "Perplexity",
   model_image_nano_banana: "Nano Banana",
   model_image_banana_pro: "Nano Banana Pro",
   model_image_midjourney: "Midjourney",
   model_image_flux: "FLUX 2",
-  model_grok41: "Grok 4.1",
-  model_deepresearch: "Deep Research",
+  model_video_veo: "Veo",
+  model_video_sora: "Sora",
+  model_video_kling: "Kling",
+  model_video_pika: "Pika",
+  model_video_hailuo: "Hailuo",
 };
 
 const PROVIDER_MAP: Record<string, string> = {
@@ -104,22 +109,23 @@ const PROVIDER_MAP: Record<string, string> = {
   model_gpt4omini: "openai/gpt-4o-mini-2024-07-18",
   model_claude45sonnet: "openrouter/anthropic/claude-3.5-sonnet",
   model_claude45thinking: "openrouter/anthropic/claude-3.7-sonnet",
-  model_deepseek32: "openrouter/deepseek/deepseek-chat",
-  model_deepseek32thinking: "openrouter/deepseek/deepseek-r1",
-  model_gemini3pro: "openrouter/google/gemini-pro-1.5",
-  model_gemini3flash: "openrouter/google/gemini-3-flash-preview",
-  // Image/Video models use default text model for chat context
+  model_deepseek_v3: "openrouter/deepseek/deepseek-chat",
+  model_deepseek_r1: "openrouter/deepseek/deepseek-r1",
+  model_gemini_pro: "openrouter/google/gemini-pro-1.5",
+  model_gemini_flash: "openrouter/google/gemini-3-flash-preview",
+  model_grok41: "xai/grok-2-vision-1212",
+  model_deepresearch: "openai/o3-deep-research-2025-06-26",
+  model_perplexity: "perplexity/sonar-pro",
+  // Image/Video models
+  model_image_nano_banana: "openai/chatgpt-image-latest",
+  model_image_banana_pro: "openai/dall-e-3",
+  model_image_midjourney: "openai/gpt-4o",
+  model_image_flux: "openai/gpt-4o",
   model_video_veo: "openai/gpt-4o",
   model_video_sora: "openai/gpt-4o",
   model_video_kling: "openai/gpt-4o",
   model_video_pika: "openai/gpt-4o",
   model_video_hailuo: "openai/gpt-4o",
-  model_image_nano_banana: "openai/chatgpt-image-latest",
-  model_image_banana_pro: "openai/dall-e-3",
-  model_image_midjourney: "openai/gpt-4o",
-  model_image_flux: "openai/gpt-4o",
-  model_grok41: "xai/grok-2-vision-1212", // Placeholder for Grok 4.1 if not available
-  model_deepresearch: "openai/o3-deep-research-2025-06-26", // Placeholder matches o3
 };
 
 function getModelKeyboard(
@@ -304,12 +310,12 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
       ],
       [
         {
-          text: getLabel("model_gemini3pro", "Gemini 3.0 Pro"),
-          callback_data: "model_gemini3pro",
+          text: getLabel("model_gemini_pro", "Gemini 3 Pro"),
+          callback_data: "model_gemini_pro",
         },
         {
-          text: getLabel("model_gemini3flash", "Gemini 3.0 Flash"),
-          callback_data: "model_gemini3flash",
+          text: getLabel("model_gemini_flash", "Gemini 3 Flash"),
+          callback_data: "model_gemini_flash",
         },
       ],
       [
@@ -798,7 +804,7 @@ async function showImageMenu(ctx: any, user: any) {
 }
 
 async function showSearchMenu(ctx: any, user: any) {
-  const currentModel = user?.selectedModel || "model_gemini3flash"; // Default to free model
+  const currentModel = user?.selectedModel || "model_gemini_flash"; // Default to free model
 
   const searchText = `Выберите модель поиска или оставьте выбранную модель по-умолчанию
 
