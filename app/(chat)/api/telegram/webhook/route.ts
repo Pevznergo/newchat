@@ -633,38 +633,44 @@ async function checkAndEnforceLimits(
     let buttons: any[] = [];
 
     if (user.hasPaid) {
-      message = `🚧 <b>Лимит исчерпан! (${limit})</b>\n\nПригласите друзей или обновите подписку.`;
+      // Paid User Reached Limit
+      message = `⚡️ <b>Творческая энергия на сегодня исчерпана! (${limit})</b>\n\nПригласите друзей, чтобы получить бонусы, или дождитесь завтрашнего дня.`;
       buttons = [
         [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
       ];
     } else {
-      // Free Logic Upsell
+      // Free User Logic & Upsell
       const clanData = await getUserClan(user.id);
-      let upsellText = "";
+
+      message =
+        "🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Премиум или Поднимите уровень клана.";
 
       if (clanData) {
-        const counts = await getClanMemberCounts(clanData.id);
-        const currentLvl = calculateClanLevel(
-          counts.totalMembers,
-          counts.proMembers
-        );
-        const nextReq = getNextLevelRequirements(
-          currentLvl,
-          counts.totalMembers,
-          counts.proMembers
-        );
-        if (nextReq) {
-          upsellText = `\n\n🏰 Уровень клана: ${currentLvl}\n${nextReq.description} для уровня ${nextReq.nextLevel} (даст больше лимитов!)`;
-        }
+        // User is in a Clan -> "My Clan" (Level Up)
+        buttons = [
+          [{ text: "💎 Premium", callback_data: "open_premium" }],
+          [
+            {
+              text: "🏰 Мой Клан",
+              web_app: { url: "https://aporto.tech/app" },
+            },
+          ],
+        ];
       } else {
-        upsellText = "\n\nВступите в Клан, чтобы увеличить лимиты!";
-      }
+        // User NOT in Clan -> "Join Clan"
+        message =
+          "🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Премиум или Вступите в клан.";
 
-      message = `🚧 <b>Лимит исчерпан!</b>\nПотрачено: ${currentUsage}/${limit}${upsellText}`;
-      buttons = [
-        [{ text: "💎 Подключить Премиум", callback_data: "open_premium" }],
-        [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
-      ];
+        buttons = [
+          [{ text: "💎 Premium", callback_data: "open_premium" }],
+          [
+            {
+              text: "🛡 Найти / Создать Клан",
+              web_app: { url: "https://aporto.tech/app" },
+            },
+          ],
+        ];
+      }
     }
 
     await ctx.reply(message, {
@@ -1332,22 +1338,6 @@ bot.callbackQuery("clan_join", async (ctx) => {
       reply_markup: { force_reply: true },
     }
   );
-  await safeAnswerCallbackQuery(ctx);
-});
-
-bot.callbackQuery("spin_wheel", async (ctx) => {
-  await ctx.reply("Откройте приложение клана:", {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "🏰 Открыть Клан",
-            web_app: { url: "https://aporto.tech/app" },
-          },
-        ],
-      ],
-    },
-  });
   await safeAnswerCallbackQuery(ctx);
 });
 
@@ -2576,48 +2566,16 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         return;
       }
 
-      // Limit Check for Free Users (Generic for all image models for now)
-      if (userType !== "pro") {
-        const redis = (await import("@/lib/redis")).default;
-        const usageKey = `usage:image_gen:${user.id}`; // Unified key
-        try {
-          const usage = await redis.get(usageKey);
-          const count = usage ? Number.parseInt(usage, 10) : 0;
-          // Limit: 5 free images per period (approx month)
-          if (count >= 5) {
-            await ctx.reply(
-              "🛑 Лимит генераций исчерпан!\n\nНа бесплатном тарифе доступно 5 изображений.\nПереходите на Premium для безлимита! 🚀",
-              {
-                reply_markup: {
-                  inline_keyboard: [
-                    [
-                      {
-                        text: "💎 Купить Premium",
-                        callback_data: "open_premium",
-                      },
-                    ],
-                    [
-                      {
-                        text: "🎡 Испытать удачу",
-                        callback_data: "spin_wheel",
-                      },
-                    ],
-                  ],
-                },
-              }
-            );
-            return;
-          }
-          // Increment usage
-          const multi = redis.multi();
-          multi.incr(usageKey);
-          if (count === 0) {
-            multi.expire(usageKey, 30 * 24 * 60 * 60);
-          }
-          await multi.exec();
-        } catch (e) {
-          console.error("Redis usage check failed", e);
-        }
+      // Enforce Limits
+      const allowed = await checkAndEnforceLimits(
+        ctx,
+        user,
+        1, // Cost 1? Or look up model cost? Usually 1 generation = 1 credit or handled by isImage logic in check function
+        selectedModelId
+      );
+
+      if (!allowed) {
+        return;
       }
 
       await ctx.replyWithChatAction("upload_photo");
@@ -2841,26 +2799,60 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       );
 
       if (imageToolCall) {
-        if (userType !== "pro") {
+        const call = imageToolCall as any;
+        const prompt = call.args.prompt;
+        const targetModelId = "model_image_nano_banana"; // Default efficient model
+
+        // Check Limits
+        const allowed = await checkAndEnforceLimits(
+          ctx,
+          user,
+          1,
+          targetModelId
+        );
+        if (!allowed) return;
+
+        await ctx.replyWithChatAction("upload_photo");
+        await ctx.reply(`🎨 Рисую: "${prompt}"...`);
+
+        try {
+          const { experimental_generateImage } = await import("ai");
+          const { openai } = await import("@ai-sdk/openai");
+
+          // Use Nano Banana (DALL-E 3 disguised or standard)
+          // standard openai.image maps to dall-e-3
+          const { image } = await experimental_generateImage({
+            model: openai.image("dall-e-3"),
+            prompt,
+            n: 1,
+            size: "1024x1024",
+            providerOptions: {
+              openai: { quality: "standard" },
+            },
+          });
+
+          if (image?.base64) {
+            const buffer = Buffer.from(image.base64, "base64");
+            await ctx.replyWithPhoto(
+              new InputFile(buffer, `image_${Date.now()}.png`),
+              {
+                caption: `🎨 ${prompt}\n\nСделано в @aporto_bot`,
+              }
+            );
+
+            // Track
+            trackBackendEvent("Model: Request", user.id.toString(), {
+              model: targetModelId,
+              type: "image",
+              status: "success",
+            });
+          }
+        } catch (e) {
+          console.error("Tool Image Gen Error:", e);
           await ctx.reply(
-            "Для генерации изображений необходима PRO-подписка. 🔒\nВы можете купить её или попробовать выиграть в Колесе Фортуны!",
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Купить PRO", callback_data: "/pro" }],
-                  [
-                    {
-                      text: "Колесо Фортуны",
-                      callback_data: "spin_wheel",
-                    },
-                  ],
-                ],
-              },
-            }
+            "Не удалось сгенерировать изображение. Попробуйте еще раз."
           );
-          return;
         }
-        await ctx.reply("Генерация изображений скоро будет доступна! 🎨");
         return;
       }
     }

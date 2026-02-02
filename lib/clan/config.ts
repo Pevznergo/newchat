@@ -21,7 +21,7 @@ export const CLAN_LEVELS: Record<number, ClanLevelConfig> = {
     benefits: { weeklyTextCredits: 30, weeklyImageGenerations: 0 },
   },
   3: {
-    requirements: { minUsers: 10, minPro: 1 },
+    requirements: { minUsers: 6, minPro: 1 },
     benefits: { weeklyTextCredits: 50, weeklyImageGenerations: 5 }, // Images on Nano Banana only check happens in logic
   },
   4: {
