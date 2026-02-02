@@ -1878,12 +1878,12 @@ bot.on("callback_query:data", async (ctx) => {
     });
 
     // Notify about high cost models
-    const cost = MODEL_COSTS[data] || 1;
+    await ensureModelsLoaded();
+    const dbModel = CACHED_MODELS?.find((m) => m.modelId === data);
+    const cost = dbModel ? dbModel.cost : MODEL_COSTS[data] || 1;
+
     if (cost > 1 && !isFreeModel) {
-      const modelName = MODEL_NAMES[data] || "Модель";
-      // Determine wording based on model type?
-      // User requested: "Видео с моделью VEO 3.1 расходует 2 генерации".
-      // We use generic: "Модель ... расходует X генерации"
+      const modelName = dbModel?.name || MODEL_NAMES[data] || data;
       const message = `ℹ️ ${modelName}\n💰 Расход: ${cost} генераций за запрос.`;
       await safeAnswerCallbackQuery(ctx, message, { show_alert: true });
     }
@@ -2895,11 +2895,6 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
                 await ctx.replyWithPhoto(imageUrl, {
                   caption: "Сделано в @aporto_bot",
                 });
-                if (cost > 0) {
-                  await ctx.reply(`💸 Списано: ${cost} кр.`, {
-                    disable_notification: true,
-                  });
-                }
               } else {
                 await ctx.reply(
                   `Could not extract image. Response:\n\n${content.substring(0, 200)}...`
