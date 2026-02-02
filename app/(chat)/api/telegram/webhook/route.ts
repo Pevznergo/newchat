@@ -329,14 +329,7 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
 function getPremiumKeyboard() {
   return {
     inline_keyboard: [
-      [
-        { text: "Pro 1 мес. (400₽)", callback_data: "sub_pro_1" },
-        { text: "Pro 3 мес. (-10%)", callback_data: "sub_pro_3" },
-      ],
-      [
-        { text: "Pro 6 мес. (-15%)", callback_data: "sub_pro_6" },
-        { text: "Pro 12 мес. (-20%)", callback_data: "sub_pro_12" },
-      ],
+      [{ text: "💎 Premium", callback_data: "open_premium_subs" }],
       [{ text: "📦 Пакеты запросов", callback_data: "open_packets" }],
       [{ text: "👥 Клан PRO", callback_data: "open_clan_pro" }],
       [{ text: "💬 Проблемы с оплатой", url: "https://t.me/GoPevzner" }],
@@ -2095,6 +2088,26 @@ bot.on("callback_query:data", async (ctx) => {
         "Ошибка платежа."
       );
     }
+    return;
+  }
+
+  // Handle Premium Sub-menu
+  if (data === "open_premium_subs") {
+    await ctx.editMessageText("Выберите период подписки:", {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "1 мес. (400₽)", callback_data: "sub_pro_1" },
+            { text: "3 мес. (1080₽) -10%", callback_data: "sub_pro_3" },
+          ],
+          [
+            { text: "6 мес. (2040₽) -15%", callback_data: "sub_pro_6" },
+            { text: "12 мес. (3840₽) -20%", callback_data: "sub_pro_12" },
+          ],
+          [{ text: "🔙 Назад", callback_data: "open_premium" }],
+        ],
+      },
+    });
     return;
   }
 
