@@ -23,7 +23,9 @@ import {
 } from "@/lib/clan/logic";
 import { SCENARIOS } from "@/lib/content/scenarios";
 import {
+  addExtraRequests,
   cancelUserSubscription,
+  consumeExtraRequests,
   createStarSubscription,
   createTelegramUser,
   createUserConsent,
@@ -324,39 +326,20 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
   };
 }
 
-const MJ_PRICING = {
-  50: 250,
-  100: 450,
-  200: 800,
-  500: 1750,
-};
-
-const VIDEO_PRICING = {
-  2: 150,
-  10: 500,
-  20: 900,
-  50: 2000,
-};
-
-const SUNO_PRICING = {
-  20: 250,
-  50: 500,
-  100: 900,
-};
-
 function getPremiumKeyboard() {
   return {
     inline_keyboard: [
       [
-        { text: "Premium", callback_data: "buy_premium" },
-        { text: "Premium X2", callback_data: "buy_premium_x2" },
+        { text: "Pro 1 мес. (400₽)", callback_data: "sub_pro_1" },
+        { text: "Pro 3 мес. (-10%)", callback_data: "sub_pro_3" },
       ],
       [
-        { text: "Midjourney", callback_data: "buy_midjourney" },
-        { text: "Видео", callback_data: "buy_video" },
-        { text: "Suno", callback_data: "buy_suno" },
+        { text: "Pro 6 мес. (-15%)", callback_data: "sub_pro_6" },
+        { text: "Pro 12 мес. (-20%)", callback_data: "sub_pro_12" },
       ],
-      [{ text: "Закрыть", callback_data: "menu_close" }],
+      [{ text: "📦 Пакеты запросов", callback_data: "open_packets" }],
+      [{ text: "👥 Клан PRO", callback_data: "open_clan_pro" }],
+      [{ text: "💬 Проблемы с оплатой", url: "https://t.me/GoPevzner" }],
     ],
   };
 }
@@ -457,32 +440,6 @@ async function safeAnswerCallbackQuery(ctx: any, text?: string, options?: any) {
 }
 
 // --- Menu Helpers ---
-
-function getMidjourneyPackagesKeyboard() {
-  const buttons = Object.entries(MJ_PRICING).map(([count, price]) => {
-    return [
-      {
-        text: `${count} генераций – ${price} ₽`,
-        callback_data: `select_mj_${count}`,
-      },
-    ];
-  });
-  buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]); // Fixed callback to premium_back as per user flow expectation? Or maybe menu_start. Let's stick to premium_back if it came from premium menu. But wait, buy_midjourney is in premium menu. So back should go to premium menu.
-  return { inline_keyboard: buttons };
-}
-
-function getVideoPackagesKeyboard() {
-  const buttons = Object.entries(VIDEO_PRICING).map(([count, price]) => {
-    return [
-      {
-        text: `${count} генераций – ${price} ₽`,
-        callback_data: `select_video_${count}`,
-      },
-    ];
-  });
-  buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]);
-  return { inline_keyboard: buttons };
-}
 
 // --- Global Cache for Models ---
 let CACHED_MODELS: any[] | null = null;
@@ -630,26 +587,32 @@ async function checkAndEnforceLimits(
 
   // Check Limit
   if (!isUnlimited && currentUsage + effectiveCost > limit) {
+    // Try to consume from extraRequests
+    const consumed = await consumeExtraRequests(user.id, effectiveCost);
+    if (consumed) {
+      // Consumed from extra pack, allow proceed
+      return true;
+    }
+
     let message = "";
     let buttons: any[] = [];
 
     if (user.hasPaid) {
       // Paid User Reached Limit
-      message = `⚡️ <b>Творческая энергия на сегодня исчерпана! (${limit})</b>\n\nПригласите друзей, чтобы получить бонусы, или дождитесь завтрашнего дня.`;
+      message = `⚡️ <b>Лимит тарифа исчерпан! (${limit})</b>\n\nДокупите пакет запросов, чтобы продолжить.`;
       buttons = [
-        [{ text: "👥 Пригласить друзей", callback_data: "referral_link" }],
+        [{ text: "📦 Купить запросы", callback_data: "open_packets" }],
       ];
     } else {
       // Free User Logic & Upsell
       const clanData = await getUserClan(user.id);
-
       message =
-        "🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Премиум или Поднимите уровень клана.";
+        "🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Pro или докупите запросы.";
 
       if (clanData) {
-        // User is in a Clan -> "My Clan" (Level Up)
         buttons = [
-          [{ text: "💎 Premium", callback_data: "open_premium" }],
+          [{ text: "💎 Pro (400₽)", callback_data: "open_premium" }],
+          [{ text: "📦 Купить запросы", callback_data: "open_packets" }],
           [
             {
               text: "🏰 Мой Клан",
@@ -658,12 +621,9 @@ async function checkAndEnforceLimits(
           ],
         ];
       } else {
-        // User NOT in Clan -> "Join Clan"
-        message =
-          "🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Премиум или Вступите в клан.";
-
         buttons = [
-          [{ text: "💎 Premium", callback_data: "open_premium" }],
+          [{ text: "💎 Pro (400₽)", callback_data: "open_premium" }],
+          [{ text: "📦 Купить запросы", callback_data: "open_packets" }],
           [
             {
               text: "🛡 Найти / Создать Клан",
@@ -695,19 +655,6 @@ async function checkAndEnforceLimits(
   }
 
   return true;
-}
-
-function getSunoPackagesKeyboard() {
-  const buttons = Object.entries(SUNO_PRICING).map(([count, price]) => {
-    return [
-      {
-        text: `${count} генераций – ${price} ₽`,
-        callback_data: `select_suno_${count}`,
-      },
-    ];
-  });
-  buttons.push([{ text: "⬅️ Назад", callback_data: "premium_back" }]);
-  return { inline_keyboard: buttons };
 }
 
 function getPaymentMethodKeyboard(payUrl: string) {
@@ -823,54 +770,28 @@ async function showMusicMenu(ctx: any) {
   });
 }
 
-const PREMIUM_MENU_TEXT = `Бот открывает доступ к лучшим AI-сервисам на одной платформе:
+const PREMIUM_MENU_TEXT = `🚀 <b>PRO ПОДПИСКА</b>
+Открывает доступ ко всем возможностям бота без ограничений.
 
-<b>Бесплатно | ЕЖЕНЕДЕЛЬНО</b>
-100 любых запросов
-✅ GPT-5 mini | GPT-4o mini
-✅ DeepSeek-V3.2 | Gemini 3 Flash
-✅ Интернет-поиск Perplexity
-✅ Распознавание изображений
-25 генераций изображений
-🌅 Nano Banana | GPT Image 1.5
-
-<b>ПРЕМИУМ | МЕСЯЦ</b>
-🔼 Лимит запросов – 100 в день
-✅ Все опции выше
-✅ Nano Banana Pro | GPT Image 1.5
-✅ GPT-5.2 | GPT-4.1 | OpenAI o3
-✅ Gemini 3 Pro | Claude 4.5
-✅ Работа с документами
-✅ Голосовые ответы
+✅ <b>Лимит: 7500 запросов в месяц</b>
+✅ Все нейросети: GPT-4o, Claude 3.5 Sonnet, Gemini Pro
+✅ Генерация изображений (DALL-E 3)
+✅ Работа с файлами и документами
 ✅ Без рекламы
-Стоимость: 750 ₽ *
+✅ Приоритетная поддержка
 
-<b>ПРЕМИУМ X2 | МЕСЯЦ</b>
-⏫ Лимит запросов – 200 в день
-✅ Те же опции, что в «Премиум»
-Стоимость: 1250 ₽
+💰 <b>Стоимость: 400 ₽ / мес</b>
+(Скидки до 20% при оплате на долгий срок)
 
-<b>MIDJOURNEY И FLUX | ПАКЕТ</b>
-От 50 до 500 генераций (на выбор)
-🌅 /Midjourney V7 и Flux 2
-✅ Midjourney Video
-✅ Замена лиц на фото
-Стоимость: от 250 ₽
+📦 <b>ПАКЕТЫ ЗАПРОСОВ</b>
+Если закончились лимиты, можно докупить пакет запросов. Они не сгорают.
+• 1500 запросов — 400 ₽
+• 3000 запросов — 750 ₽
+• 7000 запросов — 2000 ₽
 
-<b>ВИДЕО | ПАКЕТ</b>
-От 2 до 50 генераций (на выбор)
-🎬 Veo 3.1 | Sora 2 | Kling | Hailuo | Pika
-✅ Видео на основе изображений
-✅ Креативные видео-эффекты
-Стоимость: от 150 ₽
-
-<b>ПЕСНИ SUNO | ПАКЕТ</b>
-От 20 до 100 генераций (на выбор)
-🎸 Нейросеть /Suno V5
-✅ Свои стихи или генерация с AI
-Стоимость: от 250 ₽
-
-💬 По вопросам оплаты: @GoPevzner`;
+👥 <b>КЛАН PRO</b>
+Подписка для группы до 15 человек. Выгоднее, чем покупать каждому отдельно!
+`;
 
 async function showPremiumMenu(ctx: any) {
   await ctx.reply(PREMIUM_MENU_TEXT, {
@@ -2108,184 +2029,100 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
-  // Handle Midjourney Package Selection
-  if (data === "buy_midjourney") {
-    await ctx.reply("Выберите количество:", {
-      reply_markup: getMidjourneyPackagesKeyboard(),
-    });
-    await safeAnswerCallbackQuery(ctx);
+  // Handle Pack Selection
+  if (data === "open_packets") {
+    const packs = [
+      { name: "1500 запросов", price: "400₽", slug: "pack_requests_1500" },
+      { name: "3000 запросов", price: "750₽", slug: "pack_requests_3000" },
+      { name: "7000 запросов", price: "2000₽", slug: "pack_requests_7000" },
+    ];
+
+    const buttons = packs.map((framework) => [
+      {
+        text: `${framework.name} - ${framework.price}`,
+        callback_data: `select_pack_${framework.slug}`,
+      },
+    ]);
+    buttons.push([{ text: "🔙 Назад", callback_data: "open_premium" }]);
+
+    await ctx.editMessageText(
+      "📦 <b>Пакеты запросов</b>\nДополнительные запросы, которые не сгорают.",
+      {
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: buttons },
+      }
+    );
     return;
   }
 
-  // Handle Specific Midjourney Package Payment
-  if (data.startsWith("select_mj_")) {
-    const count = Number.parseInt(data.replace("select_mj_", ""), 10);
-    const price = MJ_PRICING[count as keyof typeof MJ_PRICING];
+  // Handle Pack Payment Init
+  if (data.startsWith("select_pack_")) {
+    const slug = data.replace("select_pack_", "");
+    const tariff = await getTariffBySlug(slug);
 
-    if (!price) {
-      await safeAnswerCallbackQuery(ctx, "Ошибка: тариф не найден");
+    if (!tariff) {
+      await safeAnswerCallbackQuery(ctx, "Тариф не найден");
       return;
     }
 
-    const description = `Midjourney (${count} генераций)`;
-    const tariffSlug = `midjourney_${count}`; // No duration, it's a pack
-
     await safeAnswerCallbackQuery(ctx, "Создаю счет...");
-    try {
-      await ctx.deleteMessage();
-    } catch {
-      // ignore
-    }
 
     const placeholder = await ctx.reply("⏳ Создаю платеж...");
-
-    // Create Payment
     const payment = await createYookassaPayment(
-      price,
-      description,
+      tariff.priceRub,
+      tariff.description || tariff.name,
       telegramId,
-      tariffSlug,
+      tariff.slug,
       placeholder.message_id
     );
 
     if (payment?.confirmation?.confirmation_url) {
-      const payUrl = payment.confirmation.confirmation_url;
-
       await ctx.api.editMessageText(
         placeholder.chat.id,
         placeholder.message_id,
-        "Выберите способ оплаты:",
+        `Оплата тарифа: <b>${tariff.name}</b>\nСумма: ${tariff.priceRub}₽`,
         {
-          reply_markup: getPaymentMethodKeyboard(payUrl),
+          parse_mode: "HTML",
+          reply_markup: getPaymentMethodKeyboard(
+            payment.confirmation.confirmation_url
+          ),
         }
       );
     } else {
       await ctx.api.editMessageText(
         placeholder.chat.id,
         placeholder.message_id,
-        "❌ Ошибка создания платежа. Попробуйте позже."
+        "Ошибка платежа."
       );
     }
     return;
   }
 
-  // Handle Video Package Selection
-  if (data === "buy_video") {
-    await ctx.reply("Выберите количество:", {
-      reply_markup: getVideoPackagesKeyboard(),
-    });
-    await safeAnswerCallbackQuery(ctx);
-    return;
-  }
+  // Handle Clan Pro Stub
+  if (data === "open_clan_pro") {
+    const clanProOptions = [
+      { text: "1 Месяц - 4200₽", callback_data: "clan_pro_stub" },
+      { text: "3 Месяца -5%", callback_data: "clan_pro_stub" },
+      { text: "6 Месяцев -10%", callback_data: "clan_pro_stub" },
+      { text: "12 Месяцев -15%", callback_data: "clan_pro_stub" },
+    ];
+    const buttons = clanProOptions.map((o) => [o]);
+    buttons.push([{ text: "🔙 Назад", callback_data: "open_premium" }]);
 
-  // Handle Specific Video Package Payment
-  if (data.startsWith("select_video_")) {
-    const count = Number.parseInt(data.replace("select_video_", ""), 10);
-    const price = VIDEO_PRICING[count as keyof typeof VIDEO_PRICING];
-
-    if (!price) {
-      await safeAnswerCallbackQuery(ctx, "Ошибка: тариф не найден");
-      return;
-    }
-
-    const description = `Video (${count} генераций)`;
-    const tariffSlug = `video_${count}`;
-
-    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
-    try {
-      await ctx.deleteMessage();
-    } catch {
-      // ignore
-    }
-
-    const placeholder = await ctx.reply("⏳ Создаю платеж...");
-
-    const payment = await createYookassaPayment(
-      price,
-      description,
-      telegramId,
-      tariffSlug,
-      placeholder.message_id
+    await ctx.editMessageText(
+      "👥 <b>Подписка для Клана</b>\n\nДо 15 участников. Оплата единым счетом.\nВыгоднее, чем покупать отдельно каждому!",
+      {
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: buttons },
+      }
     );
-
-    if (payment?.confirmation?.confirmation_url) {
-      const payUrl = payment.confirmation.confirmation_url;
-
-      await ctx.api.editMessageText(
-        placeholder.chat.id,
-        placeholder.message_id,
-        "Выберите способ оплаты:",
-        {
-          reply_markup: getPaymentMethodKeyboard(payUrl),
-        }
-      );
-    } else {
-      await ctx.api.editMessageText(
-        placeholder.chat.id,
-        placeholder.message_id,
-        "❌ Ошибка создания платежа. Попробуйте позже."
-      );
-    }
     return;
   }
 
-  // Handle Suno Package Selection
-  if (data === "buy_suno") {
-    await ctx.reply("Выберите количество:", {
-      reply_markup: getSunoPackagesKeyboard(),
+  if (data === "clan_pro_stub") {
+    await ctx.answerCallbackQuery("Напишите нам для подключения: @GoPevzner", {
+      show_alert: true,
     });
-    await safeAnswerCallbackQuery(ctx);
-    return;
-  }
-
-  // Handle Specific Suno Package Payment
-  if (data.startsWith("select_suno_")) {
-    const count = Number.parseInt(data.replace("select_suno_", ""), 10);
-    const price = SUNO_PRICING[count as keyof typeof SUNO_PRICING];
-
-    if (!price) {
-      await safeAnswerCallbackQuery(ctx, "Ошибка: тариф не найден");
-      return;
-    }
-
-    const description = `Suno (${count} генераций)`;
-    const tariffSlug = `suno_${count}`;
-
-    await safeAnswerCallbackQuery(ctx, "Создаю счет...");
-    try {
-      await ctx.deleteMessage();
-    } catch {
-      // ignore
-    }
-
-    const placeholder = await ctx.reply("⏳ Создаю платеж...");
-
-    const payment = await createYookassaPayment(
-      price,
-      description,
-      telegramId,
-      tariffSlug,
-      placeholder.message_id
-    );
-
-    if (payment?.confirmation?.confirmation_url) {
-      const payUrl = payment.confirmation.confirmation_url;
-
-      await ctx.api.editMessageText(
-        placeholder.chat.id,
-        placeholder.message_id,
-        "Выберите способ оплаты:",
-        {
-          reply_markup: getPaymentMethodKeyboard(payUrl),
-        }
-      );
-    } else {
-      await ctx.api.editMessageText(
-        placeholder.chat.id,
-        placeholder.message_id,
-        "❌ Ошибка создания платежа. Попробуйте позже."
-      );
-    }
     return;
   }
 
@@ -2329,15 +2166,31 @@ bot.on("message:successful_payment", async (ctx) => {
       return;
     }
 
-    const parts = tariffSlug.split("_");
-    const months = Number.parseInt(parts.at(-1) ?? "1", 10);
-    const durationDays = months * 30;
+    if (tariffSlug.startsWith("pack_")) {
+      // Request Pack
+      const tariff = await getTariffBySlug(tariffSlug);
+      if (tariff && tariff.requestLimit) {
+        await addExtraRequests(user.id, tariff.requestLimit);
+        await ctx.reply(
+          `✅ Оплата прошла успешно!\nДобавлено ${tariff.requestLimit} запросов.`
+        );
+      } else {
+        await ctx.reply(
+          "✅ Оплата прошла, но тариф не найден. Напишите в поддержку."
+        );
+      }
+    } else {
+      // Subscription
+      const parts = tariffSlug.split("_");
+      const months = Number.parseInt(parts.at(-1) ?? "1", 10);
+      const durationDays = months * 30;
 
-    await createStarSubscription(user.id, tariffSlug, durationDays);
+      await createStarSubscription(user.id, tariffSlug, durationDays);
 
-    await ctx.reply(
-      `✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`
-    );
+      await ctx.reply(
+        `✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`
+      );
+    }
   } catch (error) {
     console.error("Error processing successful_payment:", error);
     await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");

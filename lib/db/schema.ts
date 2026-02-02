@@ -58,6 +58,9 @@ export const user = pgTable("User", {
   weeklyTextUsage: integer("weekly_text_usage").default(0),
   weeklyImageUsage: integer("weekly_image_usage").default(0),
 
+  // Purchased Extra Requests
+  extraRequests: integer("extra_requests").default(0),
+
   // User status fields
   isActive: boolean("is_active").default(false),
   isAdmin: boolean("is_admin").default(false),
