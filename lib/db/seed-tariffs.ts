@@ -26,7 +26,7 @@ const seed = async () => {
       priceRub: 400,
       priceStars: 200, // Approx
       durationDays: 30,
-      requestLimit: 7500, // Monthly limit
+      requestLimit: 1500, // Monthly limit
       description: "Базовый тариф на месяц",
     },
     {
@@ -36,7 +36,7 @@ const seed = async () => {
       priceRub: 1080, // 400 * 3 * 0.9
       priceStars: 540,
       durationDays: 90,
-      requestLimit: 7500,
+      requestLimit: 1500,
       description: "Выгода 10%",
     },
     {
@@ -46,7 +46,7 @@ const seed = async () => {
       priceRub: 2040, // 400 * 6 * 0.85
       priceStars: 1020,
       durationDays: 180,
-      requestLimit: 7500,
+      requestLimit: 1500,
       description: "Выгода 15%",
     },
     {
@@ -56,7 +56,7 @@ const seed = async () => {
       priceRub: 3840, // 400 * 12 * 0.8
       priceStars: 1920,
       durationDays: 365,
-      requestLimit: 7500,
+      requestLimit: 1500,
       description: "Выгода 20%",
     },
 

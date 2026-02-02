@@ -773,7 +773,7 @@ async function showMusicMenu(ctx: any) {
 const PREMIUM_MENU_TEXT = `🚀 <b>PRO ПОДПИСКА</b>
 Открывает доступ ко всем возможностям бота без ограничений.
 
-✅ <b>Лимит: 7500 запросов в месяц</b>
+✅ <b>Лимит: 1500 запросов в месяц</b>
 ✅ Все нейросети: GPT-4o, Claude 3.5 Sonnet, Gemini Pro
 ✅ Генерация изображений (DALL-E 3)
 ✅ Работа с файлами и документами
@@ -2169,7 +2169,7 @@ bot.on("message:successful_payment", async (ctx) => {
     if (tariffSlug.startsWith("pack_")) {
       // Request Pack
       const tariff = await getTariffBySlug(tariffSlug);
-      if (tariff && tariff.requestLimit) {
+      if (tariff?.requestLimit) {
         await addExtraRequests(user.id, tariff.requestLimit);
         await ctx.reply(
           `✅ Оплата прошла успешно!\nДобавлено ${tariff.requestLimit} запросов.`
