@@ -2120,7 +2120,8 @@ bot.on("callback_query:data", async (ctx) => {
   }
 
   if (data === "clan_pro_stub") {
-    await ctx.answerCallbackQuery("Напишите нам для подключения: @GoPevzner", {
+    await ctx.answerCallbackQuery({
+      text: "Напишите нам для подключения: @GoPevzner",
       show_alert: true,
     });
     return;
