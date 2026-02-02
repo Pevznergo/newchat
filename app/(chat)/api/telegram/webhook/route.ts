@@ -2810,7 +2810,9 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
           1,
           targetModelId
         );
-        if (!allowed) return;
+        if (!allowed) {
+          return;
+        }
 
         await ctx.replyWithChatAction("upload_photo");
         await ctx.reply(`🎨 Рисую: "${prompt}"...`);

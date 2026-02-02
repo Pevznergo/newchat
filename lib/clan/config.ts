@@ -14,11 +14,11 @@ export type ClanLevelConfig = {
 export const CLAN_LEVELS: Record<number, ClanLevelConfig> = {
   1: {
     requirements: { minUsers: 1, minPro: 0 },
-    benefits: { weeklyTextCredits: 15, weeklyImageGenerations: 0 },
+    benefits: { weeklyTextCredits: 15, weeklyImageGenerations: 1 },
   },
   2: {
     requirements: { minUsers: 2, minPro: 0 },
-    benefits: { weeklyTextCredits: 30, weeklyImageGenerations: 0 },
+    benefits: { weeklyTextCredits: 30, weeklyImageGenerations: 3 },
   },
   3: {
     requirements: { minUsers: 6, minPro: 1 },
