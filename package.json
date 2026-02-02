@@ -15,6 +15,8 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
+    "seed:models": "tsx lib/db/seed-ai-models.ts",
+    "seed:tariffs": "tsx lib/db/seed-tariffs.ts",
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test"
   },
   "dependencies": {
