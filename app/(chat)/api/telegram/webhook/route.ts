@@ -23,9 +23,7 @@ import {
 } from "@/lib/clan/logic";
 import { SCENARIOS } from "@/lib/content/scenarios";
 import {
-  addExtraRequests,
   cancelUserSubscription,
-  consumeExtraRequests,
   createStarSubscription,
   createTelegramUser,
   createUserConsent,
@@ -587,13 +585,6 @@ async function checkAndEnforceLimits(
 
   // Check Limit
   if (!isUnlimited && currentUsage + effectiveCost > limit) {
-    // Try to consume from extraRequests
-    const consumed = await consumeExtraRequests(user.id, effectiveCost);
-    if (consumed) {
-      // Consumed from extra pack, allow proceed
-      return true;
-    }
-
     let message = "";
     let buttons: any[] = [];
 
@@ -2167,31 +2158,16 @@ bot.on("message:successful_payment", async (ctx) => {
       return;
     }
 
-    if (tariffSlug.startsWith("pack_")) {
-      // Request Pack
-      const tariff = await getTariffBySlug(tariffSlug);
-      if (tariff?.requestLimit) {
-        await addExtraRequests(user.id, tariff.requestLimit);
-        await ctx.reply(
-          `✅ Оплата прошла успешно!\nДобавлено ${tariff.requestLimit} запросов.`
-        );
-      } else {
-        await ctx.reply(
-          "✅ Оплата прошла, но тариф не найден. Напишите в поддержку."
-        );
-      }
-    } else {
-      // Subscription
-      const parts = tariffSlug.split("_");
-      const months = Number.parseInt(parts.at(-1) ?? "1", 10);
-      const durationDays = months * 30;
+    // Original logic (before pack support)
+    const parts = tariffSlug.split("_");
+    const months = Number.parseInt(parts.at(-1) ?? "1", 10);
+    const durationDays = months * 30;
 
-      await createStarSubscription(user.id, tariffSlug, durationDays);
+    await createStarSubscription(user.id, tariffSlug, durationDays);
 
-      await ctx.reply(
-        `✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`
-      );
-    }
+    await ctx.reply(
+      `✅ Оплата прошла успешно!\nПодписка активирована на ${months} мес.`
+    );
   } catch (error) {
     console.error("Error processing successful_payment:", error);
     await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");

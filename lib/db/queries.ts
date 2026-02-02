@@ -1341,32 +1341,3 @@ export const resetWeeklyLimits = async () => {
 
   return result.length;
 };
-
-export async function addExtraRequests(userId: string, amount: number) {
-  try {
-    await db
-      .update(user)
-      .set({ extraRequests: sql`${user.extraRequests} + ${amount}` })
-      .where(eq(user.id, userId));
-    return true;
-  } catch (error) {
-    console.error("Failed to add extra requests", error);
-    return false;
-  }
-}
-
-export async function consumeExtraRequests(userId: string, amount: number) {
-  try {
-    // Optimistic update: Decrement only if enough balance
-    const result = await db
-      .update(user)
-      .set({ extraRequests: sql`${user.extraRequests} - ${amount}` })
-      .where(and(eq(user.id, userId), gte(user.extraRequests, amount)))
-      .returning({ id: user.id });
-
-    return result.length > 0;
-  } catch (error) {
-    console.error("Failed to consume extra requests", error);
-    return false;
-  }
-}
