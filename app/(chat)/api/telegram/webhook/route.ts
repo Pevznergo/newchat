@@ -398,7 +398,7 @@ function getVideoAspectKeyboard(modelId: string, currentAspect?: string) {
   };
 }
 
-function getVideoQualityKeyboard(modelId: string, currentQuality?: string) {
+function getVideoQualityKeyboard(_modelId: string, currentQuality?: string) {
   const is720 = currentQuality === "720p";
   const is1080 = currentQuality === "1080p";
 
