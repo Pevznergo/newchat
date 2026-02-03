@@ -1,5 +1,6 @@
 import path from "node:path";
 import { generateText, tool } from "ai";
+import { eq } from "drizzle-orm";
 import { Bot, InputFile, webhookCallback } from "grammy";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -24,6 +25,7 @@ import {
   getNextLevelRequirements,
 } from "@/lib/clan/logic";
 import { SCENARIOS } from "@/lib/content/scenarios";
+import { db } from "@/lib/db";
 import {
   addExtraRequests,
   cancelUserSubscription,
@@ -51,8 +53,10 @@ import {
   setUserDetails,
   updateUserPreferences,
   updateUserSelectedModel,
+  updateUserTracking,
   upsertAiModel,
 } from "@/lib/db/queries";
+import { shortLinks } from "@/lib/db/schema";
 import { createYookassaPayment } from "@/lib/payment";
 import { generateUUID } from "@/lib/utils";
 import { trackBackendEvent } from "../../../../../lib/mixpanel";
@@ -1174,8 +1178,10 @@ bot.command("start", async (ctx) => {
     const startParam =
       payload && typeof payload === "string" ? payload.trim() : undefined;
 
-    // Analytics: Determine Source
+    // Analytics: Determine Source and Campaign
     let sourceType = "Organic";
+    let campaignTracking: any = {};
+
     if (startParam) {
       if (startParam.startsWith("qr_")) {
         sourceType = "QR Code";
@@ -1187,7 +1193,37 @@ bot.command("start", async (ctx) => {
       ) {
         sourceType = "Referral";
       } else {
-        sourceType = "Other Ref";
+        // Check Short Links DB
+        try {
+          const [link] = await db
+            .select()
+            .from(shortLinks)
+            .where(eq(shortLinks.code, startParam))
+            .limit(1);
+
+          if (link) {
+            sourceType = link.stickerTitle || "QR Campaign"; // Use Sticker Title as Source
+            // Set Tracking Params
+            campaignTracking = {
+              utmSource: link.stickerTitle || "qr",
+              utmMedium: "qr", // Standard for this flow
+              utmCampaign: link.stickerFeatures,
+              utmContent: link.stickerPrizes,
+            };
+
+            // Increment Clicks (Async - fire and forget)
+            db.update(shortLinks)
+              .set({ clicksCount: (link.clicksCount || 0) + 1 })
+              .where(eq(shortLinks.id, link.id))
+              .then(() => console.log(`Incremented clicks for ${link.code}`))
+              .catch((e) => console.error("Failed to increment clicks", e));
+          } else {
+            sourceType = "Other Ref";
+          }
+        } catch (e) {
+          console.error("Failed to check short links", e);
+          sourceType = "Other Ref";
+        }
       }
     }
 
@@ -1195,10 +1231,30 @@ bot.command("start", async (ctx) => {
 
     // Create user in DB FIRST if not exists (Critical for Join Clan)
     let [user] = await getUserByTelegramId(telegramId);
-    if (!user) {
-      [user] = await createTelegramUser(telegramId, undefined, startParam);
-      trackBackendEvent("User: Register", userIdStr, { source: sourceType });
+    if (user) {
+      // If user exists, but came from new campaign, should we update tracking?
+      // Let's update if we have new tracking info.
+      if (Object.keys(campaignTracking).length > 0) {
+        await updateUserTracking(user.id, campaignTracking);
+      }
+    } else {
+      [user] = await createTelegramUser(
+        telegramId,
+        undefined,
+        startParam,
+        campaignTracking
+      );
+      trackBackendEvent("User: Register", userIdStr, {
+        source: sourceType,
+        ...campaignTracking,
+      });
     }
+
+    trackBackendEvent("User: Start", userIdStr, {
+      source: sourceType,
+      start_param: startParam,
+      ...campaignTracking,
+    });
 
     trackBackendEvent("Bot: Launch", userIdStr, { source: sourceType });
 
@@ -3711,7 +3767,9 @@ bot.on("message:photo", async (ctx) => {
             m.role === "user"
               ? // Simple text mapping for history, preserving images might be complex in this DB schema
                 // if parts are not stored fully. Assuming parts has text.
-                (m.parts as any[]).map((p) => p.text).join("\n")
+                (m.parts as any[])
+                  .map((p) => p.text)
+                  .join("\n")
               : (m.parts as any[]).map((p) => p.text).join("\n"),
         }));
 

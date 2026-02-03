@@ -194,7 +194,13 @@ export async function linkGoogleAccount(email: string, googleId: string) {
 export async function createTelegramUser(
   telegramId: string,
   email?: string,
-  startParam?: string
+  startParam?: string,
+  tracking?: {
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
+  }
 ) {
   try {
     const finalEmail = email || `telegram-${telegramId}@telegram.bot`;
@@ -204,6 +210,7 @@ export async function createTelegramUser(
         email: finalEmail,
         telegramId,
         startParam: startParam || null, // Save QR code source
+        ...tracking,
       })
       .returning();
 
@@ -241,6 +248,22 @@ export async function createTelegramUser(
       "bad_request:database",
       "Failed to create telegram user"
     );
+  }
+}
+
+export async function updateUserTracking(
+  userId: string,
+  tracking: {
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
+  }
+) {
+  try {
+    return await db.update(user).set(tracking).where(eq(user.id, userId));
+  } catch (e) {
+    console.error("Failed to update user tracking", e);
   }
 }
 

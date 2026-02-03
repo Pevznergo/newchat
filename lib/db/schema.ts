@@ -318,3 +318,16 @@ export const clanLevel = pgTable("ClanLevel", {
 });
 
 export type ClanLevel = InferSelectModel<typeof clanLevel>;
+export const shortLinks = pgTable("short_links", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).unique().notNull(), // The start param
+  targetUrl: varchar("target_url", { length: 500 }).notNull(), // Context URL
+  clicksCount: integer("clicks_count").default(0),
+  stickerTitle: varchar("sticker_title", { length: 255 }),
+  stickerFeatures: varchar("sticker_features", { length: 255 }),
+  stickerPrizes: varchar("sticker_prizes", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("active"), // active, archived, printed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ShortLink = InferSelectModel<typeof shortLinks>;
