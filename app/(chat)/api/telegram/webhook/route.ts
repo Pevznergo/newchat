@@ -1884,7 +1884,34 @@ bot.on("callback_query:data", async (ctx) => {
 
     if (cost > 1 && !isFreeModel) {
       const modelName = dbModel?.name || MODEL_NAMES[data] || data;
-      const message = `ℹ️ ${modelName}\n💰 Расход: ${cost} генераций за запрос.`;
+
+      let prefix = "Чат";
+      if (data.includes("video") || dbModel?.type === "video") {
+        prefix = "Видео";
+      } else if (
+        data.includes("image") ||
+        dbModel?.type === "image" ||
+        data.includes("midjourney") ||
+        data.includes("flux") ||
+        data.includes("banana")
+      ) {
+        prefix = "Изображение";
+      }
+
+      let plural = "генераций";
+      const lastDigit = cost % 10;
+      const lastTwo = cost % 100;
+
+      if (lastDigit === 1 && lastTwo !== 11) {
+        plural = "генерацию";
+      } else if (
+        [2, 3, 4].includes(lastDigit) &&
+        ![12, 13, 14].includes(lastTwo)
+      ) {
+        plural = "генерации";
+      }
+
+      const message = `${prefix} с моделью ${modelName} расходует\n${cost} ${plural}`;
       await safeAnswerCallbackQuery(ctx, message, { show_alert: true });
     }
 
