@@ -402,27 +402,6 @@ function getVideoAspectKeyboard(modelId: string, currentAspect?: string) {
   };
 }
 
-function getVideoQualityKeyboard(_modelId: string, currentQuality?: string) {
-  const is720 = currentQuality === "720p";
-  const is1080 = currentQuality === "1080p";
-
-  return {
-    inline_keyboard: [
-      [
-        {
-          text: `${is720 ? "✅ " : ""}720p`,
-          callback_data: "set_video_quality_720p",
-        },
-        {
-          text: `${is1080 ? "✅ " : ""}1080p`,
-          callback_data: "set_video_quality_1080p",
-        },
-      ],
-      [{ text: "🔙 Назад", callback_data: "back_to_video_aspect" }],
-    ],
-  };
-}
-
 function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
   const isLocked = (id: string) =>
