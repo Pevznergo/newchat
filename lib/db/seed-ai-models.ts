@@ -87,7 +87,7 @@ async function seedAiModels() {
     },
     {
       modelId: "model_claude45sonnet",
-      name: "Claude 3.5 Sonnet",
+      name: "Claude 4.5 Sonnet",
       provider: "openrouter",
       type: "text",
       cost: 20,
@@ -208,7 +208,7 @@ async function seedAiModels() {
     },
     {
       modelId: "model_claude45sonnet_web",
-      name: "Claude 3.5 Sonnet (Web)",
+      name: "Claude 4.5 Sonnet (Web)",
       provider: "openrouter",
       type: "text",
       cost: 10,
@@ -368,14 +368,13 @@ async function seedAiModels() {
     },
   ];
 
-  // Clear existing models
-  console.log("🗑️  Clearing existing models...");
-  await db.delete(aiModel);
-
-  // Insert new models
-  console.log("💾 Inserting models...");
+  // Insert new models (only if they don't exist)
+  console.log("💾 Syncing models (skipping existing)...");
   for (const model of models) {
-    await db.insert(aiModel).values(model);
+    await db
+      .insert(aiModel)
+      .values(model)
+      .onConflictDoNothing({ target: aiModel.modelId });
   }
 
   console.log(`✅ Seeded ${models.length} AI models`);

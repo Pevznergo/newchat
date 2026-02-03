@@ -3193,12 +3193,6 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         },
       ],
     });
-
-    if (cost > 0) {
-      await ctx.reply(`💸 Списано: ${cost} кр.`, {
-        disable_notification: true,
-      });
-    }
   } catch (error) {
     console.error("Telegram Webhook Error:", error);
     await ctx.reply("Sorry, something went wrong processing your message.");
