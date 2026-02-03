@@ -331,12 +331,12 @@ function getSoraVariantKeyboard(selectedModel: string, isPremium: boolean) {
 }
 
 function getSoraDurationKeyboard(modelId: string, duration?: number) {
-  // Base costs: Sora 2 = 170, Sora 2 Pro = 850
-  const isPro = modelId === "model_video_sora_pro";
-  const baseCost = isPro ? 850 : 170;
+  const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === modelId);
+  // Fallback to defaults if cache missing (43 approx 170/4, 213 approx 850/4)
+  const costPerSec = dbModel?.cost || (modelId.includes("_pro") ? 213 : 43);
 
-  const getBtn = (sec: number, multiplier: number) => {
-    const cost = baseCost * multiplier;
+  const getBtn = (sec: number) => {
+    const cost = costPerSec * sec;
     const label = `${sec} сек (${cost} кр.)`;
     const check = duration === sec ? "✅ " : "";
     return {
@@ -347,9 +347,9 @@ function getSoraDurationKeyboard(modelId: string, duration?: number) {
 
   return {
     inline_keyboard: [
-      [getBtn(4, 1)],
-      [getBtn(8, 2)],
-      [getBtn(12, 3)],
+      [getBtn(4)],
+      [getBtn(8)],
+      [getBtn(12)],
       [{ text: "🔙 Назад", callback_data: "menu_video_sora" }],
     ],
   };
@@ -3136,19 +3136,10 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       }
 
       // Calculate Cost
-      let cost = dbModel?.cost || 50;
-      if (selectedModelId.includes("sora")) {
-        // Base cost (170 or 850) is for 4s.
-        // Multiplier: 4s=1, 8s=2, 12s=3
-        let multiplier = 1;
-        if (duration === 8) {
-          multiplier = 2;
-        }
-        if (duration === 12) {
-          multiplier = 3;
-        }
-        cost *= multiplier;
-      }
+      // cost in DB is per second
+      const costPerSec =
+        dbModel?.cost || (selectedModelId.includes("sora") ? 43 : 10);
+      const cost = costPerSec * duration;
 
       // Check access
       const hasAccess = await checkClanLevelRequirement(

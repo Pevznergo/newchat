@@ -305,13 +305,13 @@ async function seedAiModels() {
       isPro: false,
     },
 
-    // Video Models
+    // Video Models (Costs are PER SECOND)
     {
       modelId: "model_video_veo",
       name: "Veo 3.1",
       provider: "google",
       type: "video",
-      cost: 50,
+      cost: 10, // ~50 for 5s
       apiModelId: "google/veo", // hypothetical
       requiredClanLevel: 1,
       isEnabled: true,
@@ -323,7 +323,7 @@ async function seedAiModels() {
       name: "Veo 3.1 Fast",
       provider: "google",
       type: "video",
-      cost: 25,
+      cost: 5, // ~25 for 5s
       apiModelId: "google/veo-fast", // hypothetical
       requiredClanLevel: 1,
       isEnabled: true,
@@ -335,7 +335,7 @@ async function seedAiModels() {
       name: "Sora 2",
       provider: "openai",
       type: "video",
-      cost: 170, // Base cost for 4s
+      cost: 43, // 4s*43 ≈ 172 (Target 170)
       apiModelId: "openai/sora-2",
       requiredClanLevel: 1,
       isEnabled: true,
@@ -347,7 +347,7 @@ async function seedAiModels() {
       name: "Sora 2 Pro",
       provider: "openai",
       type: "video",
-      cost: 850, // Base cost for 4s
+      cost: 213, // 4s*213 ≈ 852 (Target 850)
       apiModelId: "openai/sora-2-pro",
       requiredClanLevel: 1,
       isEnabled: true,
