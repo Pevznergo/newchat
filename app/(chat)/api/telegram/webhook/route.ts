@@ -243,9 +243,12 @@ function getImageModelKeyboard(
     const isLocked = !isPremium && !FREE_MODELS.includes(key);
     const status = isLocked ? "🔒" : isSelected ? "✅" : "";
 
+    const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === key);
+    const name = dbModel?.name || model.name;
+
     return [
       {
-        text: `${status} ${model.name}`,
+        text: `${status} ${name}`,
         callback_data: key,
       },
     ];
@@ -260,8 +263,11 @@ function getVideoModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
   const isLocked = (id: string) =>
     !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
-  const getLabel = (id: string, name: string) =>
-    `${isLocked(id)}${isSelected(id)}${name}`;
+  const getLabel = (id: string, defaultName: string) => {
+    const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
+    const name = dbModel?.name || defaultName;
+    return `${isLocked(id)}${isSelected(id)}${name}`;
+  };
 
   return {
     inline_keyboard: [
@@ -798,6 +804,7 @@ GPT-5 mini, Gemini 3 Flash и DeepSeek доступны бесплатно`;
 }
 
 async function showImageMenu(ctx: any, user: any) {
+  await ensureModelsLoaded();
   const hasConsented = await hasUserConsented(user.id, "image_generation");
 
   if (!hasConsented) {
@@ -849,9 +856,8 @@ async function showSearchMenu(ctx: any, user: any) {
 }
 
 async function showVideoMenu(ctx: any, user: any) {
-  const currentModel = user?.selectedModel?.startsWith("model_video_")
-    ? user.selectedModel
-    : "model_video_veo";
+  await ensureModelsLoaded();
+  const currentModel = user.selectedModel || "model_video_kling";
 
   const videoMenuText = `Выберите сервис для создания ролика:
 
