@@ -1526,6 +1526,25 @@ bot.callbackQuery(/^scenario_item_(.+)$/, async (ctx) => {
     const item = cat.items.find((i) => i.id === itemId);
     if (item) {
       foundItem = item;
+
+      // Auto-switch model logic
+      const telegramId = ctx.from?.id.toString();
+      if (telegramId) {
+        const [user] = await getUserByTelegramId(telegramId);
+        if (user) {
+          // Default to text model
+          let targetModel = "model_gpt5nano";
+
+          // If category implies image generation
+          if (cat.id === "create_image" || cat.id === "improve_photo") {
+            targetModel = "model_image_nano_banana";
+          }
+
+          if (user.selectedModel !== targetModel) {
+            await updateUserSelectedModel(user.id, targetModel);
+          }
+        }
+      }
       break;
     }
   }
