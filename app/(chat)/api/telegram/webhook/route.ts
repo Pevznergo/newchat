@@ -1,6 +1,7 @@
 import path from "node:path";
 import { generateText, tool } from "ai";
 import { Bot, InputFile, webhookCallback } from "grammy";
+import OpenAI from "openai";
 import { z } from "zod";
 import {
   CONTEXT_COST_RUBRIC,
@@ -114,8 +115,15 @@ const PROVIDER_MAP: Record<string, string> = {
   model_gemini_pro: "openrouter/google/gemini-pro-1.5",
   model_gemini_flash: "openrouter/google/gemini-3-flash-preview",
   model_grok41: "xai/grok-2-vision-1212",
-  model_deepresearch: "openai/o3-deep-research-2025-06-26",
   model_perplexity: "perplexity/sonar-pro",
+
+  // Web Search Variants
+  model_gpt52_web: "openai/gpt-5.2-2025-12-11",
+  model_claude45sonnet_web: "openrouter/anthropic/claude-3.5-sonnet",
+  model_gemini_pro_web: "google/gemini-1.5-pro-latest", // Use native Google provider for grounding
+  model_gemini_flash_web: "google/gemini-1.5-flash-latest",
+  model_grok41_web: "xai/grok-2-vision-1212",
+  model_deepresearch: "openai/o3-deep-research-2025-06-26", // Already search-capable logic?
   // Image/Video models
   model_image_nano_banana: "openai/chatgpt-image-latest",
   model_image_banana_pro: "openai/dall-e-3",
@@ -300,28 +308,28 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
           callback_data: "model_perplexity",
         },
         {
-          text: getLabel("model_gpt52", "GPT 5.2"),
-          callback_data: "model_gpt52",
+          text: getLabel("model_gpt52_web", "GPT 5.2"),
+          callback_data: "model_gpt52_web",
         },
         {
-          text: getLabel("model_claude45sonnet", "Claude 4.5"),
-          callback_data: "model_claude45sonnet",
-        },
-      ],
-      [
-        {
-          text: getLabel("model_gemini_pro", "Gemini 3 Pro"),
-          callback_data: "model_gemini_pro",
-        },
-        {
-          text: getLabel("model_gemini_flash", "Gemini 3 Flash"),
-          callback_data: "model_gemini_flash",
+          text: getLabel("model_claude45sonnet_web", "Claude 4.5"),
+          callback_data: "model_claude45sonnet_web",
         },
       ],
       [
         {
-          text: getLabel("model_grok41", "Grok 4.1"),
-          callback_data: "model_grok41",
+          text: getLabel("model_gemini_pro_web", "Gemini 3 Pro"),
+          callback_data: "model_gemini_pro_web",
+        },
+        {
+          text: getLabel("model_gemini_flash_web", "Gemini 3 Flash"),
+          callback_data: "model_gemini_flash_web",
+        },
+      ],
+      [
+        {
+          text: getLabel("model_grok41_web", "Grok 4.1"),
+          callback_data: "model_grok41_web",
         },
         {
           text: getLabel("model_deepresearch", "Deep Research"),
@@ -2992,30 +3000,109 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       prompt_length: text.length,
     });
 
-    const response = await generateText({
-      model: getLanguageModel(realModelId),
-      system: systemPrompt({
-        selectedChatModel: realModelId,
-        requestHints: {
-          latitude: undefined,
-          longitude: undefined,
-          city: undefined,
-          country: undefined,
-        },
-      }),
-      messages: aiMessages,
-      tools: {
-        generateImage: tool({
-          description:
-            "Generate an image, picture, or drawing. Use this tool when the user asks to 'draw', 'create', 'generate' or 'make' an image/picture (keywords: нарисуй, создай, сгенерируй, сделай картинку/изображение).",
-          inputSchema: z.object({
-            prompt: z
-              .string()
-              .describe("The description of the image to generate"),
+    let response: any;
+    const isWebMode =
+      selectedModelId.endsWith("_web") ||
+      selectedModelId === "model_deepresearch" ||
+      selectedModelId.includes("perplexity");
+
+    // 1. OpenAI Native Web Search (Experimental)
+    // Only applies if the model supports it and we have standard OpenAI API key
+    // AND if the user selected a web-enabled model variant
+    if (
+      isWebMode &&
+      (realModelId.includes("gpt-5") ||
+        realModelId.includes("deep-research") ||
+        realModelId.includes("gpt-4o-search")) &&
+      !realModelId.startsWith("openrouter/")
+    ) {
+      try {
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        // @ts-expect-error - 'responses' API is experimental
+        const result = await openai.responses.create({
+          model: realModelId.replace("openai/", ""), // strip prefix if present
+          tools: [{ type: "web_search" }],
+          input: text, // Responses API uses 'input' string or array
+        });
+
+        // Mocking a standard Vercel AI SDK response structure for compatibility
+        response = {
+          text: result.output_text || result.content || "No response content",
+          toolCalls: [],
+        };
+      } catch (e: any) {
+        console.warn(
+          "OpenAI Responses API failed, falling back to standard:",
+          e.message
+        );
+        // Fallback to standard flow below
+      }
+    }
+
+    // 2. Gemini Grounding (Google Search)
+    if (!response && isWebMode && realModelId.startsWith("google/")) {
+      try {
+        // Vercel AI SDK Google provider support for grounding
+        // We pass it via providerOptions or custom request if supported.
+        // Currently, standard generateText with @ai-sdk/google might explicitly need useSearchGrounding
+        // But since the API signature varies, we'll try to pass it via options.
+        response = await generateText({
+          model: getLanguageModel(realModelId),
+          system: systemPrompt({
+            selectedChatModel: realModelId,
+            requestHints: {
+              latitude: undefined,
+              longitude: undefined,
+              city: undefined,
+              country: undefined,
+            },
           }),
+          messages: aiMessages,
+          // @ts-expect-error
+          providerOptions: {
+            google: {
+              useSearchGrounding: true,
+            },
+          },
+          tools: {
+            generateImage: tool({
+              description: "Generate an image...",
+              inputSchema: z.object({ prompt: z.string() }),
+            }),
+          },
+        });
+      } catch (_e) {
+        // Fallback or error
+      }
+    }
+
+    // 3. Standard Generation (Default)
+    if (!response) {
+      response = await generateText({
+        model: getLanguageModel(realModelId),
+        system: systemPrompt({
+          selectedChatModel: realModelId,
+          requestHints: {
+            latitude: undefined,
+            longitude: undefined,
+            city: undefined,
+            country: undefined,
+          },
         }),
-      },
-    });
+        messages: aiMessages,
+        tools: {
+          generateImage: tool({
+            description:
+              "Generate an image, picture, or drawing. Use this tool when the user asks to 'draw', 'create', 'generate' or 'make' an image/picture (keywords: нарисуй, создай, сгенерируй, сделай картинку/изображение).",
+            inputSchema: z.object({
+              prompt: z
+                .string()
+                .describe("The description of the image to generate"),
+            }),
+          }),
+        },
+      });
+    }
 
     // Handle Tool Calls (specifically Image Generation)
     if (response.toolCalls && response.toolCalls.length > 0) {

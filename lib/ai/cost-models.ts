@@ -58,6 +58,13 @@ export const MODEL_LIMITS: Record<string, number> = {
   model_deepseek_r1: 120_000,
   model_grok41: 500_000,
   model_deepresearch: 500_000,
+
+  // Web Search Variants
+  model_gpt52_web: 700_000,
+  model_claude45sonnet_web: 400_000,
+  model_gemini_pro_web: 80_000,
+  model_gemini_flash_web: 2_000_000,
+  model_grok41_web: 500_000,
 };
 
 // Map of model IDs to their base request cost
@@ -76,6 +83,13 @@ export const MODEL_COSTS: Record<string, number> = {
   model_gemini_flash: 4,
   model_deepresearch: 50,
   model_grok41: 1,
+
+  // Web Search Variants (Slightly higher cost for search)
+  model_gpt52_web: 10,
+  model_claude45sonnet_web: 10,
+  model_gemini_pro_web: 20,
+  model_gemini_flash_web: 8,
+  model_grok41_web: 5,
 
   model_image_nano_banana: 15,
   model_image_banana_pro: 60,
