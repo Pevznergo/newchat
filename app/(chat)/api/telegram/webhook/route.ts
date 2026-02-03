@@ -49,6 +49,7 @@ import {
   saveMessages,
   setLastMessageId,
   setUserDetails,
+  updateUserPreferences,
   updateUserSelectedModel,
   upsertAiModel,
 } from "@/lib/db/queries";
@@ -260,44 +261,96 @@ function getImageModelKeyboard(
 }
 
 function getVideoModelKeyboard(selectedModel: string, isPremium: boolean) {
-  const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
-  const isLocked = (id: string) =>
-    !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+  const isVeoSelected = selectedModel?.startsWith("model_video_veo");
+  const isSoraSelected = selectedModel?.startsWith("model_video_sora");
+
+  const veoLabel = isVeoSelected ? "✅ Veo" : "Veo";
+  const soraLabel = isSoraSelected ? "✅ Sora" : "Sora";
+
+  return {
+    inline_keyboard: [
+      [
+        { text: veoLabel, callback_data: "menu_video_veo" },
+        { text: soraLabel, callback_data: "menu_video_sora" },
+      ],
+      [{ text: "🔙 Назад", callback_data: "menu_start" }],
+    ],
+  };
+}
+
+function getVeoVariantKeyboard(selectedModel: string, isPremium: boolean) {
   const getLabel = (id: string, defaultName: string) => {
     const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
     const name = dbModel?.name || defaultName;
-    return `${isLocked(id)}${isSelected(id)}${name}`;
+    const isSel = selectedModel === id ? "✅ " : "";
+    const isLock = !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+    return `${isLock}${isSel}${name}`;
   };
 
   return {
     inline_keyboard: [
       [
         {
-          text: getLabel("model_video_veo", "🪼 Veo 3.1"),
+          text: getLabel("model_video_veo", "Veo 3.1"),
           callback_data: "model_video_veo",
         },
         {
-          text: getLabel("model_video_sora", "☁️ Sora 2"),
-          callback_data: "model_video_sora",
+          text: getLabel("model_video_veo_fast", "Veo 3.1 Fast"),
+          callback_data: "model_video_veo_fast",
         },
       ],
+      [{ text: "🔙 Назад", callback_data: "menu_video" }],
+    ],
+  };
+}
+
+function getSoraVariantKeyboard(selectedModel: string, isPremium: boolean) {
+  const getLabel = (id: string, defaultName: string) => {
+    const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
+    const name = dbModel?.name || defaultName;
+    const isSel = selectedModel === id ? "✅ " : "";
+    const isLock = !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+    return `${isLock}${isSel}${name}`;
+  };
+
+  return {
+    inline_keyboard: [
       [
         {
-          text: getLabel("model_video_kling", "🐼 Kling"),
-          callback_data: "model_video_kling",
+          text: getLabel("model_video_sora", "Sora 2"),
+          callback_data: "configure_video_sora",
         },
         {
-          text: getLabel("model_video_pika", "🐰 Pika"),
-          callback_data: "model_video_pika",
+          text: getLabel("model_video_sora_pro", "Sora 2 Pro"),
+          callback_data: "configure_video_sora_pro",
         },
       ],
-      [
-        {
-          text: getLabel("model_video_hailuo", "🦊 Hailuo"),
-          callback_data: "model_video_hailuo",
-        },
-      ],
-      [{ text: "Закрыть", callback_data: "menu_close" }],
+      [{ text: "🔙 Назад", callback_data: "menu_video" }],
+    ],
+  };
+}
+
+function getSoraDurationKeyboard(modelId: string, duration?: number) {
+  // Base costs: Sora 2 = 170, Sora 2 Pro = 850
+  const isPro = modelId === "model_video_sora_pro";
+  const baseCost = isPro ? 850 : 170;
+
+  const getBtn = (sec: number, multiplier: number) => {
+    const cost = baseCost * multiplier;
+    const label = `${sec} сек (${cost} кр.)`;
+    const check = duration === sec ? "✅ " : "";
+    return {
+      text: `${check}${label}`,
+      callback_data: `set_duration_${modelId}_${sec}`,
+    };
+  };
+
+  return {
+    inline_keyboard: [
+      [getBtn(4, 1)],
+      [getBtn(8, 2)],
+      [getBtn(12, 3)],
+      [{ text: "🔙 Назад", callback_data: "menu_video_sora" }],
     ],
   };
 }
@@ -1827,6 +1880,82 @@ bot.on("callback_query:data", async (ctx) => {
     return;
   }
 
+  // --- Video Menu Logic ---
+  if (
+    data === "menu_video" ||
+    data === "menu_video_veo" ||
+    data === "menu_video_sora" ||
+    data.startsWith("configure_video_") ||
+    data.startsWith("set_duration_")
+  ) {
+    const [user] = await getUserByTelegramId(telegramId);
+    if (!user) {
+      await safeAnswerCallbackQuery(ctx);
+      return;
+    }
+
+    const currentModelId = user.selectedModel || "";
+
+    if (data === "menu_video") {
+      await ctx.editMessageText("Выберите сервис для создания ролика:", {
+        reply_markup: getVideoModelKeyboard(currentModelId, !!user.hasPaid),
+      });
+      await safeAnswerCallbackQuery(ctx);
+      return;
+    }
+
+    if (data === "menu_video_veo") {
+      await ctx.editMessageText("Выберите версию Veo:", {
+        reply_markup: getVeoVariantKeyboard(currentModelId, !!user.hasPaid),
+      });
+      await safeAnswerCallbackQuery(ctx);
+      return;
+    }
+
+    if (data === "menu_video_sora") {
+      await ctx.editMessageText("Выберите версию Sora:", {
+        reply_markup: getSoraVariantKeyboard(currentModelId, !!user.hasPaid),
+      });
+      await safeAnswerCallbackQuery(ctx);
+      return;
+    }
+
+    if (data.startsWith("configure_video_sora")) {
+      const isPro = data.includes("_pro");
+      const modelId = isPro ? "model_video_sora_pro" : "model_video_sora";
+      const currentDuration = (user.preferences as any)?.video_duration;
+      await ctx.editMessageText(
+        `Настройка ${isPro ? "Sora 2 Pro" : "Sora 2"}.\nВыберите длительность видео:`,
+        { reply_markup: getSoraDurationKeyboard(modelId, currentDuration) }
+      );
+      await safeAnswerCallbackQuery(ctx);
+      return;
+    }
+
+    if (data.startsWith("set_duration_")) {
+      // Format: set_duration_model_video_sora_4
+      const parts = data.split("_");
+      const secs = Number.parseInt(parts.pop() || "4", 10); // last part is seconds
+      const modelId = parts.slice(2).join("_"); // join the rest
+
+      // Update User Preferences
+      await updateUserPreferences(user.id, {
+        video_duration: secs,
+      });
+      // Set Mode
+      await updateUserSelectedModel(user.id, modelId);
+
+      await safeAnswerCallbackQuery(ctx, `✅ ${secs} сек`);
+
+      // Confirm selection
+      await ctx.editMessageText(`✅ Модель выбрана: ${modelId} (${secs} сек)`, {
+        reply_markup: getVideoModelKeyboard(modelId, !!user.hasPaid),
+      });
+      return;
+    }
+  }
+  // --- End Video Menu Logic ---
+
   // Handle Unsubscribe Confirm
   if (data === "unsubscribe_confirm") {
     await safeAnswerCallbackQuery(ctx, "Отменяю подписку...");
@@ -2430,6 +2559,7 @@ bot.on("message:successful_payment", async (ctx) => {
 bot.on("message:text", async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const text = ctx.message.text;
+  await ensureModelsLoaded();
 
   // --- Clan Inputs Handler ---
   const replyText = ctx.message.reply_to_message?.text;
@@ -2986,6 +3116,74 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
           "Произошла ошибка при генерации изображения. Попробуйте другой запрос."
         );
       }
+      return;
+    }
+
+    // --- Video Generation Flow ---
+    if (selectedModelId?.startsWith("model_video_")) {
+      const dbModel = CACHED_MODELS?.find((m) => m.modelId === selectedModelId);
+      const modelName = dbModel?.name || "Video Model";
+
+      // Determine Duration
+      let duration = 5; // default for Veo/Kling
+      if (selectedModelId.includes("sora")) duration = 4; // default for Sora
+
+      const prefs = user.preferences as any;
+      if (prefs?.video_duration) {
+        duration = prefs.video_duration;
+      }
+
+      // Calculate Cost
+      let cost = dbModel?.cost || 50;
+      if (selectedModelId.includes("sora")) {
+        // Base cost (170 or 850) is for 4s.
+        // Multiplier: 4s=1, 8s=2, 12s=3
+        let multiplier = 1;
+        if (duration === 8) multiplier = 2;
+        if (duration === 12) multiplier = 3;
+        cost = cost * multiplier;
+      }
+
+      // Check access
+      const hasAccess = await checkClanLevelRequirement(
+        ctx,
+        user,
+        selectedModelId
+      );
+      if (!hasAccess) return;
+
+      // Enforce Limits & Deduct
+      const allowed = await checkAndEnforceLimits(
+        ctx,
+        user,
+        cost,
+        selectedModelId
+      );
+
+      if (!allowed) return;
+
+      await ctx.replyWithChatAction("upload_video");
+      await ctx.reply(
+        `🎬 <b>Генерация видео запущена!</b>
+
+📹 Модель: <b>${modelName}</b>
+⏱ Длительность: <b>${duration} сек</b>
+💎 Списано: <b>${cost} кредитов</b>
+
+⏳ <i>Ожидайте, процесс может занять несколько минут...</i>`,
+        { parse_mode: "HTML" }
+      );
+
+      trackBackendEvent("Model: Request", telegramId, {
+        model: selectedModelId,
+        type: "video",
+        status: "attempt",
+        prompt_length: text.length,
+        cost,
+      });
+
+      // Placeholder for actual API call
+      // In a real implementation, call provider specific API here.
       return;
     }
 

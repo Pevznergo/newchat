@@ -96,6 +96,11 @@ export const MODEL_COSTS: Record<string, number> = {
   model_image_midjourney: 20,
   model_image_flux: 2, // Flux Schnell defaults
 
+  model_video_veo: 50,
+  model_video_veo_fast: 25,
+  model_video_sora: 170,
+  model_video_sora_pro: 850,
+
   // Provider IDs (Keep for compatibility)
   "openai/gpt-4o-mini-2024-07-18": 2,
   "openai/o4-mini": 2,

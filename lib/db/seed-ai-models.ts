@@ -308,11 +308,23 @@ async function seedAiModels() {
     // Video Models
     {
       modelId: "model_video_veo",
-      name: "Veo",
+      name: "Veo 3.1",
       provider: "google",
       type: "video",
       cost: 50,
-      apiModelId: null, // External service
+      apiModelId: "google/veo", // hypothetical
+      requiredClanLevel: 1,
+      isEnabled: true,
+      isPremium: true,
+      isPro: false,
+    },
+    {
+      modelId: "model_video_veo_fast",
+      name: "Veo 3.1 Fast",
+      provider: "google",
+      type: "video",
+      cost: 25,
+      apiModelId: "google/veo-fast", // hypothetical
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
@@ -320,47 +332,23 @@ async function seedAiModels() {
     },
     {
       modelId: "model_video_sora",
-      name: "Sora",
+      name: "Sora 2",
       provider: "openai",
       type: "video",
-      cost: 100,
-      apiModelId: null, // External service
+      cost: 170, // Base cost for 4s
+      apiModelId: "openai/sora-2",
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
       isPro: false,
     },
     {
-      modelId: "model_video_kling",
-      name: "Kling",
-      provider: "other",
+      modelId: "model_video_sora_pro",
+      name: "Sora 2 Pro",
+      provider: "openai",
       type: "video",
-      cost: 40,
-      apiModelId: null, // External service
-      requiredClanLevel: 1,
-      isEnabled: true,
-      isPremium: true,
-      isPro: false,
-    },
-    {
-      modelId: "model_video_pika",
-      name: "Pika",
-      provider: "other",
-      type: "video",
-      cost: 30,
-      apiModelId: null, // External service
-      requiredClanLevel: 1,
-      isEnabled: true,
-      isPremium: true,
-      isPro: false,
-    },
-    {
-      modelId: "model_video_hailuo",
-      name: "Hailuo",
-      provider: "other",
-      type: "video",
-      cost: 35,
-      apiModelId: null, // External service
+      cost: 850, // Base cost for 4s
+      apiModelId: "openai/sora-2-pro",
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,

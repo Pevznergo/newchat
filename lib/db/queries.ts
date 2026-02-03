@@ -938,6 +938,7 @@ export async function createUserConsent(
 
 interface UserPreferences {
   aspect_ratio?: string;
+  video_duration?: number;
 }
 
 export async function updateUserPreferences(
