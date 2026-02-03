@@ -144,7 +144,10 @@ function getModelKeyboard(
   const config = getLevelConfig(clanLevel);
   const unlimitedModels = config.benefits.unlimitedModels || [];
 
-  const getLabel = (id: string, name: string) => {
+  const getLabel = (id: string, defaultName: string) => {
+    const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
+    const name = dbModel?.name || defaultName;
+
     let prefix = "";
     let suffix = "";
 
@@ -154,7 +157,7 @@ function getModelKeyboard(
     } else if (!isPremium && !unlimitedModels.includes(id)) {
       // Not selected, Not Premium, Not Unlimited in Clan
       // Show Cost
-      const cost = MODEL_COSTS[id] || 1;
+      const cost = dbModel?.cost ?? (MODEL_COSTS[id] || 1);
       suffix = ` (💰${cost})`;
     } else if (!isPremium && unlimitedModels.includes(id)) {
       // Free via Clan
@@ -297,8 +300,11 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
   const isLocked = (id: string) =>
     !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
-  const getLabel = (id: string, name: string) =>
-    `${isLocked(id)}${isSelected(id)}${name}`;
+  const getLabel = (id: string, defaultName: string) => {
+    const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
+    const name = dbModel?.name || defaultName;
+    return `${isLocked(id)}${isSelected(id)}${name}`;
+  };
 
   return {
     inline_keyboard: [
@@ -765,6 +771,7 @@ function getPaymentMethodKeyboard(payUrl: string) {
 }
 
 async function showModelMenu(ctx: any, user: any) {
+  await ensureModelsLoaded();
   const currentModel = user?.selectedModel || "model_gpt4omini";
 
   const modelInfo = `В боте доступны ведущие модели ChatGPT, Claude, Gemini и DeepSeek:
@@ -827,6 +834,7 @@ async function showImageMenu(ctx: any, user: any) {
 }
 
 async function showSearchMenu(ctx: any, user: any) {
+  await ensureModelsLoaded();
   const currentModel = user?.selectedModel || "model_gemini_flash"; // Default to free model
 
   const searchText = `Выберите модель поиска или оставьте выбранную модель по-умолчанию
@@ -1802,6 +1810,9 @@ bot.command("privacy", async (ctx) => {
 bot.on("callback_query:data", async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const data = ctx.callbackQuery.data;
+
+  // Ensure models are loaded for any label lookups
+  await ensureModelsLoaded();
 
   // Handle menu navigation
   if (data === "menu_start" || data === "menu_close") {
