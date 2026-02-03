@@ -32,6 +32,9 @@ export default async function AdminLayout({
         <h1 className="text-xl font-bold">Admin Panel</h1>
         <div className="flex gap-4">
           <span className="text-sm opacity-70">{session.user.email}</span>
+          <a className="hover:underline" href="/admin/links">
+            Links
+          </a>
           <a className="hover:underline" href="/admin/models">
             Models
           </a>

@@ -982,7 +982,7 @@ async function showVideoMenu(ctx: any, user: any) {
 
   const videoMenuText = `Выберите сервис для создания ролика:
 
-🎬 Veo 3.1, Sora 2, Kling, Pika и Hailuo создают видео по описанию или изображению`;
+🎬 Veo 3.1, Sora 2 создают видео по описанию или изображению`;
 
   await ctx.reply(videoMenuText, {
     reply_markup: getVideoModelKeyboard(currentModel, user?.hasPaid),
@@ -1142,6 +1142,14 @@ async function showPrivacy(ctx: any) {
   await ctx.reply(
     "📄 Условия использования:\n\nИспользуя бота, вы соглашаетесь с правилами обработки данных и условиями сервиса."
   );
+}
+
+async function safeDeleteMessage(ctx: any) {
+  try {
+    await ctx.deleteMessage();
+  } catch (_e) {
+    // ignore error (e.g. message too old or missing perms)
+  }
 }
 
 // --- Commands ---
@@ -1382,6 +1390,7 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("pin_clan", async (ctx) => {
+  await safeDeleteMessage(ctx);
   try {
     const message = await ctx.reply(
       "👑 <b>Объединяйтесь в кланы!</b>\n\nРазвивайте своё комьюнити вместе с друзьями и забирайте крутые привилегии для каждого участника:\n\n• Дополнительные кредиты каждую неделю\n• Безлимитный доступ к нейросетям (на 5 уровне)\n• Генерация картинок\n\n👇 Жми кнопку ниже, чтобы войти в игру и создать свой клан!",
@@ -1472,6 +1481,7 @@ bot.callbackQuery("delete_message", async (ctx) => {
 });
 
 bot.command("clan", async (ctx) => {
+  await safeDeleteMessage(ctx);
   await ctx.reply("Откройте приложение клана:", {
     reply_markup: {
       inline_keyboard: [
@@ -1781,6 +1791,7 @@ bot.callbackQuery("scenarios_back", async (ctx) => {
 });
 
 bot.command("clear", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1815,6 +1826,7 @@ bot.command("clear", async (ctx) => {
 });
 
 bot.command("account", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1824,6 +1836,7 @@ bot.command("account", async (ctx) => {
 });
 
 bot.command("premium", async (ctx) => {
+  await safeDeleteMessage(ctx);
   await showPremiumMenu(ctx);
 });
 
@@ -1834,11 +1847,7 @@ bot.command("unsubscribe", async (ctx) => {
   }
 
   try {
-    try {
-      await ctx.deleteMessage();
-    } catch {
-      // ignore
-    }
+    await safeDeleteMessage(ctx);
 
     const [user] = await getUserByTelegramId(telegramId);
     if (!user) {
@@ -1897,6 +1906,7 @@ bot.command("unsubscribe", async (ctx) => {
 });
 
 bot.command("deletecontext", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1929,6 +1939,7 @@ bot.command("deletecontext", async (ctx) => {
 });
 
 bot.command("photo", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1940,6 +1951,7 @@ bot.command("photo", async (ctx) => {
 });
 
 bot.command("video", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1951,6 +1963,7 @@ bot.command("video", async (ctx) => {
 });
 
 bot.command("s", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1962,6 +1975,7 @@ bot.command("s", async (ctx) => {
 });
 
 bot.command("model", async (ctx) => {
+  await safeDeleteMessage(ctx);
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
@@ -1973,14 +1987,17 @@ bot.command("model", async (ctx) => {
 });
 
 bot.command("settings", async (ctx) => {
+  await safeDeleteMessage(ctx);
   await showSettingsMenu(ctx);
 });
 
 bot.command("help", async (ctx) => {
+  await safeDeleteMessage(ctx);
   await showHelp(ctx);
 });
 
 bot.command("privacy", async (ctx) => {
+  await safeDeleteMessage(ctx);
   await showPrivacy(ctx);
 });
 
@@ -2098,23 +2115,50 @@ bot.on("callback_query:data", async (ctx) => {
       const aspect = data.replace("set_video_aspect_", "") as
         | "portrait"
         | "landscape";
-      const modelId = user.selectedModel || "model_video_veo"; // fallback?
+      const modelId = user.selectedModel || "model_video_veo";
 
+      // Save Aspect
       await updateUserPreferences(user.id, {
         video_aspect: aspect,
       });
 
-      const quality = (user.preferences as any)?.video_quality;
+      // Default quality if not set
+      let quality = (user.preferences as any)?.video_quality;
+      if (!quality) {
+        quality = "720p";
+        await updateUserPreferences(user.id, { video_quality: "720p" });
+      }
+
       await safeAnswerCallbackQuery(
         ctx,
         `✅ ${aspect === "portrait" ? "9:16" : "16:9"}`
       );
 
-      // NEXT STEP: Quality
+      // Skip explicit Quality step -> Go straight to "Ready"
+      // User requested "message that now enter prompt"
+
+      const duration = (user.preferences as any)?.video_duration || 5;
+
+      // Calculate final cost
+      await ensureModelsLoaded();
+      const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === modelId);
+      const costPerSec = dbModel?.cost || 10;
+      const totalCost = costPerSec * duration;
+
       await ctx.editMessageText(
-        "✅ Формат выбран.\nТеперь выберите качество:",
+        `✅ <b>Настройки видео готовы!</b>
+        
+📹 Модель: <b>${dbModel?.name || "Video Model"}</b>
+⏱ Длительность: <b>${duration} сек</b>
+📐 Формат: <b>${aspect === "portrait" ? "Портрет (9:16)" : "Ландшафт (16:9)"}</b>
+📺 Качество: <b>${quality}</b>
+
+💎 Стоимость: <b>${totalCost} кр.</b>
+
+👇 <b>Напишите описание видео, чтобы начать генерацию...</b>`,
         {
-          reply_markup: getVideoQualityKeyboard(modelId, quality),
+          parse_mode: "HTML",
+          reply_markup: getVideoModelKeyboard(modelId, !!user.hasPaid),
         }
       );
       return;
@@ -3767,7 +3811,9 @@ bot.on("message:photo", async (ctx) => {
             m.role === "user"
               ? // Simple text mapping for history, preserving images might be complex in this DB schema
                 // if parts are not stored fully. Assuming parts has text.
-                (m.parts as any[]).map((p) => p.text).join("\n")
+                (m.parts as any[])
+                  .map((p) => p.text)
+                  .join("\n")
               : (m.parts as any[]).map((p) => p.text).join("\n"),
         }));
 
