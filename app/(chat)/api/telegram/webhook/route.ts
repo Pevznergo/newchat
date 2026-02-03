@@ -320,10 +320,6 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
       ],
       [
         {
-          text: getLabel("model_grok41_web", "Grok 4.1"),
-          callback_data: "model_grok41_web",
-        },
-        {
           text: getLabel("model_deepresearch", "Deep Research"),
           callback_data: "model_deepresearch",
         },

@@ -99,11 +99,11 @@ async function seedAiModels() {
     },
     {
       modelId: "model_claude45thinking",
-      name: "Claude 3.7 Sonnet Thinking",
+      name: "Claude 4.5 Thinking",
       provider: "openrouter",
       type: "text",
-      cost: 40,
-      apiModelId: "openrouter/anthropic/claude-3.7-sonnet",
+      cost: 10,
+      apiModelId: "openrouter/anthropic/claude-3.7-sonnet", // API ID stays same (actual model)
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
