@@ -424,7 +424,12 @@ function getMusicGenerationKeyboard() {
 
 async function safeAnswerCallbackQuery(ctx: any, text?: string, options?: any) {
   try {
-    await ctx.answerCallbackQuery(text, options);
+    // Construct the payload to match what works: ctx.answerCallbackQuery({ text: "...", show_alert: true })
+    const payload = { ...options };
+    if (text) {
+      payload.text = text;
+    }
+    await ctx.answerCallbackQuery(payload);
   } catch (error: any) {
     const msg = error?.message || "";
     if (
