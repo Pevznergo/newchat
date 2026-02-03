@@ -939,6 +939,8 @@ export async function createUserConsent(
 interface UserPreferences {
   aspect_ratio?: string;
   video_duration?: number;
+  video_aspect?: "portrait" | "landscape";
+  video_quality?: "720p" | "1080p";
 }
 
 export async function updateUserPreferences(

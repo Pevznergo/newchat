@@ -292,11 +292,11 @@ function getVeoVariantKeyboard(selectedModel: string, isPremium: boolean) {
       [
         {
           text: getLabel("model_video_veo", "Veo 3.1"),
-          callback_data: "model_video_veo",
+          callback_data: "configure_video_veo",
         },
         {
           text: getLabel("model_video_veo_fast", "Veo 3.1 Fast"),
-          callback_data: "model_video_veo_fast",
+          callback_data: "configure_video_veo_fast",
         },
       ],
       [{ text: "🔙 Назад", callback_data: "menu_video" }],
@@ -330,10 +330,27 @@ function getSoraVariantKeyboard(selectedModel: string, isPremium: boolean) {
   };
 }
 
-function getSoraDurationKeyboard(modelId: string, duration?: number) {
+function getVideoDurationKeyboard(modelId: string, duration?: number) {
   const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === modelId);
-  // Fallback to defaults if cache missing (43 approx 170/4, 213 approx 850/4)
-  const costPerSec = dbModel?.cost || (modelId.includes("_pro") ? 213 : 43);
+  // Fallback to defaults if cache missing. Veo: 10/5. Sora: 43/213.
+  let defaultCost = 10;
+  if (modelId.includes("sora")) {
+    defaultCost = 43;
+  }
+  if (modelId.includes("sora_pro")) {
+    defaultCost = 213;
+  }
+  if (modelId.includes("veo_fast")) {
+    defaultCost = 5;
+  }
+
+  const costPerSec = dbModel?.cost || defaultCost;
+
+  // Determine available durations
+  const options = modelId.includes("veo") ? [4, 8] : [4, 8, 12];
+  const backCallback = modelId.includes("veo")
+    ? "menu_video_veo"
+    : "menu_video_sora";
 
   const getBtn = (sec: number) => {
     const cost = costPerSec * sec;
@@ -345,12 +362,59 @@ function getSoraDurationKeyboard(modelId: string, duration?: number) {
     };
   };
 
+  const keyboard = options.map((sec) => [getBtn(sec)]);
+
   return {
     inline_keyboard: [
-      [getBtn(4)],
-      [getBtn(8)],
-      [getBtn(12)],
-      [{ text: "🔙 Назад", callback_data: "menu_video_sora" }],
+      ...keyboard,
+      [{ text: "🔙 Назад", callback_data: backCallback }],
+    ],
+  };
+}
+
+function getVideoAspectKeyboard(modelId: string, currentAspect?: string) {
+  const isPortrait = currentAspect === "portrait";
+  const isLandscape = currentAspect === "landscape";
+
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: `${isPortrait ? "✅ " : ""}Портрет (9:16)`,
+          callback_data: "set_video_aspect_portrait",
+        },
+        {
+          text: `${isLandscape ? "✅ " : ""}Ландшафт (16:9)`,
+          callback_data: "set_video_aspect_landscape",
+        },
+      ],
+      [
+        {
+          text: "🔙 Назад",
+          callback_data: `configure_video_${modelId.replace("model_video_", "")}`,
+        },
+      ],
+    ],
+  };
+}
+
+function getVideoQualityKeyboard(modelId: string, currentQuality?: string) {
+  const is720 = currentQuality === "720p";
+  const is1080 = currentQuality === "1080p";
+
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: `${is720 ? "✅ " : ""}720p`,
+          callback_data: "set_video_quality_720p",
+        },
+        {
+          text: `${is1080 ? "✅ " : ""}1080p`,
+          callback_data: "set_video_quality_1080p",
+        },
+      ],
+      [{ text: "🔙 Назад", callback_data: "back_to_video_aspect" }],
     ],
   };
 }
@@ -1920,37 +1984,133 @@ bot.on("callback_query:data", async (ctx) => {
       return;
     }
 
-    if (data.startsWith("configure_video_sora")) {
-      const isPro = data.includes("_pro");
-      const modelId = isPro ? "model_video_sora_pro" : "model_video_sora";
-      const currentDuration = (user.preferences as any)?.video_duration;
-      await ctx.editMessageText(
-        `Настройка ${isPro ? "Sora 2 Pro" : "Sora 2"}.\nВыберите длительность видео:`,
-        { reply_markup: getSoraDurationKeyboard(modelId, currentDuration) }
-      );
-      await safeAnswerCallbackQuery(ctx);
-      return;
+    if (data.startsWith("configure_video_")) {
+      let modelId = "";
+      let name = "";
+
+      if (data.includes("_sora_pro")) {
+        modelId = "model_video_sora_pro";
+        name = "Sora 2 Pro";
+      } else if (data.includes("_sora")) {
+        modelId = "model_video_sora";
+        name = "Sora 2";
+      } else if (data.includes("_veo_fast")) {
+        modelId = "model_video_veo_fast";
+        name = "Veo 3.1 Fast";
+      } else if (data.includes("_veo")) {
+        modelId = "model_video_veo";
+        name = "Veo 3.1";
+      }
+
+      if (modelId) {
+        const currentDuration = (user.preferences as any)?.video_duration;
+        await ctx.editMessageText(
+          `Настройка ${name}.\nВыберите длительность видео:`,
+          { reply_markup: getVideoDurationKeyboard(modelId, currentDuration) }
+        );
+        await safeAnswerCallbackQuery(ctx);
+        return;
+      }
     }
 
     if (data.startsWith("set_duration_")) {
       // Format: set_duration_model_video_sora_4
       const parts = data.split("_");
-      const secs = Number.parseInt(parts.pop() || "4", 10); // last part is seconds
-      const modelId = parts.slice(2).join("_"); // join the rest
+      const secs = Number.parseInt(parts.pop() || "4", 10);
+      const modelId = parts.slice(2).join("_");
 
-      // Update User Preferences
+      // Update User Preferences & Model
       await updateUserPreferences(user.id, {
         video_duration: secs,
       });
-      // Set Mode
       await updateUserSelectedModel(user.id, modelId);
 
+      const aspect = (user.preferences as any)?.video_aspect; // Use explicit or user's
       await safeAnswerCallbackQuery(ctx, `✅ ${secs} сек`);
 
-      // Confirm selection
-      await ctx.editMessageText(`✅ Модель выбрана: ${modelId} (${secs} сек)`, {
-        reply_markup: getVideoModelKeyboard(modelId, !!user.hasPaid),
+      // NEXT STEP: Aspect Ratio
+      await ctx.editMessageText(
+        `✅ Длительность: ${secs} сек.\nТеперь выберите формат видео:`,
+        {
+          reply_markup: getVideoAspectKeyboard(modelId, aspect),
+        }
+      );
+      return;
+    }
+
+    if (data.startsWith("set_video_aspect_")) {
+      const aspect = data.replace("set_video_aspect_", "") as
+        | "portrait"
+        | "landscape";
+      const modelId = user.selectedModel || "model_video_veo"; // fallback?
+
+      await updateUserPreferences(user.id, {
+        video_aspect: aspect,
       });
+
+      const quality = (user.preferences as any)?.video_quality;
+      await safeAnswerCallbackQuery(
+        ctx,
+        `✅ ${aspect === "portrait" ? "9:16" : "16:9"}`
+      );
+
+      // NEXT STEP: Quality
+      await ctx.editMessageText(
+        "✅ Формат выбран.\nТеперь выберите качество:",
+        {
+          reply_markup: getVideoQualityKeyboard(modelId, quality),
+        }
+      );
+      return;
+    }
+
+    if (data === "back_to_video_aspect") {
+      const modelId = user.selectedModel || "model_video_veo";
+      const aspect = (user.preferences as any)?.video_aspect;
+      await ctx.editMessageText("Выберите формат видео:", {
+        reply_markup: getVideoAspectKeyboard(modelId, aspect),
+      });
+      await safeAnswerCallbackQuery(ctx);
+      return;
+    }
+
+    if (data.startsWith("set_video_quality_")) {
+      const quality = data.replace("set_video_quality_", "") as
+        | "720p"
+        | "1080p";
+      const modelId = user.selectedModel || "model_video_veo";
+
+      await updateUserPreferences(user.id, {
+        video_quality: quality,
+      });
+
+      // FINISH
+      await safeAnswerCallbackQuery(ctx, "✅ Настройки сохранены!");
+
+      const duration = (user.preferences as any)?.video_duration || 5;
+      const aspect = (user.preferences as any)?.video_aspect || "landscape";
+
+      // Calculate final cost for display
+      const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === modelId);
+      const costPerSec = dbModel?.cost || 10;
+      const totalCost = costPerSec * duration;
+
+      await ctx.editMessageText(
+        `✅ <b>Настройки видео готовы!</b>
+
+📹 Модель: <b>${dbModel?.name}</b>
+⏱ Длительность: <b>${duration} сек</b>
+📐 Формат: <b>${aspect === "portrait" ? "Портрет (9:16)" : "Ландшафт (16:9)"}</b>
+📺 Качество: <b>${quality}</b>
+
+💎 Стоимость: <b>${totalCost} кр.</b>
+
+<i>Напишите описание видео, чтобы начать генерацию...</i>`,
+        {
+          parse_mode: "HTML",
+          reply_markup: getVideoModelKeyboard(modelId, !!user.hasPaid),
+        }
+      );
       return;
     }
   }
@@ -3164,11 +3324,17 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
       }
 
       await ctx.replyWithChatAction("upload_video");
+      const aspect = prefs?.video_aspect || "landscape";
+      const quality = prefs?.video_quality || "720p";
+
       await ctx.reply(
         `🎬 <b>Генерация видео запущена!</b>
 
 📹 Модель: <b>${modelName}</b>
 ⏱ Длительность: <b>${duration} сек</b>
+📐 Формат: <b>${aspect === "portrait" ? "Портрет (9:16)" : "Ландшафт (16:9)"}</b>
+📺 Качество: <b>${quality}</b>
+
 💎 Списано: <b>${cost} кредитов</b>
 
 ⏳ <i>Ожидайте, процесс может занять несколько минут...</i>`,
