@@ -3018,7 +3018,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     ) {
       try {
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        // @ts-expect-error - 'responses' API is experimental
+
         const result = await openai.responses.create({
           model: realModelId.replace("openai/", ""), // strip prefix if present
           tools: [{ type: "web_search" }],
