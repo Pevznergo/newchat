@@ -3102,7 +3102,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
     // Handle Tool Calls (specifically Image Generation)
     if (response.toolCalls && response.toolCalls.length > 0) {
       const imageToolCall = response.toolCalls.find(
-        (tc) => tc.toolName === "generateImage"
+        (tc: any) => tc.toolName === "generateImage"
       );
 
       if (imageToolCall) {
