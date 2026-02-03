@@ -260,7 +260,7 @@ function getImageModelKeyboard(
   return { inline_keyboard: buttons };
 }
 
-function getVideoModelKeyboard(selectedModel: string, isPremium: boolean) {
+function getVideoModelKeyboard(selectedModel: string, _isPremium: boolean) {
   const isVeoSelected = selectedModel?.startsWith("model_video_veo");
   const isSoraSelected = selectedModel?.startsWith("model_video_sora");
 
@@ -3126,7 +3126,9 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 
       // Determine Duration
       let duration = 5; // default for Veo/Kling
-      if (selectedModelId.includes("sora")) duration = 4; // default for Sora
+      if (selectedModelId.includes("sora")) {
+        duration = 4; // default for Sora
+      }
 
       const prefs = user.preferences as any;
       if (prefs?.video_duration) {
@@ -3139,9 +3141,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         // Base cost (170 or 850) is for 4s.
         // Multiplier: 4s=1, 8s=2, 12s=3
         let multiplier = 1;
-        if (duration === 8) multiplier = 2;
-        if (duration === 12) multiplier = 3;
-        cost = cost * multiplier;
+        if (duration === 8) {
+          multiplier = 2;
+        }
+        if (duration === 12) {
+          multiplier = 3;
+        }
+        cost *= multiplier;
       }
 
       // Check access
@@ -3150,7 +3156,9 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         user,
         selectedModelId
       );
-      if (!hasAccess) return;
+      if (!hasAccess) {
+        return;
+      }
 
       // Enforce Limits & Deduct
       const allowed = await checkAndEnforceLimits(
@@ -3160,7 +3168,9 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
         selectedModelId
       );
 
-      if (!allowed) return;
+      if (!allowed) {
+        return;
+      }
 
       await ctx.replyWithChatAction("upload_video");
       await ctx.reply(
