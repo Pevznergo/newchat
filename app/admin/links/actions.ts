@@ -26,9 +26,17 @@ export async function getShortLinks(page = 1, limit = 20, search = "") {
       .limit(limit)
       .offset(offset);
 
-    // Get total count (approximation or separate query)
-    // For simplicity, just return data. Client handles "load more" or simple pagination.
-    return { success: true, data };
+    // Get total count for pagination
+    // Note: In Drizzle, count() is often easier with a separate query or using sq.
+    // Making a separate count query for simplicity and reliability.
+    const allMatching = await db
+      .select({ id: shortLinks.id })
+      .from(shortLinks)
+      .where(filters);
+
+    const total = allMatching.length;
+
+    return { success: true, data, total };
   } catch (error) {
     console.error("Failed to fetch links:", error);
     return { success: false, error: "Failed to fetch links" };
