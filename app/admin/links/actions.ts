@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, ilike, or } from "drizzle-orm";
+import { desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { shortLinks } from "@/lib/db/schema";
@@ -10,7 +10,7 @@ export async function getShortLinks(page = 1, limit = 20, search = "") {
     const offset = (page - 1) * limit;
 
     // Build where clause
-    let filters;
+    let filters: SQL | undefined;
     if (search) {
       filters = or(
         ilike(shortLinks.code, `%${search}%`),

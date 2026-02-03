@@ -2,10 +2,9 @@
 
 import { Loader2, Plus, RefreshCw } from "lucide-react";
 import QRCodeLib from "qrcode";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react"; // Added useCallback
+import { toast } from "sonner"; // Added sonner
 import { createShortLink, getShortLinks } from "./actions";
-
-/* eslint-disable @next/next/no-img-element */
 
 export default function AdminLinksClient() {
   const [links, setLinks] = useState<any[]>([]);
@@ -20,24 +19,22 @@ export default function AdminLinksClient() {
     stickerPrizes: "IPHONE/OZON",
   });
 
-  const fetchLinks = async () => {
+  const fetchLinks = useCallback(async () => {
     setLoading(true);
     const res = await getShortLinks(1, 100, search);
     if (res.success && res.data) {
       setLinks(res.data);
     }
     setLoading(false);
-  };
+  }, [search]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchLinks();
-  }, []);
+  }, [fetchLinks]); // Fixed dependency
 
   const handleCreate = async () => {
     if (!formData.code) {
-      // eslint-disable-next-line no-alert
-      alert("Code is required");
+      toast.error("Code is required");
       return;
     }
     setIsCreating(true);
@@ -49,13 +46,11 @@ export default function AdminLinksClient() {
 
     setIsCreating(false);
     if (res.success) {
-      // eslint-disable-next-line no-alert
-      alert("✅ Link created!");
+      toast.success("✅ Link created!");
       setFormData({ ...formData, code: "" }); // reset code
       fetchLinks();
     } else {
-      // eslint-disable-next-line no-alert
-      alert("❌ Error: " + res.error);
+      toast.error(`❌ Error: ${res.error}`); // Fixed template literal
     }
   };
 
@@ -229,6 +224,7 @@ function LinkRow({ link }: { link: any }) {
       </div>
       <div className="col-span-2 flex gap-2">
         {qrUrl ? (
+          // biome-ignore lint/performance/noImgElement: QR code data URI
           <img
             alt="QR"
             className="w-10 h-10 border rounded p-1 bg-white"
