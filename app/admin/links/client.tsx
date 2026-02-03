@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
 } from "lucide-react";
+import Image from "next/image";
 import QRCodeLib from "qrcode";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -26,7 +27,8 @@ function generateRandomCode(length = 8) {
 export default function AdminLinksClient() {
   const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  // Search is currently static, kept for future use if needed
+  const [search] = useState("");
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
@@ -229,12 +231,7 @@ export default function AdminLinksClient() {
                 <Loader2 className="animate-spin text-indigo-500" size={32} />
               </div>
             ) : (
-              // biome-ignore lint/complexity/noUselessFragments: <explanation>
-              <>
-                {links.map((link) => (
-                  <LinkRow key={link.id} link={link} />
-                ))}
-              </>
+              links.map((link) => <LinkRow key={link.id} link={link} />)
             )}
 
             {!loading && links.length === 0 && (
@@ -257,6 +254,7 @@ export default function AdminLinksClient() {
                   className="p-2 bg-white border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  type="button"
                 >
                   <ChevronLeft size={16} />
                 </button>
@@ -269,6 +267,7 @@ export default function AdminLinksClient() {
                   onClick={() =>
                     setCurrentPage((p) => Math.min(totalPages, p + 1))
                   }
+                  type="button"
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -300,7 +299,9 @@ function LinkRow({ link }: { link: any }) {
   }, [botLink]);
 
   const handleDownload = () => {
-    if (!qrUrl) return;
+    if (!qrUrl) {
+      return;
+    }
 
     const linkElem = document.createElement("a");
     linkElem.href = qrUrl;
@@ -351,15 +352,22 @@ function LinkRow({ link }: { link: any }) {
       <div className="col-span-2 flex justify-end gap-2">
         {/* Preview small QR */}
         {qrUrl && (
-          // biome-ignore lint/performance/noImgElement: QR Preview
           <div className="relative group/qr">
-            <img
+            <Image
               alt="QR"
               className="w-8 h-8 border rounded p-0.5 bg-white object-contain"
+              height={32}
               src={qrUrl}
+              width={32}
             />
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/qr:block bg-white p-2 rounded shadow-lg border z-10 w-32">
-              <img alt="QR Large" className="w-full h-auto" src={qrUrl} />
+              <Image
+                alt="QR Large"
+                className="w-full h-auto"
+                height={128}
+                src={qrUrl}
+                width={128}
+              />
             </div>
           </div>
         )}
