@@ -3053,7 +3053,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
             },
           }),
           messages: aiMessages,
-          // @ts-expect-error
+
           providerOptions: {
             google: {
               useSearchGrounding: true,
