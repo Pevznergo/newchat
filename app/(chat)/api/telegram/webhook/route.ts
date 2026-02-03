@@ -304,16 +304,8 @@ function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
     inline_keyboard: [
       [
         {
-          text: getLabel("model_perplexity", "Perplexity"),
-          callback_data: "model_perplexity",
-        },
-        {
           text: getLabel("model_gpt52_web", "GPT 5.2"),
           callback_data: "model_gpt52_web",
-        },
-        {
-          text: getLabel("model_claude45sonnet_web", "Claude 4.5"),
-          callback_data: "model_claude45sonnet_web",
         },
       ],
       [
@@ -3027,7 +3019,10 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 
         // Mocking a standard Vercel AI SDK response structure for compatibility
         response = {
-          text: result.output_text || result.content || "No response content",
+          text:
+            result.output_text ||
+            (result as any).content ||
+            "No response content",
           toolCalls: [],
         };
       } catch (e: any) {
