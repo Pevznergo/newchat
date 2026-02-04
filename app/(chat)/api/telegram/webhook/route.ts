@@ -1250,10 +1250,26 @@ bot.command("start", async (ctx) => {
         startParam,
         campaignTracking
       );
-      trackBackendEvent("User: Register", userIdStr, {
+
+      // Identify newly created user
+      identifyBackendUser(userIdStr, {
+        $name: `User ${userIdStr}`,
+        $email: user.email,
         source: sourceType,
+        start_param: startParam,
         ...campaignTracking,
       });
+
+      trackBackendEvent("User: Register", userIdStr, {
+        source: sourceType,
+        start_param: startParam,
+        ...campaignTracking,
+      });
+    }
+
+    // Ensure we Identify existing users too if they have new UTM tracking
+    if (Object.keys(campaignTracking).length > 0) {
+      identifyBackendUser(userIdStr, campaignTracking);
     }
 
     trackBackendEvent("User: Start", userIdStr, {
