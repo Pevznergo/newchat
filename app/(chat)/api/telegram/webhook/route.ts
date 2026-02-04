@@ -899,11 +899,9 @@ async function checkAndEnforceLimits(
       // Free User, No Clan, No Free Images -> Blocked
       isAllowed = false;
     }
-  } else {
+  } else if (currentUsage + effectiveCost <= limit) {
     // Text Logic (Standard)
-    if (currentUsage + effectiveCost <= limit) {
-      isAllowed = true;
-    }
+    isAllowed = true;
   }
 
   if (!isAllowed) {
