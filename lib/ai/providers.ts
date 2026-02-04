@@ -1,3 +1,4 @@
+import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { createOpenAI, openai } from "@ai-sdk/openai";
 import { customProvider, type LanguageModel } from "ai";
