@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { aiModel } from "@/lib/db/schema";
+import { aiModel, clanLevel } from "@/lib/db/schema";
 
 export async function getModels() {
   return await db.select().from(aiModel).orderBy(aiModel.name);
@@ -52,11 +52,13 @@ export async function upsertModel(data: {
   revalidatePath("/admin/models");
 }
 
-revalidatePath("/admin/models");
+export async function deleteModel(id: string) {
+  await db.delete(aiModel).where(eq(aiModel.id, id));
+  revalidatePath("/admin/models");
 }
 
 export async function getClanLevels() {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: sorting by level
   return await db
     .select()
     .from(clanLevel)
