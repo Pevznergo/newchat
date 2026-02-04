@@ -899,7 +899,7 @@ export async function decrementUserFreeImages(userId: string, amount = 1) {
     const res = await db
       .update(user)
       .set({
-        free_images_count: sql`${user.free_images_count} - ${amount}`,
+        freeImagesCount: sql`${user.freeImagesCount} - ${amount}`,
       })
       .where(eq(user.id, userId))
       .returning();
