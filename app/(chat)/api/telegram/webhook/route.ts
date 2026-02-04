@@ -491,11 +491,15 @@ function getSearchModelKeyboard(
       ],
       [
         {
-          text: getLabel("model_deepresearch", "Deep Research"),
-          callback_data: "model_deepresearch",
+          text: getLabel("model_gpt41_web", "GPT 4.1"),
+          callback_data: "model_gpt41_web",
         },
-        { text: "Закрыть", callback_data: "menu_close" },
+        {
+          text: getLabel("model_gpt_4osearch_web", "GPT-4o Search"),
+          callback_data: "model_gpt_4osearch_web",
+        },
       ],
+      [{ text: "Закрыть", callback_data: "menu_close" }],
     ],
   };
 }
