@@ -491,16 +491,6 @@ function getSearchModelKeyboard(
       ],
       [
         {
-          text: getLabel("model_gemini_pro_web", "Gemini 3 Pro"),
-          callback_data: "model_gemini_pro_web",
-        },
-        {
-          text: getLabel("model_gemini_flash_web", "Gemini 3 Flash"),
-          callback_data: "model_gemini_flash_web",
-        },
-      ],
-      [
-        {
           text: getLabel("model_deepresearch", "Deep Research"),
           callback_data: "model_deepresearch",
         },
