@@ -305,18 +305,15 @@ function getVideoModelKeyboard(
 
   const isVeoSelected = selectedModel?.startsWith("model_video_veo");
   const isSoraSelected = selectedModel?.startsWith("model_video_sora");
-  const isKlingSelected = selectedModel?.startsWith("model_video_kling");
 
   const veoLabel = isVeoSelected ? "✅ Veo" : "Veo";
   const soraLabel = isSoraSelected ? "✅ Sora" : "Sora";
-  const klingLabel = isKlingSelected ? "✅ Kling (Pro)" : "Kling (Pro)";
 
   return {
     inline_keyboard: [
       [
         { text: veoLabel, callback_data: "menu_video_veo" },
         { text: soraLabel, callback_data: "menu_video_sora" },
-        { text: klingLabel, callback_data: "menu_video_kling" },
       ],
       [{ text: "🔙 Назад", callback_data: "menu_start" }],
     ],
@@ -2243,11 +2240,30 @@ bot.on("callback_query:data", async (ctx) => {
         const isFree = FREE_MODELS.includes(modelId);
 
         if (!user.hasPaid && !isFree && clanLevel < requiredLevel) {
-          await safeAnswerCallbackQuery(
-            ctx,
-            `🔒 Доступно с ${requiredLevel} уровня Клана!`,
-            true
+          await ctx.editMessageText(
+            `⚠️ <b>Доступ ограничен</b>\n\nМодель <b>${name}</b> доступна с ${requiredLevel} уровня Клана.\nПоднимите уровень клана или оформите Премиум, чтобы пользоваться ей без ограничений.`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "🏰 Мой Клан",
+                      web_app: { url: "https://aporto.tech/app" },
+                    },
+                  ],
+                  [
+                    {
+                      text: "🚀 Подключить премиум",
+                      callback_data: "open_premium",
+                    },
+                  ],
+                  [{ text: "🔙 Назад", callback_data: "menu_video" }],
+                ],
+              },
+            }
           );
+          await safeAnswerCallbackQuery(ctx);
           return;
         }
 
@@ -4055,7 +4071,9 @@ bot.on("message:photo", async (ctx) => {
             m.role === "user"
               ? // Simple text mapping for history, preserving images might be complex in this DB schema
                 // if parts are not stored fully. Assuming parts has text.
-                (m.parts as any[]).map((p) => p.text).join("\n")
+                (m.parts as any[])
+                  .map((p) => p.text)
+                  .join("\n")
               : (m.parts as any[]).map((p) => p.text).join("\n"),
         }));
 
