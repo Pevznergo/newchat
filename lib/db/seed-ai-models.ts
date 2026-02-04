@@ -308,7 +308,7 @@ async function seedAiModels() {
       provider: "openai",
       type: "image",
       cost: 20,
-      apiModelId: "gpt-images-1.5-gen",
+      apiModelId: "gpt-image-1.5",
       requiredClanLevel: 2,
       isEnabled: true,
       isPremium: true,

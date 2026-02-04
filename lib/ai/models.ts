@@ -124,15 +124,15 @@ export const IMAGE_MODELS: Record<string, ImageModel> = {
     enabled: true,
   },
   model_image_gpt_images_1_5: {
-    id: "gpt-images-1.5", // Internal or mapped ID
+    id: "gpt-image-1.5", // Corrected ID
     name: "GPT Images 1.5",
     provider: "openai", // Handled via bot logic
     enabled: true,
   },
   model_image_flux: {
-    id: "flux-2-schnell",
-    name: "FLUX 2",
-    provider: "openai",
-    enabled: false,
+    id: "openrouter/black-forest-labs/flux.2-pro", // Exact ID from user DB
+    name: "FLUX 2 Pro",
+    provider: "openrouter",
+    enabled: true,
   },
 };
