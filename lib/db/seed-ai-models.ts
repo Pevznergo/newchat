@@ -390,21 +390,7 @@ async function seedAiModels() {
     await db
       .insert(aiModel)
       .values(model)
-      .onConflictDoUpdate({
-        target: aiModel.modelId,
-        set: {
-          name: model.name,
-          cost: model.cost,
-          description: model.description,
-          provider: model.provider,
-          type: model.type,
-          apiModelId: model.apiModelId,
-          requiredClanLevel: model.requiredClanLevel,
-          isEnabled: model.isEnabled,
-          isPremium: model.isPremium,
-          isPro: model.isPro,
-        },
-      });
+      .onConflictDoNothing({ target: aiModel.modelId });
   }
 
   console.log(`✅ Seeded ${models.length} AI models`);
