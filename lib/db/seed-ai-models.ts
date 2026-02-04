@@ -303,17 +303,17 @@ async function seedAiModels() {
       description: "Продвинутая версия Nano Banana",
     },
     {
-      modelId: "model_image_midjourney",
-      name: "Midjourney",
-      provider: "other",
+      modelId: "model_image_gpt_images_1_5",
+      name: "GPT Images 1.5",
+      provider: "openai",
       type: "image",
       cost: 20,
-      apiModelId: null, // External service
+      apiModelId: "gpt-images-1.5-gen",
       requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
       isPro: false,
-      description: "Самая художественная нейросеть",
+      description: "Генерация изображений с помощью GPT Images 1.5",
     },
     {
       modelId: "model_image_flux",

@@ -24,7 +24,7 @@ export const INTERNAL_MODEL_IDS = {
 
   // Image
   nano: "model_image_nano_banana",
-  midjourney: "model_image_midjourney",
+  gpt_images_1_5: "model_image_gpt_images_1_5",
   flux: "model_image_flux",
 };
 
@@ -93,7 +93,7 @@ export const MODEL_COSTS: Record<string, number> = {
 
   model_image_nano_banana: 15,
   model_image_banana_pro: 60,
-  model_image_midjourney: 20,
+  model_image_gpt_images_1_5: 20,
   model_image_flux: 2, // Flux Schnell defaults
 
   model_video_veo: 50,
@@ -140,7 +140,6 @@ export const MODEL_COSTS: Record<string, number> = {
   "perplexity/perplexity-search": 2,
   "perplexity/perplexity-pro": 20,
 
-  midjourney: 20,
   "flux-schnell": 2,
   "flux-pro": 10,
   "flux-ultra": 12,

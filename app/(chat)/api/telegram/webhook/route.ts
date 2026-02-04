@@ -102,7 +102,7 @@ const MODEL_NAMES: Record<string, string> = {
   model_perplexity: "Perplexity",
   model_image_nano_banana: "Nano Banana",
   model_image_banana_pro: "Nano Banana Pro",
-  model_image_midjourney: "Midjourney",
+  model_image_gpt_images_1_5: "GPT Images 1.5",
   model_image_flux: "FLUX 2",
   model_video_veo: "Veo",
   model_video_sora: "Sora",
@@ -156,18 +156,25 @@ function getModelKeyboard(
   const getLabel = (id: string, defaultName: string) => {
     const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
     const name = dbModel?.name || defaultName;
+    const requiredLevel = dbModel?.requiredClanLevel || 1;
 
     let prefix = "";
     let suffix = "";
 
-    // Status
-    if (selectedModel === id) {
+    // Check availability
+    if (!isPremium && clanLevel < requiredLevel) {
+      prefix = "🔒 ";
+    } else if (selectedModel === id) {
       prefix = "✅ ";
     } else if (!isPremium && !unlimitedModels.includes(id)) {
       // Not selected, Not Premium, Not Unlimited in Clan
       // Show Cost
-      const cost = dbModel?.cost ?? (MODEL_COSTS[id] || 1);
-      suffix = ` (💰${cost})`;
+      // Not selected, Not Premium, Not Unlimited in Clan
+      // Show Cost
+      // const cost = dbModel?.cost ?? (MODEL_COSTS[id] || 1);
+      // suffix = ` (💰${cost})`;
+      // User requested to remove cost display
+      suffix = "";
     } else if (!isPremium && unlimitedModels.includes(id)) {
       // Free via Clan
       prefix = "🏰 ";
@@ -245,15 +252,32 @@ function getModelKeyboard(
 
 function getImageModelKeyboard(
   selectedModel: string | undefined,
-  isPremium: boolean
+  isPremium: boolean,
+  clanLevel = 1
 ) {
   const buttons = Object.entries(IMAGE_MODELS).map(([key, model]) => {
-    const isSelected = selectedModel === key;
-    const isLocked = !isPremium && !FREE_MODELS.includes(key);
-    const status = isLocked ? "🔒" : isSelected ? "✅" : "";
-
+    // Fetch DB config for this model
+    // Note: Cache should be loaded by ensureDataLoaded() in handler
     const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === key);
+    const requiredLevel = dbModel?.requiredClanLevel || 1;
     const name = dbModel?.name || model.name;
+
+    const isSelected = selectedModel === key;
+    // Check if free via specific exemption list or prefix
+    const isFree = FREE_MODELS.includes(key);
+
+    // Is Locked?
+    // 1. If not Premium AND not Free -> Check Clan Level
+    let isLocked = false;
+    if (!isPremium && !isFree) {
+      if (clanLevel < requiredLevel) {
+        isLocked = true; // Locked by Level
+      } else {
+        isLocked = false; // Unlocked by Level!
+      }
+    }
+
+    const status = isLocked ? "🔒" : isSelected ? "✅" : "";
 
     return [
       {
@@ -907,7 +931,7 @@ function getPaymentMethodKeyboard(payUrl: string) {
       [{ text: "СБП 🏛", url: payUrl }],
       // Optional: Add stars payment if desired, but user request specifically mentioned SBP/Card leading to gateway.
       // Re-reading user request: "и кнопки с выбором формы оплаты - СБП или По карте, которые ведут в наш платежный шлюз"
-      [{ text: "🔙 Назад", callback_data: "buy_midjourney" }],
+      [{ text: "🔙 Назад", callback_data: "buy_gpt_images" }],
     ],
   };
 }
@@ -1020,7 +1044,7 @@ const PREMIUM_MENU_TEXT = `🚀 <b>PREMIUM PRO</b>
 
 Что внутри:
 ✅ <b>ПОЛНЫЙ ФАРШ:</b> GPT-5.2, Claude 4.5, Gemini 3 Pro, DeepSeek R1.
-✅ <b>ГРАФИКА:</b> Midjourney, FLUX 2 и Nano Banana Pro.
+✅ <b>ГРАФИКА:</b> GPT Images 1.5, FLUX 2 и Nano Banana Pro.
 ✅ <b>КИНОСТУДИЯ:</b> Создание видео в Sora 2, Kling, Veo 3.1 и Hailuo.
 ✅ <b>УМНЫЙ ПОИСК:</b> Доступ в интернет через Perplexity и OpenAI o3.
 
@@ -1308,7 +1332,7 @@ bot.command("start", async (ctx) => {
 
 ИИ-фотошоп и генератор графики тоже включены!
 
-💎 В /PREMIUM (для профи): Самые мощные модели планеты: GPT-5.2, Claude, Midjourney, а также создание видео в Sora 2, Kling и Veo 3.1.
+💎 В /PREMIUM (для профи): Самые мощные модели планеты: GPT-5.2, Claude, GPT Images 1.5, а также создание видео в Sora 2, Kling и Veo 3.1.
 
 С чего начать?
 
@@ -2387,6 +2411,7 @@ bot.on("callback_query:data", async (ctx) => {
         data.includes("image") ||
         dbModel?.type === "image" ||
         data.includes("midjourney") ||
+        data.includes("gpt_images") ||
         data.includes("flux") ||
         data.includes("banana")
       ) {
@@ -3432,7 +3457,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
             break;
           }
 
-          case "midjourney":
+          case "midjourney": // Keep for legacy
           case "replicate":
           case "other":
             // Placeholder for future implementations

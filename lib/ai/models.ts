@@ -123,11 +123,11 @@ export const IMAGE_MODELS: Record<string, ImageModel> = {
     provider: "openai",
     enabled: true,
   },
-  model_image_midjourney: {
-    id: "midjourney/midjourney-v6",
-    name: "Midjourney",
-    provider: "openai", // Placeholder, processed by specialized tools/bot logic
-    enabled: false,
+  model_image_gpt_images_1_5: {
+    id: "gpt-images-1.5", // Internal or mapped ID
+    name: "GPT Images 1.5",
+    provider: "openai", // Handled via bot logic
+    enabled: true,
   },
   model_image_flux: {
     id: "flux-2-schnell",
