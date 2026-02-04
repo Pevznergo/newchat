@@ -35,7 +35,6 @@ export const CLAN_LEVELS: Record<number, ClanLevelConfig> = {
       weeklyImageGenerations: 10,
       unlimitedModels: [
         "openai/gpt-5-nano-2025-08-07", // GPT-5 Nano
-        "openrouter/google/gemini-3-flash-preview", // Gemini 3 Flash
         "openai/gpt-4o-mini-2024-07-18", // GPT-4o mini
       ],
     },
