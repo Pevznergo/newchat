@@ -642,6 +642,14 @@ async function checkClanLevelRequirement(
     dbModel
   );
 
+  // Fix: Always allow Nano Banana if limits allow (level 1+ has limits)
+  if (
+    modelId === "model_image_nano_banana" ||
+    modelId === "openai/chatgpt-image-latest"
+  ) {
+    return true;
+  }
+
   if (requiredLevel <= 1) {
     return true; // No special requirement
   }
@@ -650,7 +658,7 @@ async function checkClanLevelRequirement(
   if (!clanData) {
     // User not in clan, but model requires clan level > 1
     await ctx.reply(
-      `🔒 Эта модель требует клан уровня ${requiredLevel}.\n\nСоздайте или вступите в клан, чтобы получить доступ!\nИли перейдите на Премиум.`,
+      `⚠️ <b>Доступ к модели ограничен</b>\n\nДля использования этой модели поднимите уровень Клана до ${requiredLevel} или оформите Премиум подписку.`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -2278,27 +2286,78 @@ bot.on("callback_query:data", async (ctx) => {
 
     const isFreeModel = FREE_MODELS.includes(data);
 
-    // Premium check - Strict Lock
+    // Fetch DB config for this model
+    await ensureDataLoaded();
+    const targetModel = CACHED_MODELS?.find((m: any) => m.modelId === data);
+    const requiredLevel = targetModel?.requiredClanLevel || 1;
+    const modelName =
+      MODEL_NAMES[data] || targetModel?.name || "Selected Model";
+
+    // 1. If Locked by Premium/Free check, verify if Clan Level allows access
     if (!user.hasPaid && !isFreeModel) {
-      const modelName = MODEL_NAMES[data] || "Selected Model";
-      await ctx.editMessageText(
-        `⚠️ Для отправки запросов к модели ${modelName} приобретите подписку Премиум`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "🚀 Подключить премиум",
-                  callback_data: "open_premium",
-                },
-              ],
-              [{ text: "🔙 Назад", callback_data: "menu_start" }],
-            ],
-          },
+      if (requiredLevel > 1) {
+        // Model CAN be unlocked by Clan Level
+        const clanData = await getUserClan(user.id);
+        let clanLevel = 1;
+        if (clanData) {
+          const counts = await getClanMemberCounts(clanData.id);
+          clanLevel = calculateClanLevel(
+            counts.totalMembers,
+            counts.proMembers,
+            CACHED_CLAN_LEVELS || []
+          );
         }
-      );
-      await safeAnswerCallbackQuery(ctx);
-      return;
+
+        if (clanLevel < requiredLevel) {
+          // Blocked by Level -> Show Upsell with Clan Option
+          await ctx.editMessageText(
+            `⚠️ <b>Доступ ограничен</b>\n\nМодель <b>${modelName}</b> доступна с ${requiredLevel} уровня Клана.\nПоднимите уровень клана или оформите Премиум, чтобы пользоваться ей без ограничений.`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "🏰 Мой Клан",
+                      web_app: { url: "https://aporto.tech/app" },
+                    },
+                  ],
+                  [
+                    {
+                      text: "🚀 Подключить премиум",
+                      callback_data: "open_premium",
+                    },
+                  ],
+                  [{ text: "🔙 Назад", callback_data: "menu_start" }],
+                ],
+              },
+            }
+          );
+          await safeAnswerCallbackQuery(ctx);
+          return;
+        }
+        // If clanLevel >= requiredLevel, we PROCEED (Allowed!)
+      } else {
+        // Truly Premium Only (No clan level overrides)
+        await ctx.editMessageText(
+          `⚠️ Для отправки запросов к модели ${modelName} приобретите подписку Премиум`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "🚀 Подключить премиум",
+                    callback_data: "open_premium",
+                  },
+                ],
+                [{ text: "🔙 Назад", callback_data: "menu_start" }],
+              ],
+            },
+          }
+        );
+        await safeAnswerCallbackQuery(ctx);
+        return;
+      }
     }
 
     // Update selection
