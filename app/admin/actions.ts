@@ -69,6 +69,8 @@ export async function upsertClanLevel(data: {
   level: number;
   minUsers: number;
   minPro: number;
+  weeklyTextCredits: number;
+  weeklyImageGenerations: number;
   description: string;
 }) {
   await db
@@ -76,6 +78,8 @@ export async function upsertClanLevel(data: {
     .set({
       minUsers: data.minUsers,
       minPro: data.minPro,
+      weeklyTextCredits: data.weeklyTextCredits,
+      weeklyImageGenerations: data.weeklyImageGenerations,
       description: data.description,
       updatedAt: new Date(),
     })

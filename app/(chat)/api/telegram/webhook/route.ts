@@ -37,6 +37,7 @@ import {
   getAllTariffs,
   getChatsByUserId,
   getClanByInviteCode,
+  getClanLevels, // added
   getClanMemberCounts, // added
   getLastActiveSubscription,
   getMessagesByChatId,
@@ -146,7 +147,7 @@ function getModelKeyboard(
   isPremium: boolean,
   clanLevel = 1
 ) {
-  const config = getLevelConfig(clanLevel);
+  const config = getLevelConfig(clanLevel, CACHED_CLAN_LEVELS || []);
   const unlimitedModels = config.benefits.unlimitedModels || [];
 
   const getLabel = (id: string, defaultName: string) => {
@@ -554,19 +555,29 @@ async function safeAnswerCallbackQuery(ctx: any, text?: string, options?: any) {
 
 // --- Menu Helpers ---
 
-// --- Global Cache for Models ---
+// --- Global Cache for Models & Levels ---
 let CACHED_MODELS: any[] | null = null;
+let CACHED_CLAN_LEVELS: any[] | null = null;
 let CACHE_TIMESTAMP = 0;
 const CACHE_TTL = 60 * 1000; // 1 minute
 
-async function ensureModelsLoaded() {
+async function ensureDataLoaded() {
   const now = Date.now();
-  if (!CACHED_MODELS || now - CACHE_TIMESTAMP > CACHE_TTL) {
+  if (
+    !CACHED_MODELS ||
+    !CACHED_CLAN_LEVELS ||
+    now - CACHE_TIMESTAMP > CACHE_TTL
+  ) {
     try {
-      CACHED_MODELS = await getAiModels();
+      const [models, levels] = await Promise.all([
+        getAiModels(),
+        getClanLevels(),
+      ]);
+      CACHED_MODELS = models;
+      CACHED_CLAN_LEVELS = levels;
       CACHE_TIMESTAMP = now;
     } catch (e) {
-      console.error("Failed to load models for cache", e);
+      console.error("Failed to load models/levels for cache", e);
       // Fallback: don't crash, just use hardcoded defaults if possible or empty
     }
   }
@@ -580,7 +591,7 @@ async function calculateRequestCost(
   _videoDurationSec = 0,
   _isEditing = false
 ): Promise<number> {
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
 
   // Find in DB cache
   const dbModel = CACHED_MODELS?.find((m) => m.modelId === modelId);
@@ -652,7 +663,11 @@ async function checkClanLevelRequirement(
   }
 
   const counts = await getClanMemberCounts(clanData.id);
-  const clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
+  const clanLevel = calculateClanLevel(
+    counts.totalMembers,
+    counts.proMembers,
+    CACHED_CLAN_LEVELS || []
+  );
 
   if (clanLevel < requiredLevel) {
     await ctx.reply(
@@ -740,10 +755,14 @@ async function checkAndEnforceLimits(
 
     if (clanData) {
       const counts = await getClanMemberCounts(clanData.id);
-      clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
+      clanLevel = calculateClanLevel(
+        counts.totalMembers,
+        counts.proMembers,
+        CACHED_CLAN_LEVELS || []
+      );
     }
 
-    const config = getLevelConfig(clanLevel);
+    const config = getLevelConfig(clanLevel, CACHED_CLAN_LEVELS || []);
 
     if (isImage) {
       limit = config.benefits.weeklyImageGenerations * 15; // Convert image limit to "Credits" or just Count?
@@ -877,7 +896,7 @@ function getPaymentMethodKeyboard(payUrl: string) {
 }
 
 async function showModelMenu(ctx: any, user: any) {
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
   const currentModel = user?.selectedModel || "model_gpt4omini";
 
   const modelInfo = `В боте доступны ведущие модели ChatGPT, Claude, Gemini и DeepSeek:
@@ -904,7 +923,7 @@ GPT-5 mini, Gemini 3 Flash и DeepSeek доступны бесплатно`;
 }
 
 async function showImageMenu(ctx: any, user: any) {
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
   const hasConsented = await hasUserConsented(user.id, "image_generation");
 
   if (!hasConsented) {
@@ -941,7 +960,7 @@ async function showImageMenu(ctx: any, user: any) {
 }
 
 async function showSearchMenu(ctx: any, user: any) {
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
   const currentModel = user?.selectedModel || "model_gemini_flash"; // Default to free model
 
   const searchText = `Выберите модель поиска или оставьте выбранную модель по-умолчанию
@@ -956,7 +975,7 @@ async function showSearchMenu(ctx: any, user: any) {
 }
 
 async function showVideoMenu(ctx: any, user: any) {
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
   const currentModel = user.selectedModel || "model_video_kling";
 
   const videoMenuText = `Выберите сервис для создания ролика:
@@ -1990,7 +2009,7 @@ bot.on("callback_query:data", async (ctx) => {
   const data = ctx.callbackQuery.data;
 
   // Ensure models are loaded for any label lookups
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
 
   // Handle menu navigation
   if (data === "menu_start" || data === "menu_close") {
@@ -2122,7 +2141,7 @@ bot.on("callback_query:data", async (ctx) => {
       const duration = (user.preferences as any)?.video_duration || 5;
 
       // Calculate final cost
-      await ensureModelsLoaded();
+      await ensureDataLoaded();
       const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === modelId);
       const costPerSec = dbModel?.cost || 10;
       const totalCost = costPerSec * duration;
@@ -2286,7 +2305,7 @@ bot.on("callback_query:data", async (ctx) => {
     });
 
     // Notify about high cost models
-    await ensureModelsLoaded();
+    await ensureDataLoaded();
     const dbModel = CACHED_MODELS?.find((m) => m.modelId === data);
     const cost = dbModel ? dbModel.cost : MODEL_COSTS[data] || 1;
 
@@ -2806,7 +2825,7 @@ bot.on("message:successful_payment", async (ctx) => {
 bot.on("message:text", async (ctx) => {
   const telegramId = ctx.from.id.toString();
   const text = ctx.message.text;
-  await ensureModelsLoaded();
+  await ensureDataLoaded();
 
   // --- Clan Inputs Handler ---
   const replyText = ctx.message.reply_to_message?.text;
