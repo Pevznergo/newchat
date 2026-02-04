@@ -894,6 +894,21 @@ export async function incrementWeeklyImageUsage(
   }
 }
 
+export async function decrementUserFreeImages(userId: string, amount = 1) {
+  try {
+    const res = await db
+      .update(user)
+      .set({
+        free_images_count: sql`${user.free_images_count} - ${amount}`,
+      })
+      .where(eq(user.id, userId))
+      .returning();
+    return res[0];
+  } catch (error) {
+    console.error("Failed to decrement free images", error);
+  }
+}
+
 // Telegram Bot Queries
 
 export async function updateUserSelectedModel(userId: string, model: string) {
@@ -1392,6 +1407,38 @@ export const resetWeeklyLimits = async () => {
     .returning({ id: user.id });
 
   return result.length;
+};
+
+export const checkAndResetWeeklyLimits = async (
+  userId: string,
+  lastResetDate: Date | null
+) => {
+  const now = new Date();
+
+  // Calculate start of current week (Monday 00:00)
+  // Logic: Get current day (0=Sun, 1=Mon).
+  // If Sun(0), go back 6 days. If Mon(1), go back 0 days.
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday is start
+  const mondayOfThisWeek = new Date(now.setDate(diff));
+  mondayOfThisWeek.setHours(0, 0, 0, 0);
+
+  // If lastResetDate is before this Monday 00:00 -> We need reset
+  const needsReset = !lastResetDate || lastResetDate < mondayOfThisWeek;
+
+  if (needsReset) {
+    console.log(`[LazyReset] Resetting limits for user ${userId}`);
+    await db
+      .update(user)
+      .set({
+        weeklyTextUsage: 0,
+        weeklyImageUsage: 0,
+        lastResetDate: new Date(),
+      })
+      .where(eq(user.id, userId));
+    return true;
+  }
+  return false;
 };
 
 export async function addExtraRequests(userId: string, amount: number) {

@@ -1,5 +1,4 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { google } from "@ai-sdk/google";
 import { createOpenAI, openai } from "@ai-sdk/openai";
 import { customProvider, type LanguageModel } from "ai";
 import { isTestEnvironment } from "../constants";
@@ -38,6 +37,11 @@ const openrouter = createOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
+const customGoogle = createGoogleGenerativeAI({
+  baseURL: process.env.GOOGLE_API_BASE_URL,
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+});
+
 export function getLanguageModel(modelId: string): LanguageModel {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
@@ -58,6 +62,12 @@ export function getLanguageModel(modelId: string): LanguageModel {
   // Handle Google
   if (modelId.startsWith("google/")) {
     const modelName = modelId.split("/")[1];
+
+    // Check if custom base URL is set, if so use custom provider
+    if (process.env.GOOGLE_API_BASE_URL) {
+      return customGoogle(modelName);
+    }
+
     return google(modelName);
   }
 

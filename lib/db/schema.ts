@@ -55,8 +55,12 @@ export const user = pgTable("User", {
   lastVisit: timestamp("last_visit").defaultNow(),
 
   // Weekly Usage Tracking (New Limit System)
+  // Weekly Usage Tracking (New Limit System)
   weeklyTextUsage: integer("weekly_text_usage").default(0),
   weeklyImageUsage: integer("weekly_image_usage").default(0),
+
+  // Free Resources
+  freeImagesCount: integer("free_images_count").default(0),
 
   // Purchased Extra Requests
   extraRequests: integer("extra_requests").default(0),

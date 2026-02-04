@@ -29,10 +29,12 @@ import { db } from "@/lib/db";
 import {
   addExtraRequests,
   cancelUserSubscription,
+  checkAndResetWeeklyLimits, // added
   consumeExtraRequests,
   createStarSubscription,
   createTelegramUser,
   createUserConsent,
+  decrementUserFreeImages, // added
   getAiModels,
   getAllTariffs,
   getChatsByUserId,
@@ -800,6 +802,19 @@ async function checkAndEnforceLimits(
     modelId?.includes("midjourney") ||
     modelId?.includes("ideogram");
 
+  // Fetch Clan Data & Config for everyone (Needed for Image Limits priority)
+  const clanData = await getUserClan(user.id);
+  let clanLevel = 1;
+  if (clanData) {
+    const counts = await getClanMemberCounts(clanData.id);
+    clanLevel = calculateClanLevel(
+      counts.totalMembers,
+      counts.proMembers,
+      CACHED_CLAN_LEVELS || []
+    );
+  }
+  const config = getLevelConfig(clanLevel, CACHED_CLAN_LEVELS || []);
+
   if (user.hasPaid) {
     // 1. Paid User Logic
     limit = 3000; // Default Premium
@@ -830,20 +845,6 @@ async function checkAndEnforceLimits(
       return false;
     }
 
-    const clanData = await getUserClan(user.id);
-    let clanLevel = 1;
-
-    if (clanData) {
-      const counts = await getClanMemberCounts(clanData.id);
-      clanLevel = calculateClanLevel(
-        counts.totalMembers,
-        counts.proMembers,
-        CACHED_CLAN_LEVELS || []
-      );
-    }
-
-    const config = getLevelConfig(clanLevel, CACHED_CLAN_LEVELS || []);
-
     if (isImage) {
       limit = config.benefits.weeklyImageGenerations * 15; // Convert image limit to "Credits" or just Count?
       // Plan: "Weekly Image Limits: 3 Gen".
@@ -870,7 +871,42 @@ async function checkAndEnforceLimits(
   }
 
   // Check Limit
-  if (!isUnlimited && currentUsage + effectiveCost > limit) {
+  let isAllowed = false;
+
+  // Logic:
+  // If Unlimited -> Allowed.
+  // If Image:
+  //    Check Clan Usage < Clan Limit -> Allowed
+  //    Check Free Images > 0 -> Allowed
+  //    Check Standard Limit (Paid or Free Text) -> Allowed
+  if (isUnlimited) {
+    isAllowed = true;
+  } else if (isImage) {
+    // Image Priority Logic for CHECK
+    const clanLimit = config.benefits.weeklyImageGenerations;
+    const clanUsage = user.weeklyImageUsage || 0;
+
+    if (clanUsage < clanLimit) {
+      isAllowed = true;
+    } else if ((user.freeImagesCount || 0) > 0) {
+      isAllowed = true;
+    } else if (user.hasPaid) {
+      // Fallback to Paid Request Limit
+      if (currentUsage + effectiveCost <= limit) {
+        isAllowed = true;
+      }
+    } else {
+      // Free User, No Clan, No Free Images -> Blocked
+      isAllowed = false;
+    }
+  } else {
+    // Text Logic (Standard)
+    if (currentUsage + effectiveCost <= limit) {
+      isAllowed = true;
+    }
+  }
+
+  if (!isAllowed) {
     // Try to consume from extraRequests
     const consumed = await consumeExtraRequests(user.id, effectiveCost);
     if (consumed) {
@@ -951,12 +987,34 @@ async function checkAndEnforceLimits(
   // and ensure NO other places charge.
 
   // Increment Usage
-  if (user.hasPaid) {
-    // Paid uses requestCount
+  if (isImage) {
+    const clanLimit = config.benefits.weeklyImageGenerations; // Assuming simple count
+    const clanUsage = user.weeklyImageUsage || 0;
+
+    // 1. Clan Limits (Available for Free & Paid)
+    if (clanUsage < clanLimit) {
+      await incrementWeeklyImageUsage(user.id, 1);
+    }
+    // 2. Free Image Pack (Bonus)
+    else if ((user.freeImagesCount || 0) > 0) {
+      await decrementUserFreeImages(user.id, 1);
+    }
+    // 3. Paid / Credits
+    else if (user.hasPaid) {
+      await incrementUserRequestCount(user.id, effectiveCost);
+    }
+    // 4. Free User Fallback (Blocked or consuming extra, but check logic blocked it earlier usually)
+    else {
+      // Logic for Free User over limit is usually blocked in CHECK phase.
+      // But if we are here, means we allowed it (e.g. via extra requests or logic gap).
+      // If we are here, increment standard usage to keep track?
+      await incrementWeeklyImageUsage(user.id, 1);
+    }
+  } else if (user.hasPaid) {
+    // Text Paid
     await incrementUserRequestCount(user.id, effectiveCost);
-  } else if (isImage) {
-    await incrementWeeklyImageUsage(user.id, 1);
   } else if (effectiveCost > 0) {
+    // Text Free
     await incrementWeeklyTextUsage(user.id, effectiveCost);
   }
 
@@ -1214,8 +1272,20 @@ async function showAccountInfo(ctx: any, user: any) {
     const textLimit = config.benefits.weeklyTextCredits;
     const used = user.weeklyTextUsage || 0;
 
-    usageText = `${used}/${textLimit} кредитов (нед.)`;
+    // Clan Limit Display
+    if (user.hasPaid) {
+      // For Paid Users, hide specific clan limits in profile to avoid confusion
+      usageText = "∞ Премиум доступ";
+    } else {
+      usageText = `${used}/${textLimit} кредитов (нед.)`;
+    }
+
     planName = `Free (Клан Ур. ${clanLevel})`;
+  }
+
+  // Free Images Display
+  if ((user.freeImagesCount || 0) > 0) {
+    usageText += `\n🎁 Бесплатные генерации: ${user.freeImagesCount}`;
   }
 
   // Get neat model name
@@ -3125,6 +3195,7 @@ bot.on("message:text", async (ctx) => {
     }
     const [user] = await getUserByTelegramId(telegramId);
     if (user) {
+      await checkAndResetWeeklyLimits(user.id, user.lastResetDate); // added
       await action(user);
     }
   };
@@ -3956,7 +4027,9 @@ bot.on("message:photo", async (ctx) => {
 
     // 1. Get or Create User
     let [user] = await getUserByTelegramId(telegramId);
-    if (!user) {
+    if (user) {
+      await checkAndResetWeeklyLimits(user.id, user.lastResetDate); // added
+    } else {
       [user] = await createTelegramUser(telegramId);
     }
 
