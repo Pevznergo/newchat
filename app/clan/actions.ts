@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   createTelegramUser,
   updateClanName as dbUpdateClanName,
+  getClanLevels,
   getClanMemberCounts,
   getClanMembers,
   getUserByTelegramId,
@@ -96,6 +97,7 @@ export async function fetchClanData(initData: string) {
 
   const counts = await getClanMemberCounts(clanInfo.id);
   const members = await getClanMembers(clanInfo.id);
+  const clanLevels = await getClanLevels();
 
   const calculatedLevel = calculateClanLevel(
     counts.totalMembers,
@@ -125,6 +127,15 @@ export async function fetchClanData(initData: string) {
         isPro: m.hasPaid,
       })),
     },
+    clanLevels: clanLevels.map((level: any) => ({
+      level: level.level,
+      description: level.description,
+      minUsers: level.minUsers,
+      minPro: level.minPro,
+      weeklyTextCredits: level.weeklyTextCredits,
+      weeklyImageGenerations: level.weeklyImageGenerations,
+      unlimitedModels: level.unlimitedModels,
+    })),
   };
 }
 

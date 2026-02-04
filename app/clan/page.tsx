@@ -22,55 +22,21 @@ import {
   updateClanNameAction,
 } from "./actions";
 
-// Levels Config (Frontend Display)
-const LEVELS = [
-  {
-    level: 1,
-    benefits: [
-      { text: "15 бесплатных запросов / неделю", icon: "⚡" },
-      { text: "Доступ к базовым моделям", icon: "🤖" },
-      { text: "1 генерация изображения", icon: "🎨" },
-    ],
-  },
-  {
-    level: 2,
-    benefits: [
-      { text: "30 бесплатных запросов / неделю", icon: "⚡" },
-      { text: "Думающие модели", icon: "🚀" },
-      { text: "3 генерации изображений", icon: "🔗" },
-    ],
-  },
-  {
-    level: 3,
-    benefits: [
-      { text: "50 бесплатных запросов / неделю", icon: "⚡" },
-      { text: "5 генераций изображений", icon: "🎨" },
-      { text: "Продвинутые модели", icon: "🌐" },
-    ],
-  },
-  {
-    level: 4,
-    benefits: [
-      { text: "75 бесплатных запросов / неделю", icon: "⚡" },
-      { text: "5 генераций изображений", icon: "🎨" },
-      { text: "Продвинутые модели", icon: "🌐" },
-    ],
-  },
-  {
-    level: 5,
-    benefits: [
-      { text: "Безлимит GPT-5 Nano/Gemini Flash", icon: "♾️" },
-      { text: "100 запросов в неделю", icon: "♾️" },
-      { text: "10 генераций изображений", icon: "🎨" },
-    ],
-  },
-];
-
 type ClanMember = {
   id: string;
   name: string;
   role: string;
   isPro: boolean;
+};
+
+type ClanLevelData = {
+  level: number;
+  description: string;
+  minUsers: number;
+  minPro: number;
+  weeklyTextCredits: number;
+  weeklyImageGenerations: number;
+  unlimitedModels: string[];
 };
 
 type ClanData = {
@@ -91,6 +57,7 @@ export default function ClanPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clan, setClan] = useState<ClanData | null>(null);
+  const [clanLevels, setClanLevels] = useState<ClanLevelData[]>([]);
   const [inClan, setInClan] = useState(false);
 
   // UI State
@@ -123,9 +90,17 @@ export default function ClanPage() {
           setInClan(true);
           setClan(res.clan as ClanData);
           setEditedName(res.clan.name);
+          // Set clan levels from database
+          if (res.clanLevels) {
+            setClanLevels(res.clanLevels as ClanLevelData[]);
+          }
         } else {
           // Not in clan, show No Clan UI
           setInClan(false);
+          // Still load clan levels for display
+          if (res.clanLevels) {
+            setClanLevels(res.clanLevels as ClanLevelData[]);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -476,7 +451,7 @@ export default function ClanPage() {
       <div className="px-4 pb-48 max-w-sm mx-auto">
         {activeTab === "overview" && (
           <div className="space-y-8 animate-in slide-in-from-right-4 fade-in duration-300">
-            {LEVELS.map((lvl) => (
+            {clanLevels.map((lvl) => (
               <div
                 className={cn(
                   "transition-opacity duration-300",
@@ -495,18 +470,18 @@ export default function ClanPage() {
                   <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#2c2c2e]" />
                 </div>
 
-                {/* Benefits Items */}
+                {/* Benefits from Database Description */}
                 <div className="space-y-4 px-2">
-                  {lvl.benefits.map((benefit) => (
+                  {lvl.description?.split("\n").map((line, idx) => (
                     <div
                       className="flex items-start gap-4"
-                      key={`${lvl.level}-${benefit.text}`}
+                      key={`${lvl.level}-${idx}`}
                     >
                       <div className="w-6 h-6 rounded-full border border-blue-400/30 flex items-center justify-center bg-blue-500/10 shrink-0">
-                        <span className="text-xs">{benefit.icon}</span>
+                        <span className="text-xs">✨</span>
                       </div>
                       <div className="text-sm font-medium leading-tight pt-1">
-                        {benefit.text}
+                        {line}
                       </div>
                     </div>
                   ))}
