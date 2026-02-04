@@ -3874,6 +3874,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 
     // 3. Standard Generation (Default)
     if (!response) {
+      // Some models don't support tool use (e.g. DeepSeek R1, o1 reasoning models)
+      const supportsTools =
+        !realModelId.includes("deepseek-r1") &&
+        !realModelId.includes("o1-") &&
+        !realModelId.includes("o1-preview") &&
+        !realModelId.includes("o1-mini");
+
       response = await generateText({
         model: getLanguageModel(realModelId),
         system: systemPrompt({
@@ -3886,17 +3893,19 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
           },
         }),
         messages: aiMessages,
-        tools: {
-          generateImage: tool({
-            description:
-              "Generate an image, picture, or drawing. Use this tool when the user asks to 'draw', 'create', 'generate' or 'make' an image/picture (keywords: нарисуй, создай, сгенерируй, сделай картинку/изображение).",
-            inputSchema: z.object({
-              prompt: z
-                .string()
-                .describe("The description of the image to generate"),
+        ...(supportsTools && {
+          tools: {
+            generateImage: tool({
+              description:
+                "Generate an image, picture, or drawing. Use this tool when the user asks to 'draw', 'create', 'generate' or 'make' an image/picture (keywords: нарисуй, создай, сгенерируй, сделай картинку/изображение).",
+              inputSchema: z.object({
+                prompt: z
+                  .string()
+                  .describe("The description of the image to generate"),
+              }),
             }),
-          }),
-        },
+          },
+        }),
       });
     }
 
