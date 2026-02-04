@@ -170,6 +170,14 @@ export default function AdminModelsPage() {
                               />
                             </td>
                             <td className="px-4 py-3">
+                              <input
+                                className="w-full bg-zinc-950 border border-zinc-700 rounded-md px-3 py-1.5 text-sm text-zinc-100 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-600"
+                                defaultValue={model.description || ""}
+                                name="description"
+                                placeholder="Short description"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
                               <select
                                 className="w-full bg-zinc-950 border border-zinc-700 rounded-md px-3 py-1.5 text-sm text-zinc-100 focus:border-blue-500 outline-none"
                                 defaultValue={model.provider}

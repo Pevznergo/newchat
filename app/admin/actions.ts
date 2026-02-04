@@ -52,7 +52,31 @@ export async function upsertModel(data: {
   revalidatePath("/admin/models");
 }
 
-export async function deleteModel(id: string) {
-  await db.delete(aiModel).where(eq(aiModel.id, id));
-  revalidatePath("/admin/models");
+revalidatePath("/admin/models");
+}
+
+export async function getClanLevels() {
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  return await db
+    .select()
+    .from(clanLevel)
+    .orderBy(clanLevel.level as any);
+}
+
+export async function upsertClanLevel(data: {
+  id: string;
+  level: number;
+  minUsers: number;
+  description: string;
+}) {
+  await db
+    .update(clanLevel)
+    .set({
+      minUsers: data.minUsers,
+      description: data.description,
+      updatedAt: new Date(),
+    })
+    .where(eq(clanLevel.id, data.id));
+
+  revalidatePath("/admin/clans");
 }

@@ -38,6 +38,9 @@ export default async function AdminLayout({
           <a className="hover:underline" href="/admin/models">
             Models
           </a>
+          <a className="hover:underline" href="/admin/clans">
+            Clans
+          </a>
           <a className="hover:underline" href="/admin">
             Dashboard
           </a>
