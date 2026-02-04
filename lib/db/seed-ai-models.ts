@@ -309,7 +309,7 @@ async function seedAiModels() {
       type: "image",
       cost: 20,
       apiModelId: "gpt-images-1.5-gen",
-      requiredClanLevel: 2,
+      requiredClanLevel: 1,
       isEnabled: true,
       isPremium: true,
       isPro: false,

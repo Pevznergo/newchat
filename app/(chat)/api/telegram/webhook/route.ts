@@ -2361,12 +2361,26 @@ bot.on("callback_query:data", async (ctx) => {
           return;
         }
         // If clanLevel >= requiredLevel, we PROCEED (Allowed!)
-        // If clanLevel >= requiredLevel, we PROCEED (Allowed!)
       } else {
-        // Required Level <= 1.
-        // If Model is Premium/Paid, we allow selection so user can use Credits (Pay-Per-Use).
-        // The checkAndEnforceLimits function will handle credit deduction or blocking if out of credits.
-        // So we do NOTHING here (allow proceed).
+        // Truly Premium Only (No clan level overrides)
+        await ctx.editMessageText(
+          `⚠️ Для отправки запросов к модели ${modelName} приобретите подписку Премиум`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "🚀 Подключить премиум",
+                    callback_data: "open_premium",
+                  },
+                ],
+                [{ text: "🔙 Назад", callback_data: "menu_start" }],
+              ],
+            },
+          }
+        );
+        await safeAnswerCallbackQuery(ctx);
+        return;
       }
     }
 
