@@ -45,7 +45,9 @@ export function calculateClanLevel(
       if (level === 5) {
         const freeMembers = totalMembers - proMembers;
         const currentRatio = freeMembers / (proMembers || 1);
-        if (currentRatio <= 5) return 5;
+        if (currentRatio <= 5) {
+          return 5;
+        }
       } else {
         return level;
       }
