@@ -60,7 +60,10 @@ import {
 import { shortLinks } from "@/lib/db/schema";
 import { createYookassaPayment } from "@/lib/payment";
 import { generateUUID } from "@/lib/utils";
-import { trackBackendEvent } from "../../../../../lib/mixpanel";
+import {
+  identifyBackendUser,
+  trackBackendEvent,
+} from "../../../../../lib/mixpanel";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
