@@ -80,7 +80,6 @@ export const maxDuration = 60;
 const FREE_MODELS = [
   "model_gpt5nano",
   "model_gpt4omini",
-  "model_gemini_flash",
   "model_image_nano_banana",
   "model_deepseek_v3",
 ];
@@ -92,7 +91,7 @@ const MODEL_NAMES: Record<string, string> = {
   model_gpt5nano: "GPT-5 Nano",
   model_gpt4omini: "GPT-4o Mini",
   model_claude45sonnet: "Claude 3.5 Sonnet",
-  model_claude45thinking: "Claude 3.7 Sonnet Thinking",
+  model_claude45thinking: "Claude 3 Opus",
   model_deepseek_v3: "DeepSeek V3",
   model_deepseek_r1: "DeepSeek R1",
   model_gemini_pro: "Gemini 3 Pro",
@@ -292,30 +291,54 @@ function getImageModelKeyboard(
   return { inline_keyboard: buttons };
 }
 
-function getVideoModelKeyboard(selectedModel: string, _isPremium: boolean) {
+function getVideoModelKeyboard(
+  selectedModel: string,
+  _isPremium: boolean,
+  _clanLevel = 1
+) {
+  // Logic remains same for top-level menu
+  // ... (Lines 294-309 omitted for brevity, will replace with full block if needed or just function sig)
+  // Actually, getVideoModelKeyboard calls sub-menus? No, it returns menu to SELECT Veo or Sora.
+  // Then "menu_video_veo" callback calls getVeoVariantKeyboard.
+  // So we need to update getVeoVariantKeyboard signature and logic.
+  // Let's replace the whole block of video keyboard functions.
+
   const isVeoSelected = selectedModel?.startsWith("model_video_veo");
   const isSoraSelected = selectedModel?.startsWith("model_video_sora");
+  const isKlingSelected = selectedModel?.startsWith("model_video_kling");
 
   const veoLabel = isVeoSelected ? "✅ Veo" : "Veo";
   const soraLabel = isSoraSelected ? "✅ Sora" : "Sora";
+  const klingLabel = isKlingSelected ? "✅ Kling (Pro)" : "Kling (Pro)";
 
   return {
     inline_keyboard: [
       [
         { text: veoLabel, callback_data: "menu_video_veo" },
         { text: soraLabel, callback_data: "menu_video_sora" },
+        { text: klingLabel, callback_data: "menu_video_kling" },
       ],
       [{ text: "🔙 Назад", callback_data: "menu_start" }],
     ],
   };
 }
 
-function getVeoVariantKeyboard(selectedModel: string, isPremium: boolean) {
+function getVeoVariantKeyboard(
+  selectedModel: string,
+  isPremium: boolean,
+  clanLevel = 1
+) {
   const getLabel = (id: string, defaultName: string) => {
     const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
     const name = dbModel?.name || defaultName;
+    const requiredLevel = dbModel?.requiredClanLevel || 1;
+
     const isSel = selectedModel === id ? "✅ " : "";
-    const isLock = !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+    let isLock = "";
+
+    if (!isPremium && !FREE_MODELS.includes(id) && clanLevel < requiredLevel) {
+      isLock = "🔒 ";
+    }
     return `${isLock}${isSel}${name}`;
   };
 
@@ -336,12 +359,22 @@ function getVeoVariantKeyboard(selectedModel: string, isPremium: boolean) {
   };
 }
 
-function getSoraVariantKeyboard(selectedModel: string, isPremium: boolean) {
+function getSoraVariantKeyboard(
+  selectedModel: string,
+  isPremium: boolean,
+  clanLevel = 1
+) {
   const getLabel = (id: string, defaultName: string) => {
     const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
     const name = dbModel?.name || defaultName;
+    const requiredLevel = dbModel?.requiredClanLevel || 1;
+
     const isSel = selectedModel === id ? "✅ " : "";
-    const isLock = !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+    let isLock = "";
+
+    if (!isPremium && !FREE_MODELS.includes(id) && clanLevel < requiredLevel) {
+      isLock = "🔒 ";
+    }
     return `${isLock}${isSel}${name}`;
   };
 
@@ -430,14 +463,23 @@ function getVideoAspectKeyboard(modelId: string, currentAspect?: string) {
   };
 }
 
-function getSearchModelKeyboard(selectedModel: string, isPremium: boolean) {
+function getSearchModelKeyboard(
+  selectedModel: string,
+  isPremium: boolean,
+  clanLevel = 1
+) {
   const isSelected = (id: string) => (selectedModel === id ? "✅ " : "");
-  const isLocked = (id: string) =>
-    !isPremium && !FREE_MODELS.includes(id) ? "🔒 " : "";
+
   const getLabel = (id: string, defaultName: string) => {
     const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === id);
     const name = dbModel?.name || defaultName;
-    return `${isLocked(id)}${isSelected(id)}${name}`;
+    const requiredLevel = dbModel?.requiredClanLevel || 1;
+
+    let isLock = "";
+    if (!isPremium && !FREE_MODELS.includes(id) && clanLevel < requiredLevel) {
+      isLock = "🔒 ";
+    }
+    return `${isLock}${isSelected(id)}${name}`;
   };
 
   return {
@@ -1034,8 +1076,24 @@ async function showSearchMenu(ctx: any, user: any) {
 
 Чтобы начать поиск отправьте в чат ваш запрос 👇`;
 
+  // Calculate Clan Level for Visual Locks
+  const clanData = await getUserClan(user.id);
+  let clanLevel = 1;
+  if (clanData) {
+    const counts = await getClanMemberCounts(clanData.id);
+    clanLevel = calculateClanLevel(
+      counts.totalMembers,
+      counts.proMembers,
+      CACHED_CLAN_LEVELS || []
+    );
+  }
+
   await ctx.reply(searchText, {
-    reply_markup: getSearchModelKeyboard(currentModel, !!user.hasPaid),
+    reply_markup: getSearchModelKeyboard(
+      currentModel,
+      !!user.hasPaid,
+      clanLevel
+    ),
   });
 }
 
@@ -1047,8 +1105,20 @@ async function showVideoMenu(ctx: any, user: any) {
 
 🎬 Veo 3.1, Sora 2 создают видео по описанию или изображению`;
 
+  // Calculate Clan Level for Visual Locks
+  const clanData = await getUserClan(user.id);
+  let clanLevel = 1;
+  if (clanData) {
+    const counts = await getClanMemberCounts(clanData.id);
+    clanLevel = calculateClanLevel(
+      counts.totalMembers,
+      counts.proMembers,
+      CACHED_CLAN_LEVELS || []
+    );
+  }
+
   await ctx.reply(videoMenuText, {
-    reply_markup: getVideoModelKeyboard(currentModel, user?.hasPaid),
+    reply_markup: getVideoModelKeyboard(currentModel, user?.hasPaid, clanLevel),
   });
 }
 
@@ -2097,11 +2167,27 @@ bot.on("callback_query:data", async (ctx) => {
       return;
     }
 
+    // Calculate Clan Level for Visual Locks & Enforcement
+    const clanData = await getUserClan(user.id);
+    let clanLevel = 1;
+    if (clanData) {
+      const counts = await getClanMemberCounts(clanData.id);
+      clanLevel = calculateClanLevel(
+        counts.totalMembers,
+        counts.proMembers,
+        CACHED_CLAN_LEVELS || []
+      );
+    }
+
     const currentModelId = user.selectedModel || "";
 
     if (data === "menu_video") {
       await ctx.editMessageText("Выберите сервис для создания ролика:", {
-        reply_markup: getVideoModelKeyboard(currentModelId, !!user.hasPaid),
+        reply_markup: getVideoModelKeyboard(
+          currentModelId,
+          !!user.hasPaid,
+          clanLevel
+        ),
       });
       await safeAnswerCallbackQuery(ctx);
       return;
@@ -2109,7 +2195,11 @@ bot.on("callback_query:data", async (ctx) => {
 
     if (data === "menu_video_veo") {
       await ctx.editMessageText("Выберите версию Veo:", {
-        reply_markup: getVeoVariantKeyboard(currentModelId, !!user.hasPaid),
+        reply_markup: getVeoVariantKeyboard(
+          currentModelId,
+          !!user.hasPaid,
+          clanLevel
+        ),
       });
       await safeAnswerCallbackQuery(ctx);
       return;
@@ -2117,7 +2207,11 @@ bot.on("callback_query:data", async (ctx) => {
 
     if (data === "menu_video_sora") {
       await ctx.editMessageText("Выберите версию Sora:", {
-        reply_markup: getSoraVariantKeyboard(currentModelId, !!user.hasPaid),
+        reply_markup: getSoraVariantKeyboard(
+          currentModelId,
+          !!user.hasPaid,
+          clanLevel
+        ),
       });
       await safeAnswerCallbackQuery(ctx);
       return;
@@ -2142,6 +2236,21 @@ bot.on("callback_query:data", async (ctx) => {
       }
 
       if (modelId) {
+        // ENFORCE CLAN LEVEL LIMITS
+        await ensureDataLoaded();
+        const dbModel = CACHED_MODELS?.find((m) => m.modelId === modelId);
+        const requiredLevel = dbModel?.requiredClanLevel || 1;
+        const isFree = FREE_MODELS.includes(modelId);
+
+        if (!user.hasPaid && !isFree && clanLevel < requiredLevel) {
+          await safeAnswerCallbackQuery(
+            ctx,
+            `🔒 Доступно с ${requiredLevel} уровня Клана!`,
+            true
+          );
+          return;
+        }
+
         const currentDuration = (user.preferences as any)?.video_duration;
         await ctx.editMessageText(
           `Настройка ${name}.\nВыберите длительность видео:`,
@@ -2411,7 +2520,7 @@ bot.on("callback_query:data", async (ctx) => {
     const dbModel = CACHED_MODELS?.find((m) => m.modelId === data);
     const cost = dbModel ? dbModel.cost : MODEL_COSTS[data] || 1;
 
-    if (cost > 1 && !isFreeModel) {
+    if (cost > 0 && !isFreeModel) {
       const modelName = dbModel?.name || MODEL_NAMES[data] || data;
 
       let prefix = "Чат";
@@ -2508,13 +2617,13 @@ bot.on("callback_query:data", async (ctx) => {
       if (data.startsWith("model_image_")) {
         keyboard = getImageModelKeyboard(data, !!user.hasPaid, clanLevel);
       } else if (data.startsWith("model_video_")) {
-        keyboard = getVideoModelKeyboard(data, !!user.hasPaid);
+        keyboard = getVideoModelKeyboard(data, !!user.hasPaid, clanLevel);
       } else if (
         ["model_perplexity", "model_grok41", "model_deepresearch"].includes(
           data
         )
       ) {
-        keyboard = getSearchModelKeyboard(data, !!user.hasPaid);
+        keyboard = getSearchModelKeyboard(data, !!user.hasPaid, clanLevel);
       } else {
         keyboard = getModelKeyboard(data, !!user.hasPaid, clanLevel);
       }
