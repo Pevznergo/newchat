@@ -1234,6 +1234,7 @@ export async function upsertAiModel(
         isPremium: modelData.isPremium || false,
         isPro: modelData.isPro || false,
         isEnabled: modelData.isEnabled || true,
+        requiredClanLevel: modelData.requiredClanLevel || 1,
       })
       .onConflictDoUpdate({
         target: aiModel.modelId,

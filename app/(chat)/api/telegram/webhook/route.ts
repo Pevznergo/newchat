@@ -633,8 +633,14 @@ async function checkClanLevelRequirement(
     return true;
   }
 
+  await ensureDataLoaded();
+
   const dbModel = CACHED_MODELS?.find((m) => m.modelId === modelId);
   const requiredLevel = dbModel?.requiredClanLevel || 1;
+  console.log(
+    `[CheckClanLevel] Model: ${modelId}, Required: ${requiredLevel}, DBModel:`,
+    dbModel
+  );
 
   if (requiredLevel <= 1) {
     return true; // No special requirement
@@ -1979,6 +1985,7 @@ bot.command("s", async (ctx) => {
 
 bot.command("model", async (ctx) => {
   await safeDeleteMessage(ctx);
+  await ensureDataLoaded();
   const telegramId = ctx.from?.id.toString();
   if (!telegramId) {
     return;
