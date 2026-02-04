@@ -2654,6 +2654,100 @@ bot.on("callback_query:data", async (ctx) => {
             "Создавайте и редактируйте изображения прямо в чате.\n\nГотовы начать?\nОтправьте изображение, которое вы хотите изменить, или напишите в чат, что нужно создать",
           reply_markup: {
             inline_keyboard: [
+              [
+                {
+                  text: "🎨 ТОП 50 промптов",
+                  url: "https://teletype.in/@pevzner/50prompts",
+                },
+              ],
+              [{ text: "🔙 Назад", callback_data: "menu_start" }],
+            ],
+          },
+        }
+      );
+      await safeAnswerCallbackQuery(ctx, "Модель выбрана!");
+      return;
+    }
+
+    // Special handling for Nano Banana Pro
+    if (data === "model_image_banana_pro") {
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        /* ignore */
+      }
+
+      await ctx.replyWithPhoto(
+        new InputFile(
+          path.join(process.cwd(), "public", "nano_banana_intro.jpg")
+        ),
+        {
+          caption:
+            "Создавайте и редактируйте изображения прямо в чате.\n\nГотовы начать?\nОтправьте изображение, которое вы хотите изменить, или напишите в чат, что нужно создать",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "🎨 ТОП 50 промптов",
+                  url: "https://teletype.in/@pevzner/50prompts",
+                },
+              ],
+              [{ text: "🔙 Назад", callback_data: "menu_start" }],
+            ],
+          },
+        }
+      );
+      await safeAnswerCallbackQuery(ctx, "Модель выбрана!");
+      return;
+    }
+
+    // Special handling for GPT Images 1.5
+    if (data === "model_image_gpt_images_1_5") {
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        /* ignore */
+      }
+
+      await ctx.replyWithPhoto(
+        new InputFile(
+          path.join(process.cwd(), "public", "gpt_images_intro.jpg")
+        ),
+        {
+          caption:
+            "Создавайте и редактируйте изображения прямо в чате.\n\nГотовы начать?\nОтправьте изображение, которые вы хотите изменить, или напишите в чат, что нужно создать",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "📖 Инструкция",
+                  url: "https://teletype.in/@pevzner/guidegptimages",
+                },
+              ],
+              [{ text: "🔙 Назад", callback_data: "menu_start" }],
+            ],
+          },
+        }
+      );
+      await safeAnswerCallbackQuery(ctx, "Модель выбрана!");
+      return;
+    }
+
+    // Special handling for FLUX
+    if (data === "model_image_flux") {
+      try {
+        await ctx.deleteMessage();
+      } catch (_e) {
+        /* ignore */
+      }
+
+      await ctx.replyWithPhoto(
+        new InputFile(path.join(process.cwd(), "public", "flux_intro.jpg")),
+        {
+          caption:
+            "Для запуска генерации напишите в чат, какое изображение вы хотите создать 👇",
+          reply_markup: {
+            inline_keyboard: [
               [{ text: "🔙 Назад", callback_data: "menu_start" }],
             ],
           },
