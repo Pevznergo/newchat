@@ -1452,24 +1452,7 @@ bot.callbackQuery(/^join_clan_(.+)$/, async (ctx) => {
     const res = await joinClan(user.id, inviteCode);
 
     if (res.success) {
-      await ctx.answerCallbackQuery("Вы успешно вступили в клан! 🎉");
-      await ctx.editMessageText(
-        `✅ <b>Поздравляем!</b>\n\nВы вступили в клан <b>${res.clan?.name}</b>.\nТеперь вам доступны новые возможности! отправьте /start в бот чтобы обновить меню`,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "🏰 Открыть Клан",
-                  url: "https://t.me/aporto_bot/app?startapp=clan",
-                },
-              ], // Deep link to clan? Or main app
-            ],
-          },
-        }
-      );
-
+      await safeDeleteMessage(ctx);
       // Try to pin clan message?
     } else {
       let errorMsg = "Не удалось вступить в клан.";
