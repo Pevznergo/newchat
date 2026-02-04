@@ -58,7 +58,6 @@ export async function deleteModel(id: string) {
 }
 
 export async function getClanLevels() {
-  // biome-ignore lint/suspicious/noExplicitAny: sorting by level
   return await db
     .select()
     .from(clanLevel)
