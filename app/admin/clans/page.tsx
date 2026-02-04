@@ -39,6 +39,7 @@ export default function AdminClansPage() {
       id: editingId as string,
       level: Number(formData.get("level")),
       minUsers: Number(formData.get("minUsers")),
+      minPro: Number(formData.get("minPro")),
       description: formData.get("description") as string,
     };
 
@@ -73,6 +74,9 @@ export default function AdminClansPage() {
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                       Min Users
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                      Min Premium
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                       Description
@@ -118,12 +122,20 @@ export default function AdminClansPage() {
                                 type="number"
                               />
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 text-center">
                               <input
-                                className="w-full bg-zinc-950 border border-zinc-700 rounded-md px-3 py-1.5 text-sm text-zinc-100 focus:border-blue-500 outline-none"
+                                className="w-20 bg-zinc-950 border border-zinc-700 rounded-md px-2 py-1.5 text-sm text-center text-zinc-100 focus:border-blue-500 outline-none"
+                                defaultValue={level.minPro}
+                                name="minPro"
+                                type="number"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <textarea
+                                className="w-full bg-zinc-950 border border-zinc-700 rounded-md px-3 py-1.5 text-sm text-zinc-100 focus:border-blue-500 outline-none min-h-[80px] resize-y"
                                 defaultValue={level.description || ""}
                                 name="description"
-                                placeholder="Description"
+                                placeholder="Description (one benefit per line)"
                               />
                             </td>
                             <td className="px-6 py-3 whitespace-nowrap text-right">
@@ -156,7 +168,10 @@ export default function AdminClansPage() {
                             <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-zinc-300 font-mono">
                               {level.minUsers}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-zinc-300 font-mono">
+                              {level.minPro}
+                            </td>
+                            <td className="px-6 py-4 whitespace-pre-wrap text-sm text-zinc-400 min-w-[300px]">
                               {level.description || (
                                 <span className="text-zinc-600 italic">
                                   No description

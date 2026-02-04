@@ -68,12 +68,14 @@ export async function upsertClanLevel(data: {
   id: string;
   level: number;
   minUsers: number;
+  minPro: number;
   description: string;
 }) {
   await db
     .update(clanLevel)
     .set({
       minUsers: data.minUsers,
+      minPro: data.minPro,
       description: data.description,
       updatedAt: new Date(),
     })
