@@ -958,8 +958,20 @@ async function showModelMenu(ctx: any, user: any) {
 
 GPT-5 mini, Gemini 3 Flash и DeepSeek доступны бесплатно`;
 
+  // Calculate Clan Level for Visual Locks
+  const clanData = await getUserClan(user.id);
+  let clanLevel = 1;
+  if (clanData) {
+    const counts = await getClanMemberCounts(clanData.id);
+    clanLevel = calculateClanLevel(
+      counts.totalMembers,
+      counts.proMembers,
+      CACHED_CLAN_LEVELS || []
+    );
+  }
+
   await ctx.reply(modelInfo, {
-    reply_markup: getModelKeyboard(currentModel, user?.hasPaid),
+    reply_markup: getModelKeyboard(currentModel, user?.hasPaid, clanLevel),
   });
 }
 
@@ -995,8 +1007,20 @@ async function showImageMenu(ctx: any, user: any) {
     ? user.selectedModel
     : undefined;
 
+  // Calculate Clan Level for Visual Locks
+  const clanData = await getUserClan(user.id);
+  let clanLevel = 1;
+  if (clanData) {
+    const counts = await getClanMemberCounts(clanData.id);
+    clanLevel = calculateClanLevel(
+      counts.totalMembers,
+      counts.proMembers,
+      CACHED_CLAN_LEVELS || []
+    );
+  }
+
   await ctx.reply("Выберите модель для создания изображений:", {
-    reply_markup: getImageModelKeyboard(currentModel, user?.hasPaid),
+    reply_markup: getImageModelKeyboard(currentModel, user?.hasPaid, clanLevel),
   });
 }
 
