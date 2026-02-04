@@ -1245,38 +1245,6 @@ bot.command("start", async (ctx) => {
 
     trackBackendEvent("Bot: Launch", userIdStr, { source: sourceType });
 
-    // CLAN INVITE HANDLING
-    if (startParam?.startsWith("clan_")) {
-      const inviteCode = startParam.replace("clan_", "").trim();
-      if (inviteCode) {
-        const clan = await getClanByInviteCode(inviteCode);
-        if (clan) {
-          await ctx.reply(
-            `🏰 <b>Приглашение в клан</b>\n\nВы были приглашены в клан <b>${clan.name}</b>.\nВступите, чтобы получать бонусы и доступ к новым моделям!`,
-            {
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: `✅ Вступить в ${clan.name}`,
-                      callback_data: `join_clan_${inviteCode}`,
-                    },
-                  ],
-                  [{ text: "❌ Отмена", callback_data: "delete_message" }],
-                ],
-              },
-            }
-          );
-          // We do NOT return here, we let the welcome message trigger too, or maybe we should return to focus on the invite?
-          // User request: "updated everything in bot".
-          // Let's allow the welcome message to follow, so they have the menu too.
-        } else {
-          await ctx.reply("❌ Клан с таким кодом не найден.");
-        }
-      }
-    }
-
     // Reset model to default on start
     await updateUserSelectedModel(user.id, "model_gpt5nano");
 
@@ -1362,6 +1330,41 @@ bot.command("start", async (ctx) => {
       },
     });
     console.log("Welcome message sent");
+
+    // CLAN INVITE HANDLING (Moved to end so it's the last message)
+    if (startParam?.startsWith("clan_")) {
+      const inviteCode = startParam.replace("clan_", "").trim();
+      if (inviteCode) {
+        const clan = await getClanByInviteCode(inviteCode);
+        if (clan) {
+          // Add small delay to ensure it arrives last
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          await ctx.reply(
+            `🏰 <b>Приглашение в клан</b>\n\nВы были приглашены в клан <b>${clan.name}</b>.\nВступите, чтобы получать бонусы и доступ к новым моделям!`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: `✅ Вступить в ${clan.name}`,
+                      callback_data: `join_clan_${inviteCode}`,
+                    },
+                  ],
+                  [{ text: "❌ Отмена", callback_data: "delete_message" }],
+                ],
+              },
+            }
+          );
+        } else {
+          // Silent fail or late error?
+          // If we are here, welcome message is already sent.
+          // Let's send specific error if code was invalid but user is new/existing.
+          await ctx.reply("❌ Клан с таким кодом не найден.");
+        }
+      }
+    }
   } catch (error) {
     console.error("Error in /start command:", error);
     await ctx.reply("Sorry, I encountered an error. Please try again later.");
@@ -2316,7 +2319,12 @@ bot.on("callback_query:data", async (ctx) => {
         plural = "генерации";
       }
 
-      const message = `${prefix} с моделью ${modelName} расходует\n${cost} ${plural}`;
+      let message = `${prefix} с моделью ${modelName} расходует\n${cost} ${plural}`;
+
+      if (dbModel?.description) {
+        message = `${dbModel.description} расходует\n${cost} ${plural}`;
+      }
+
       await safeAnswerCallbackQuery(ctx, message, { show_alert: true });
     }
 
@@ -3790,7 +3798,9 @@ bot.on("message:photo", async (ctx) => {
             m.role === "user"
               ? // Simple text mapping for history, preserving images might be complex in this DB schema
                 // if parts are not stored fully. Assuming parts has text.
-                (m.parts as any[]).map((p) => p.text).join("\n")
+                (m.parts as any[])
+                  .map((p) => p.text)
+                  .join("\n")
               : (m.parts as any[]).map((p) => p.text).join("\n"),
         }));
 

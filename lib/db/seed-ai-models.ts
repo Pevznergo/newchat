@@ -36,6 +36,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Самая мощная модель для сложных задач",
     },
     {
       modelId: "model_o3",
@@ -48,6 +49,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Продвинутая модель для глубоких исследований",
     },
     {
       modelId: "model_gpt41",
@@ -60,6 +62,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Баланс скорости и интеллекта",
     },
     {
       modelId: "model_gpt5nano",
@@ -72,6 +75,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: false,
       isPro: false,
+      description: "Облегченная версия для быстрых ответов",
     },
     {
       modelId: "model_gpt4omini",
@@ -84,6 +88,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: false,
       isPro: false,
+      description: "Повседневный помощник для простых задач",
     },
     {
       modelId: "model_claude45sonnet",
@@ -96,6 +101,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Лучшая модель для работы с кодом и текстом",
     },
     {
       modelId: "model_claude45thinking",
@@ -108,6 +114,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Аналитическое мышление от Anthropic",
     },
     {
       modelId: "model_deepseek_v3",
@@ -120,6 +127,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: false,
       isPro: false,
+      description: "Мощная открытая модель для диалогов",
     },
     {
       modelId: "model_deepseek_r1",
@@ -132,6 +140,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Специализированная модель для рассуждений",
     },
     {
       modelId: "model_gemini_pro",
@@ -144,6 +153,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Передовая модель от Google",
     },
     {
       modelId: "model_gemini_flash",
@@ -156,6 +166,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: false,
       isPro: false,
+      description: "Сверхбыстрая обработка больших данных",
     },
     {
       modelId: "model_grok41",
@@ -168,6 +179,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Дерзкий и умный ИИ от xAI",
     },
     {
       modelId: "model_deepresearch",
@@ -180,6 +192,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Глубокий анализ и поиск информации",
     },
     {
       modelId: "model_perplexity",
@@ -192,6 +205,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Поисковая система с ИИ-ответами",
     },
     // Web Search Variants
     {
@@ -205,6 +219,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "GPT-5.2 с доступом в интернет",
     },
     {
       modelId: "model_claude45sonnet_web",
@@ -217,6 +232,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Claude с поиском в реальном времени",
     },
     {
       modelId: "model_gemini_pro_web",
@@ -229,6 +245,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Gemini Pro с актуальными данными",
     },
     {
       modelId: "model_gemini_flash_web",
@@ -241,6 +258,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Быстрый поиск с Gemini Flash",
     },
     {
       modelId: "model_grok41_web",
@@ -253,6 +271,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Grok с доступом к новостям X",
     },
 
     // Image Models
@@ -267,6 +286,8 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: false,
       isPro: false,
+      description:
+        "Передовая модель от Google для продвинутого редактирования изображений",
     },
     {
       modelId: "model_image_banana_pro",
@@ -279,6 +300,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Продвинутая версия Nano Banana",
     },
     {
       modelId: "model_image_midjourney",
@@ -291,6 +313,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Самая художественная нейросеть",
     },
     {
       modelId: "model_image_flux",
@@ -303,6 +326,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Профессиональная генерация изображений",
     },
 
     // Video Models (Costs are PER SECOND)
@@ -317,6 +341,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Кинематографичное видео от Google",
     },
     {
       modelId: "model_video_veo_fast",
@@ -329,6 +354,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Быстрая генерация видеоклипов",
     },
     {
       modelId: "model_video_sora",
@@ -341,6 +367,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Революция в генерации видео от OpenAI",
     },
     {
       modelId: "model_video_sora_pro",
@@ -353,6 +380,7 @@ async function seedAiModels() {
       isEnabled: true,
       isPremium: true,
       isPro: false,
+      description: "Максимальное качество и реализм",
     },
   ];
 
@@ -362,7 +390,21 @@ async function seedAiModels() {
     await db
       .insert(aiModel)
       .values(model)
-      .onConflictDoNothing({ target: aiModel.modelId });
+      .onConflictDoUpdate({
+        target: aiModel.modelId,
+        set: {
+          name: model.name,
+          cost: model.cost,
+          description: model.description,
+          provider: model.provider,
+          type: model.type,
+          apiModelId: model.apiModelId,
+          requiredClanLevel: model.requiredClanLevel,
+          isEnabled: model.isEnabled,
+          isPremium: model.isPremium,
+          isPro: model.isPro,
+        },
+      });
   }
 
   console.log(`✅ Seeded ${models.length} AI models`);

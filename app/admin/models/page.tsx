@@ -35,6 +35,7 @@ export default function AdminModelsPage() {
       apiModelId: "",
       requiredClanLevel: 1,
       isEnabled: true,
+      description: "",
     };
     setModels([newModel, ...models]);
     setEditingId("new");
@@ -72,6 +73,7 @@ export default function AdminModelsPage() {
       apiModelId: formData.get("apiModelId") as string,
       requiredClanLevel: Number(formData.get("requiredClanLevel") || 1),
       isEnabled: formData.get("isEnabled") === "on",
+      description: formData.get("description") as string,
     };
 
     if (!data.modelId || !data.name || !data.type) {
@@ -116,6 +118,9 @@ export default function AdminModelsPage() {
                   <tr className="border-b border-zinc-800 bg-zinc-900/80">
                     <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                       Model Name
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                      Description
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                       Provider
@@ -259,6 +264,12 @@ export default function AdminModelsPage() {
                                   {model.name}
                                 </span>
                               </div>
+                            </td>
+                            <td
+                              className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400 max-w-[200px] truncate"
+                              title={model.description}
+                            >
+                              {model.description || "-"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
                               <span className="inline-flex items-center px-2 py-1 rounded-md bg-zinc-800/50 border border-zinc-700/50 text-xs text-zinc-300">

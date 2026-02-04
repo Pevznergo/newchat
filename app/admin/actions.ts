@@ -19,6 +19,7 @@ export async function upsertModel(data: {
   apiModelId?: string;
   requiredClanLevel?: number;
   isEnabled?: boolean;
+  description?: string;
 }) {
   const payload = {
     modelId: data.modelId,
@@ -29,6 +30,7 @@ export async function upsertModel(data: {
     apiModelId: data.apiModelId || null,
     requiredClanLevel: data.requiredClanLevel || 1,
     isEnabled: data.isEnabled ?? true,
+    description: data.description || null,
     updatedAt: new Date(),
   };
 
