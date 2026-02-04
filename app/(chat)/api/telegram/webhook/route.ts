@@ -2453,10 +2453,36 @@ bot.on("callback_query:data", async (ctx) => {
     }
 
     // Determine which keyboard to use based on model type
+    // Calculate Clan Level for Visual Locks
+    const clanData = await getUserClan(user.id);
+    let clanLevel = 1;
+    if (clanData) {
+      if (clanData.level) {
+        // Optimization: Use stored level if available/reliable
+        // But logic usually recalculates.
+        // Let's rely on cached member counts for speed if possible, or just raw count.
+        // Or simpler: Reuse the calculation helper.
+        const counts = await getClanMemberCounts(clanData.id);
+        clanLevel = calculateClanLevel(
+          counts.totalMembers,
+          counts.proMembers,
+          CACHED_CLAN_LEVELS || []
+        );
+      } else {
+        // Likely fallback
+        const counts = await getClanMemberCounts(clanData.id);
+        clanLevel = calculateClanLevel(
+          counts.totalMembers,
+          counts.proMembers,
+          CACHED_CLAN_LEVELS || []
+        );
+      }
+    }
+
     try {
       let keyboard: { inline_keyboard: any[][] };
       if (data.startsWith("model_image_")) {
-        keyboard = getImageModelKeyboard(data, !!user.hasPaid);
+        keyboard = getImageModelKeyboard(data, !!user.hasPaid, clanLevel);
       } else if (data.startsWith("model_video_")) {
         keyboard = getVideoModelKeyboard(data, !!user.hasPaid);
       } else if (
@@ -2466,7 +2492,7 @@ bot.on("callback_query:data", async (ctx) => {
       ) {
         keyboard = getSearchModelKeyboard(data, !!user.hasPaid);
       } else {
-        keyboard = getModelKeyboard(data, !!user.hasPaid);
+        keyboard = getModelKeyboard(data, !!user.hasPaid, clanLevel);
       }
 
       await ctx.editMessageReplyMarkup({
@@ -3896,7 +3922,9 @@ bot.on("message:photo", async (ctx) => {
             m.role === "user"
               ? // Simple text mapping for history, preserving images might be complex in this DB schema
                 // if parts are not stored fully. Assuming parts has text.
-                (m.parts as any[]).map((p) => p.text).join("\n")
+                (m.parts as any[])
+                  .map((p) => p.text)
+                  .join("\n")
               : (m.parts as any[]).map((p) => p.text).join("\n"),
         }));
 
