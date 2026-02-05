@@ -7,18 +7,26 @@
 				"noAlert": "off",
 				"noEvolvingTypes": "off",
 				"noExplicitAny": "off",
-				"noImplicitAnyLet": "off"
+				"noImplicitAnyLet": "off",
+				"noDocumentCookie": "off"
 			},
 			"a11y": {
 				"noLabelWithoutControl": "off",
 				"useButtonType": "off",
-				"noAutofocus": "off"
+				"noAutofocus": "off",
+				"noSvgWithoutTitle": "off",
+				"useSemanticElements": "off",
+				"useKeyWithClickEvents": "off"
 			},
 			"correctness": {
-				"noUnusedFunctionParameters": "off"
+				"noUnusedFunctionParameters": "off",
+				"useExhaustiveDependencies": "warn"
 			},
 			"style": {
 				"noNonNullAssertion": "off"
+			},
+			"complexity": {
+				"noImportantStyles": "off"
 			},
 			"nursery": {
 				"useSortedClasses": "off"
