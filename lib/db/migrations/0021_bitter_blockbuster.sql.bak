@@ -67,6 +67,7 @@ CREATE TABLE "MessageTemplate" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "AiModel" ADD COLUMN "description" text;--> statement-breakpoint
 ALTER TABLE "User" ADD COLUMN "free_images_count" integer DEFAULT 0;--> statement-breakpoint
 ALTER TABLE "BroadcastCampaign" ADD CONSTRAINT "BroadcastCampaign_template_id_MessageTemplate_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."MessageTemplate"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "BroadcastCampaign" ADD CONSTRAINT "BroadcastCampaign_created_by_User_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."User"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
