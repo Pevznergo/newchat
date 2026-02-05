@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function BroadcastDetailPage({
   params,
@@ -12,7 +12,7 @@ export default function BroadcastDetailPage({
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/admin/messages/broadcasts/${params.id}/stats`
@@ -22,17 +22,18 @@ export default function BroadcastDetailPage({
     } catch (error) {
       console.error("Failed to fetch stats:", error);
     }
-  };
+  }, [params.id]);
 
   useEffect(() => {
     fetchStats();
     // Refresh stats every 5 seconds if sending
     const interval = setInterval(fetchStats, 5000);
     return () => clearInterval(interval);
-  }, [params.id]);
+  }, [fetchStats]);
 
   const handleStartSending = async () => {
-    if (!confirm("Start sending this campaign to all recipients?")) {
+    // TODO: Replace with proper UI confirmation dialog
+    if (!window.confirm("Start sending this campaign to all recipients?")) {
       return;
     }
 
@@ -46,14 +47,13 @@ export default function BroadcastDetailPage({
       );
 
       if (response.ok) {
-        alert("Campaign started successfully!");
+        console.log("Campaign started successfully!");
         fetchStats();
       } else {
-        alert("Failed to start campaign");
+        console.error("Failed to start campaign");
       }
     } catch (error) {
       console.error("Error starting campaign:", error);
-      alert("Error starting campaign");
     } finally {
       setLoading(false);
     }
@@ -79,6 +79,7 @@ export default function BroadcastDetailPage({
           <button
             className="text-blue-600 hover:text-blue-800 mb-2 text-sm"
             onClick={() => router.back()}
+            type="button"
           >
             ← Back to Campaigns
           </button>
@@ -89,6 +90,7 @@ export default function BroadcastDetailPage({
             className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
             disabled={loading}
             onClick={handleStartSending}
+            type="button"
           >
             {loading ? "Starting..." : "Start Sending"}
           </button>
