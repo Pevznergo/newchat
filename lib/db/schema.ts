@@ -336,3 +336,146 @@ export const shortLinks = pgTable("short_links", {
 });
 
 export type ShortLink = InferSelectModel<typeof shortLinks>;
+
+// =========================================================================
+// MESSAGING SYSTEM
+// =========================================================================
+
+export const messageTemplate = pgTable("MessageTemplate", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+  // Template Info
+  name: varchar("name", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  contentType: varchar("content_type", { length: 20 }).default("text"), // text, html, markdown
+
+  // Media attachments (optional)
+  mediaType: varchar("media_type", { length: 20 }), // photo, video, document
+  mediaUrl: text("media_url"),
+
+  // Inline keyboard (optional) - stored as JSON array
+  inlineKeyboard: json("inline_keyboard"), // [{text: "Button", callback_data: "action"}, ...]
+
+  // Template type
+  templateType: varchar("template_type", { length: 50 }).notNull(), // 'follow_up', 'broadcast'
+
+  // Targeting
+  targetAudience: varchar("target_audience", { length: 20 }).default("all"), // 'all', 'free', 'premium'
+
+  // Status
+  isActive: boolean("is_active").default(true),
+
+  // Metadata
+  createdBy: uuid("created_by").references(() => user.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type MessageTemplate = InferSelectModel<typeof messageTemplate>;
+
+export const followUpRule = pgTable("FollowUpRule", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+  // Template reference
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => messageTemplate.id, { onDelete: "cascade" }),
+
+  // Trigger configuration
+  triggerType: varchar("trigger_type", { length: 50 }).notNull(), // 'after_registration', 'after_last_message', 'inactive_user', 'limit_reached'
+  triggerDelayHours: integer("trigger_delay_hours").notNull(), // Delay after trigger event
+
+  // Conditions (JSON for flexibility)
+  conditions: json("conditions"), // {min_messages: 0, max_messages: 5, has_subscription: false, ...}
+
+  // Targeting (inherited from template but can override)
+  targetAudience: varchar("target_audience", { length: 20 }), // null = use template's audience
+
+  // Limits
+  maxSendsPerUser: integer("max_sends_per_user").default(1), // How many times to send this rule to same user
+
+  // Schedule
+  sendTimeStart: varchar("send_time_start", { length: 5 }), // HH:MM format
+  sendTimeEnd: varchar("send_time_end", { length: 5 }), // HH:MM format
+
+  // Status
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(0), // Higher priority rules execute first
+
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type FollowUpRule = InferSelectModel<typeof followUpRule>;
+
+export const messageSend = pgTable("MessageSend", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+  // References
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  templateId: uuid("template_id").references(() => messageTemplate.id, {
+    onDelete: "set null",
+  }),
+  followUpRuleId: uuid("follow_up_rule_id").references(() => followUpRule.id, {
+    onDelete: "set null",
+  }),
+  broadcastId: uuid("broadcast_id"), // For broadcast sends
+
+  // Send info
+  sendType: varchar("send_type", { length: 20 }).notNull(), // 'follow_up', 'broadcast'
+  status: varchar("status", { length: 20 }).default("pending"), // 'pending', 'sent', 'failed', 'delivered', 'read'
+
+  // Telegram message details
+  telegramMessageId: varchar("telegram_message_id", { length: 50 }),
+  telegramChatId: varchar("telegram_chat_id", { length: 50 }),
+
+  // Error tracking
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+
+  // Timestamps
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+  // Mixpanel tracking
+  mixpanelEventId: varchar("mixpanel_event_id", { length: 255 }),
+  mixpanelTracked: boolean("mixpanel_tracked").default(false),
+});
+
+export type MessageSend = InferSelectModel<typeof messageSend>;
+
+export const broadcastCampaign = pgTable("BroadcastCampaign", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+  // Campaign info
+  name: varchar("name", { length: 255 }).notNull(),
+  templateId: uuid("template_id").references(() => messageTemplate.id),
+
+  // Targeting
+  targetAudience: varchar("target_audience", { length: 20 }).notNull(), // 'all', 'free', 'premium'
+
+  // Advanced filters (optional)
+  filters: json("filters"), // {min_messages: 10, last_activity_days: 7, clan_level: [1,2], ...}
+
+  // Scheduling
+  scheduledAt: timestamp("scheduled_at"),
+  status: varchar("status", { length: 20 }).default("draft"), // 'draft', 'scheduled', 'sending', 'completed', 'cancelled'
+
+  // Stats
+  totalRecipients: integer("total_recipients").default(0),
+  sentCount: integer("sent_count").default(0),
+  failedCount: integer("failed_count").default(0),
+
+  // Metadata
+  createdBy: uuid("created_by").references(() => user.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export type BroadcastCampaign = InferSelectModel<typeof broadcastCampaign>;

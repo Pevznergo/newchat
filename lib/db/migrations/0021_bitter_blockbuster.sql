@@ -1,0 +1,78 @@
+CREATE TABLE "BroadcastCampaign" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"template_id" uuid,
+	"target_audience" varchar(20) NOT NULL,
+	"filters" json,
+	"scheduled_at" timestamp,
+	"status" varchar(20) DEFAULT 'draft',
+	"total_recipients" integer DEFAULT 0,
+	"sent_count" integer DEFAULT 0,
+	"failed_count" integer DEFAULT 0,
+	"created_by" uuid,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"started_at" timestamp,
+	"completed_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "FollowUpRule" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"template_id" uuid NOT NULL,
+	"trigger_type" varchar(50) NOT NULL,
+	"trigger_delay_hours" integer NOT NULL,
+	"conditions" json,
+	"target_audience" varchar(20),
+	"max_sends_per_user" integer DEFAULT 1,
+	"send_time_start" varchar(5),
+	"send_time_end" varchar(5),
+	"is_active" boolean DEFAULT true,
+	"priority" integer DEFAULT 0,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "MessageSend" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"template_id" uuid,
+	"follow_up_rule_id" uuid,
+	"broadcast_id" uuid,
+	"send_type" varchar(20) NOT NULL,
+	"status" varchar(20) DEFAULT 'pending',
+	"telegram_message_id" varchar(50),
+	"telegram_chat_id" varchar(50),
+	"error_message" text,
+	"retry_count" integer DEFAULT 0,
+	"scheduled_at" timestamp,
+	"sent_at" timestamp,
+	"delivered_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"mixpanel_event_id" varchar(255),
+	"mixpanel_tracked" boolean DEFAULT false
+);
+--> statement-breakpoint
+CREATE TABLE "MessageTemplate" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"content" text NOT NULL,
+	"content_type" varchar(20) DEFAULT 'text',
+	"media_type" varchar(20),
+	"media_url" text,
+	"inline_keyboard" json,
+	"template_type" varchar(50) NOT NULL,
+	"target_audience" varchar(20) DEFAULT 'all',
+	"is_active" boolean DEFAULT true,
+	"created_by" uuid,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "AiModel" ADD COLUMN "description" text;--> statement-breakpoint
+ALTER TABLE "User" ADD COLUMN "free_images_count" integer DEFAULT 0;--> statement-breakpoint
+ALTER TABLE "BroadcastCampaign" ADD CONSTRAINT "BroadcastCampaign_template_id_MessageTemplate_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."MessageTemplate"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "BroadcastCampaign" ADD CONSTRAINT "BroadcastCampaign_created_by_User_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."User"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "FollowUpRule" ADD CONSTRAINT "FollowUpRule_template_id_MessageTemplate_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."MessageTemplate"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "MessageSend" ADD CONSTRAINT "MessageSend_user_id_User_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."User"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "MessageSend" ADD CONSTRAINT "MessageSend_template_id_MessageTemplate_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."MessageTemplate"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "MessageSend" ADD CONSTRAINT "MessageSend_follow_up_rule_id_FollowUpRule_id_fk" FOREIGN KEY ("follow_up_rule_id") REFERENCES "public"."FollowUpRule"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "MessageTemplate" ADD CONSTRAINT "MessageTemplate_created_by_User_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."User"("id") ON DELETE no action ON UPDATE no action;

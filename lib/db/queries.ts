@@ -28,7 +28,10 @@ import {
   clanLevel,
   type DBMessage,
   document,
+  followUpRule,
   message,
+  messageSend,
+  messageTemplate,
   type Suggestion,
   stream,
   suggestion,
@@ -1467,5 +1470,265 @@ export async function consumeExtraRequests(userId: string, amount: number) {
   } catch (error) {
     console.error("Failed to consume extra requests", error);
     return false;
+  }
+}
+
+// =========================================================================
+// MESSAGE TEMPLATES
+// =========================================================================
+
+export async function getMessageTemplates(filters?: {
+  type?: string;
+  audience?: string;
+  isActive?: boolean;
+}) {
+  try {
+    const conditions = [];
+
+    if (filters?.type) {
+      conditions.push(eq(messageTemplate.templateType, filters.type));
+    }
+    if (filters?.audience) {
+      conditions.push(eq(messageTemplate.targetAudience, filters.audience));
+    }
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(messageTemplate.isActive, filters.isActive));
+    }
+
+    return await db
+      .select()
+      .from(messageTemplate)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(messageTemplate.createdAt));
+  } catch (error) {
+    console.error("Failed to get message templates", error);
+    return [];
+  }
+}
+
+export async function getMessageTemplateById(id: string) {
+  try {
+    const [template] = await db
+      .select()
+      .from(messageTemplate)
+      .where(eq(messageTemplate.id, id))
+      .limit(1);
+
+    return template || null;
+  } catch (error) {
+    console.error("Failed to get message template", error);
+    return null;
+  }
+}
+
+export async function createMessageTemplate(data: {
+  name: string;
+  content: string;
+  contentType?: string;
+  mediaType?: string;
+  mediaUrl?: string;
+  inlineKeyboard?: any;
+  templateType: string;
+  targetAudience?: string;
+  createdBy?: string;
+}) {
+  try {
+    const [template] = await db
+      .insert(messageTemplate)
+      .values({
+        name: data.name,
+        content: data.content,
+        contentType: data.contentType || "text",
+        mediaType: data.mediaType,
+        mediaUrl: data.mediaUrl,
+        inlineKeyboard: data.inlineKeyboard,
+        templateType: data.templateType,
+        targetAudience: data.targetAudience || "all",
+        createdBy: data.createdBy,
+      })
+      .returning();
+
+    return template;
+  } catch (error) {
+    console.error("Failed to create message template", error);
+    return null;
+  }
+}
+
+export async function updateMessageTemplate(
+  id: string,
+  data: Partial<{
+    name: string;
+    content: string;
+    contentType: string;
+    mediaType: string;
+    mediaUrl: string;
+    inlineKeyboard: any;
+    targetAudience: string;
+    isActive: boolean;
+  }>
+) {
+  try {
+    const [template] = await db
+      .update(messageTemplate)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(messageTemplate.id, id))
+      .returning();
+
+    return template;
+  } catch (error) {
+    console.error("Failed to update message template", error);
+    return null;
+  }
+}
+
+export async function deleteMessageTemplate(id: string) {
+  try {
+    // Soft delete
+    const [template] = await db
+      .update(messageTemplate)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(messageTemplate.id, id))
+      .returning();
+
+    return !!template;
+  } catch (error) {
+    console.error("Failed to delete message template", error);
+    return false;
+  }
+}
+
+// =========================================================================
+// FOLLOW-UP RULES
+// =========================================================================
+
+export async function getFollowUpRules(filters?: { isActive?: boolean }) {
+  try {
+    const conditions = [];
+
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(followUpRule.isActive, filters.isActive));
+    }
+
+    return await db
+      .select()
+      .from(followUpRule)
+      .leftJoin(
+        messageTemplate,
+        eq(followUpRule.templateId, messageTemplate.id)
+      )
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(followUpRule.priority), desc(followUpRule.createdAt));
+  } catch (error) {
+    console.error("Failed to get follow-up rules", error);
+    return [];
+  }
+}
+
+export async function createFollowUpRule(data: {
+  templateId: string;
+  triggerType: string;
+  triggerDelayHours: number;
+  conditions?: any;
+  targetAudience?: string;
+  maxSendsPerUser?: number;
+  priority?: number;
+}) {
+  try {
+    const [rule] = await db
+      .insert(followUpRule)
+      .values({
+        templateId: data.templateId,
+        triggerType: data.triggerType,
+        triggerDelayHours: data.triggerDelayHours,
+        conditions: data.conditions,
+        targetAudience: data.targetAudience,
+        maxSendsPerUser: data.maxSendsPerUser || 1,
+        priority: data.priority || 0,
+      })
+      .returning();
+
+    return rule;
+  } catch (error) {
+    console.error("Failed to create follow-up rule", error);
+    return null;
+  }
+}
+
+export async function createMessageSend(data: {
+  userId: string;
+  templateId?: string;
+  followUpRuleId?: string;
+  sendType: string;
+  scheduledAt?: Date;
+}) {
+  try {
+    const [send] = await db
+      .insert(messageSend)
+      .values({
+        userId: data.userId,
+        templateId: data.templateId,
+        followUpRuleId: data.followUpRuleId,
+        sendType: data.sendType,
+        status: "pending",
+        scheduledAt: data.scheduledAt || new Date(),
+      })
+      .returning();
+
+    return send;
+  } catch (error) {
+    console.error("Failed to create message send", error);
+    return null;
+  }
+}
+
+export async function getPendingMessageSends(limit = 100) {
+  try {
+    return await db
+      .select()
+      .from(messageSend)
+      .leftJoin(messageTemplate, eq(messageSend.templateId, messageTemplate.id))
+      .leftJoin(user, eq(messageSend.userId, user.id))
+      .where(
+        and(
+          eq(messageSend.status, "pending"),
+          lte(messageSend.scheduledAt, new Date())
+        )
+      )
+      .limit(limit);
+  } catch (error) {
+    console.error("Failed to get pending message sends", error);
+    return [];
+  }
+}
+
+export async function updateMessageSendStatus(
+  id: string,
+  status: string,
+  data?: {
+    telegramMessageId?: string;
+    errorMessage?: string;
+    sentAt?: Date;
+  }
+) {
+  try {
+    const updateData: any = { status };
+    if (data) {
+      Object.assign(updateData, data);
+    }
+
+    const [send] = await db
+      .update(messageSend)
+      .set(updateData)
+      .where(eq(messageSend.id, id))
+      .returning();
+
+    return send;
+  } catch (error) {
+    console.error("Failed to update message send status", error);
+    return null;
   }
 }
