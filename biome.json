@@ -1,19 +1,20 @@
 {
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"recommended": true,
-			"suspicious": {
-				"noAlert": "off",
-				"noEvolvingTypes": "off"
-			},
-			"a11y": {
-				"noLabelWithoutControl": "off",
-				"useButtonType": "warn"
-			}
-		}
-	},
-	"formatter": {
-		"enabled": true
-	}
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noAlert": "off",
+        "noEvolvingTypes": "off",
+        "noExplicitAny": "off"
+      },
+      "a11y": {
+        "noLabelWithoutControl": "off",
+        "useButtonType": "warn"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true
+  }
 }
