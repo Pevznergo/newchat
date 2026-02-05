@@ -53,7 +53,6 @@ export default function AdminModelsPage() {
 	}
 
 	async function handleDelete(id: string) {
-		// biome-ignore lint/suspicious/noAlert: Admin tool
 		if (confirm("Are you sure?")) {
 			await deleteModel(id);
 			loadModels();

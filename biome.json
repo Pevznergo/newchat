@@ -1,37 +1,38 @@
 {
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noAlert": "off",
-        "noEvolvingTypes": "off",
-        "noExplicitAny": "off",
-        "noImplicitAnyLet": "off"
-      },
-      "a11y": {
-        "noLabelWithoutControl": "off",
-        "useButtonType": "off",
-        "noAutofocus": "off"
-      },
-      "correctness": {
-        "noUnusedFunctionParameters": "off"
-      },
-      "style": {
-        "noNonNullAssertion": "off"
-      },
-      "nursery": {
-        "useSortedClasses": "off"
-      }
-    }
-  },
-  "formatter": {
-    "enabled": true
-  },
-  "css": {
-    "parser": {
-      "cssModules": false,
-      "allowWrongLineComments": true
-    }
-  }
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"suspicious": {
+				"noAlert": "off",
+				"noEvolvingTypes": "off",
+				"noExplicitAny": "off",
+				"noImplicitAnyLet": "off"
+			},
+			"a11y": {
+				"noLabelWithoutControl": "off",
+				"useButtonType": "off",
+				"noAutofocus": "off"
+			},
+			"correctness": {
+				"noUnusedFunctionParameters": "off"
+			},
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+			"nursery": {
+				"useSortedClasses": "off"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"css": {
+		"parser": {
+			"cssModules": false,
+			"allowWrongLineComments": true,
+			"tailwindDirectives": true
+		}
+	}
 }
