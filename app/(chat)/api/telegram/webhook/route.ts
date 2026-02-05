@@ -1002,12 +1002,29 @@ async function checkAndEnforceLimits(
       // If we are here, increment standard usage to keep track?
       await incrementWeeklyImageUsage(user.id, 1);
     }
-  } else if (user.hasPaid) {
-    // Text Paid
-    await incrementUserRequestCount(user.id, effectiveCost);
-  } else if (effectiveCost > 0) {
-    // Text Free
-    await incrementWeeklyTextUsage(user.id, effectiveCost);
+  } else {
+    // TEXT REQUEST PRIORITY:
+    // 1. Clan free limits (for ALL users, including premium)
+    // 2. Premium subscription credits
+    // 3. Extra purchased requests
+
+    const clanLimit = config.benefits.weeklyTextCredits;
+    const clanUsage = user.weeklyTextUsage || 0;
+
+    if (clanUsage < clanLimit) {
+      // Use clan free limits FIRST
+      await incrementWeeklyTextUsage(user.id, effectiveCost);
+    } else if (user.hasPaid) {
+      // THEN use premium subscription credits
+      await incrementUserRequestCount(user.id, effectiveCost);
+    } else if ((user.extraRequests || 0) >= effectiveCost) {
+      // THEN use extra purchased requests
+      await consumeExtraRequests(user.id, effectiveCost);
+    } else {
+      // No resources available - should have been blocked in CHECK phase
+      // But track it anyway to maintain data consistency
+      await incrementWeeklyTextUsage(user.id, effectiveCost);
+    }
   }
 
   return true;
@@ -1219,9 +1236,29 @@ function getProfileKeyboard() {
 
 async function showAccountInfo(ctx: any, user: any) {
   const isPremium = !!user.hasPaid;
-  // New Credit System Logic
   let usageText = "";
   let clanInfoText = "";
+
+  // ALWAYS fetch clan data (for both premium and free users)
+  const clanData = await getUserClan(user.id);
+  let clanLevel = 1;
+  let role = "";
+
+  if (clanData) {
+    const counts = await getClanMemberCounts(clanData.id);
+    clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
+    role =
+      clanData.role === "owner"
+        ? "Глава"
+        : clanData.role === "admin"
+          ? "Админ"
+          : "Участник";
+
+    clanInfoText = `\n🏰 Клан: ${clanData.name} (Ур. ${clanLevel})\nРоль: ${role}`;
+  }
+
+  // Get clan benefits config
+  const config = getLevelConfig(clanLevel);
 
   // Get Plan Name
   let planName = isPremium ? "Премиум 🚀" : "Стандартный";
@@ -1231,53 +1268,38 @@ async function showAccountInfo(ctx: any, user: any) {
     const sub = await getLastActiveSubscription(user.id);
     const limit = sub?.tariffSlug.includes("x2") ? 6000 : 3000;
     const used = user.requestCount || 0;
-    usageText = `${used}/${limit} кредитов`;
+    usageText = `💎 Премиум: ${used}/${limit} кредитов`;
 
     if (user.selectedModel?.includes("video")) {
       usageText += "\n(Видео: отдельные пакеты)";
     }
+
+    // ADD: Show clan free limits for premium users
+    const clanTextUsed = user.weeklyTextUsage || 0;
+    const clanTextLimit = config.benefits.weeklyTextCredits;
+    const clanImageUsed = user.weeklyImageUsage || 0;
+    const clanImageLimit = config.benefits.weeklyImageGenerations;
+
+    usageText += `\n🎁 Клан (бесплатно): ${clanTextUsed}/${clanTextLimit} запросов/нед`;
+    if (clanImageLimit > 0) {
+      usageText += `\n🎁 Клан (бесплатно): ${clanImageUsed}/${clanImageLimit} генераций/нед`;
+    }
   } else {
     // Free: Track weekly text usage vs Clan Level Limit
-    const clanData = await getUserClan(user.id);
-    let clanLevel = 1;
-    let role = "";
-
-    if (clanData) {
-      // Need to calculate current level dynamically or trust DB?
-      // DB `clan.level` field exists. Ideally we update it periodically?
-      // Or calculate on fly.
-      // Plan says "Progression based on members".
-      // Let's calculate on fly to be accurate.
-      const counts = await getClanMemberCounts(clanData.id);
-      clanLevel = calculateClanLevel(counts.totalMembers, counts.proMembers);
-      role =
-        clanData.role === "owner"
-          ? "Глава"
-          : clanData.role === "admin"
-            ? "Админ"
-            : "Участник";
-
-      clanInfoText = `\n🏰 Клан: ${clanData.name} (Ур. ${clanLevel})\nРоль: ${role}`;
-    }
-
-    const config = getLevelConfig(clanLevel);
     const textLimit = config.benefits.weeklyTextCredits;
     const used = user.weeklyTextUsage || 0;
-
-    // Clan Limit Display
-    if (user.hasPaid) {
-      // For Paid Users, hide specific clan limits in profile to avoid confusion
-      usageText = "∞ Премиум доступ";
-    } else {
-      usageText = `${used}/${textLimit} кредитов (нед.)`;
-    }
-
+    usageText = `${used}/${textLimit} кредитов (нед.)`;
     planName = `Free (Клан Ур. ${clanLevel})`;
   }
 
-  // Free Images Display
+  // Free Images Display (bonus packs)
   if ((user.freeImagesCount || 0) > 0) {
-    usageText += `\n🎁 Бесплатные генерации: ${user.freeImagesCount}`;
+    usageText += `\n🎁 Бонусные генерации: ${user.freeImagesCount}`;
+  }
+
+  // Extra requests display
+  if ((user.extraRequests || 0) > 0) {
+    usageText += `\n📦 Доп. запросы: ${user.extraRequests}`;
   }
 
   // Get neat model name
