@@ -2,73 +2,73 @@ import { Resend } from "resend";
 import type { DailyStats } from "./stats";
 
 const resend = new Resend(
-  process.env.RESEND_API_KEY || "re_6wsXoaT7_3Bju3UzLcsxxN88CkqcRWojs"
+	process.env.RESEND_API_KEY || "re_6wsXoaT7_3Bju3UzLcsxxN88CkqcRWojs",
 ); // Use env or fallback provided by user
 
 export async function sendDailyStatsEmail(stats: DailyStats) {
-  try {
-    const {
-      totalUsers,
-      newUsers24h,
-      activeUsers24h,
-      clicks24h,
-      clickHistory,
-      growthHistory,
-      tariffBreakdown,
-    } = stats;
+	try {
+		const {
+			totalUsers,
+			newUsers24h,
+			activeUsers24h,
+			clicks24h,
+			clickHistory,
+			growthHistory,
+			tariffBreakdown,
+		} = stats;
 
-    // Generate Chart URL (Dual Axis: Users & Clicks)
-    const chartConfig = {
-      type: "bar",
-      data: {
-        labels: ["-6d", "-5d", "-4d", "-3d", "-2d", "Yesterday", "Today"],
-        datasets: [
-          {
-            type: "line",
-            label: "User Growth",
-            borderColor: "#10b981",
-            borderWidth: 2,
-            fill: false,
-            data: growthHistory,
-            yAxisID: "y-users",
-          },
-          {
-            type: "bar",
-            label: "Clicks (Scan)",
-            backgroundColor: "rgba(59, 130, 246, 0.5)",
-            data: clickHistory,
-            yAxisID: "y-clicks",
-          },
-        ],
-      },
-      options: {
-        legend: { display: true },
-        title: { display: true, text: "Weekly Growth & Scans" },
-        scales: {
-          yAxes: [
-            {
-              id: "y-users",
-              type: "linear",
-              position: "left",
-              ticks: { beginAtZero: true, fontColor: "#10b981" },
-            },
-            {
-              id: "y-clicks",
-              type: "linear",
-              position: "right",
-              ticks: { beginAtZero: true, fontColor: "#3b82f6" },
-              gridLines: { drawOnChartArea: false },
-            },
-          ],
-        },
-      },
-    };
-    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
-      JSON.stringify(chartConfig)
-    )}&w=500&h=300`;
+		// Generate Chart URL (Dual Axis: Users & Clicks)
+		const chartConfig = {
+			type: "bar",
+			data: {
+				labels: ["-6d", "-5d", "-4d", "-3d", "-2d", "Yesterday", "Today"],
+				datasets: [
+					{
+						type: "line",
+						label: "User Growth",
+						borderColor: "#10b981",
+						borderWidth: 2,
+						fill: false,
+						data: growthHistory,
+						yAxisID: "y-users",
+					},
+					{
+						type: "bar",
+						label: "Clicks (Scan)",
+						backgroundColor: "rgba(59, 130, 246, 0.5)",
+						data: clickHistory,
+						yAxisID: "y-clicks",
+					},
+				],
+			},
+			options: {
+				legend: { display: true },
+				title: { display: true, text: "Weekly Growth & Scans" },
+				scales: {
+					yAxes: [
+						{
+							id: "y-users",
+							type: "linear",
+							position: "left",
+							ticks: { beginAtZero: true, fontColor: "#10b981" },
+						},
+						{
+							id: "y-clicks",
+							type: "linear",
+							position: "right",
+							ticks: { beginAtZero: true, fontColor: "#3b82f6" },
+							gridLines: { drawOnChartArea: false },
+						},
+					],
+				},
+			},
+		};
+		const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+			JSON.stringify(chartConfig),
+		)}&w=500&h=300`;
 
-    // Simple HTML content
-    const htmlContent = `
+		// Simple HTML content
+		const htmlContent = `
       <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px;">
         <h2 style="color: #333;">📊 Daily Bot Statistics</h2>
         <p style="color: #666; font-size: 14px;">Report for ${new Date().toLocaleDateString()}</p>
@@ -105,26 +105,26 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
         </div>
 
         ${
-          stats.sources.length > 0
-            ? `
+					stats.sources.length > 0
+						? `
         <div style="margin-top: 20px; padding: 15px; background: #fff; border-top: 1px solid #eee;">
           <h3 style="margin: 0 0 10px; font-size: 16px;">🔗 Top Sources (QR/UTM)</h3>
           <table style="width: 100%; text-align: left; font-size: 14px;">
             ${stats.sources
-              .map(
-                (s) => `
+							.map(
+								(s) => `
               <tr>
                 <td style="padding: 4px 0; color: #555;">${s.source}</td>
                 <td style="padding: 4px 0; font-weight: bold; text-align: right;">${s.count}</td>
               </tr>
-            `
-              )
-              .join("")}
+            `,
+							)
+							.join("")}
           </table>
         </div>
         `
-            : ""
-        }
+						: ""
+				}
 
         <div style="margin-top: 30px; font-size: 12px; color: #aaa; text-align: center;">
           Sent via Resend | <a href="#">Unsubscribe</a>
@@ -132,17 +132,17 @@ export async function sendDailyStatsEmail(stats: DailyStats) {
       </div>
     `;
 
-    const data = await resend.emails.send({
-      from: "Aporto Bot <onboarding@resend.dev>", // Default Resend testing sender. Verified domain required for custom.
-      to: ["pevznergo@gmail.com"],
-      subject: `📈 Statistics: +${newUsers24h} New Users`,
-      html: htmlContent,
-    });
+		const data = await resend.emails.send({
+			from: "Aporto Bot <onboarding@resend.dev>", // Default Resend testing sender. Verified domain required for custom.
+			to: ["pevznergo@gmail.com"],
+			subject: `📈 Statistics: +${newUsers24h} New Users`,
+			html: htmlContent,
+		});
 
-    console.log("Email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Failed to send email:", error);
-    return { success: false, error };
-  }
+		console.log("Email sent successfully:", data);
+		return { success: true, data };
+	} catch (error) {
+		console.error("Failed to send email:", error);
+		return { success: false, error };
+	}
 }

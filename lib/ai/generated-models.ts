@@ -3,24 +3,24 @@
 // Last generated: Placeholder - run `pnpm generate:models` to populate
 
 export interface GeneratedModel {
-  id: string;
-  modelId: string;
-  name: string;
-  provider: string;
-  type: string;
-  cost: number;
-  isPremium: boolean | null;
-  isPro: boolean | null;
-  isEnabled: boolean | null;
-  apiModelId: string | null;
-  requiredClanLevel: number | null;
-  createdAt: Date;
-  updatedAt: Date;
+	id: string;
+	modelId: string;
+	name: string;
+	provider: string;
+	type: string;
+	cost: number;
+	isPremium: boolean | null;
+	isPro: boolean | null;
+	isEnabled: boolean | null;
+	apiModelId: string | null;
+	requiredClanLevel: number | null;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export const GENERATED_MODELS: GeneratedModel[] = [];
 
 // Helper map for quick lookup by modelId
 export const MODELS_BY_ID = new Map<string, GeneratedModel>(
-  GENERATED_MODELS.map((m) => [m.modelId, m])
+	GENERATED_MODELS.map((m) => [m.modelId, m]),
 );

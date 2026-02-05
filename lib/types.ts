@@ -10,7 +10,7 @@ import type { Suggestion } from "./db/schema";
 export type DataPart = { type: "append-message"; message: string };
 
 export const messageMetadataSchema = z.object({
-  createdAt: z.string(),
+	createdAt: z.string(),
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
@@ -19,39 +19,39 @@ type weatherTool = InferUITool<typeof getWeather>;
 type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type requestSuggestionsTool = InferUITool<
-  ReturnType<typeof requestSuggestions>
+	ReturnType<typeof requestSuggestions>
 >;
 
 export type ChatTools = {
-  getWeather: weatherTool;
-  createDocument: createDocumentTool;
-  updateDocument: updateDocumentTool;
-  requestSuggestions: requestSuggestionsTool;
+	getWeather: weatherTool;
+	createDocument: createDocumentTool;
+	updateDocument: updateDocumentTool;
+	requestSuggestions: requestSuggestionsTool;
 };
 
 export type CustomUIDataTypes = {
-  textDelta: string;
-  imageDelta: string;
-  sheetDelta: string;
-  codeDelta: string;
-  suggestion: Suggestion;
-  appendMessage: string;
-  id: string;
-  title: string;
-  kind: ArtifactKind;
-  clear: null;
-  finish: null;
-  "chat-title": string;
+	textDelta: string;
+	imageDelta: string;
+	sheetDelta: string;
+	codeDelta: string;
+	suggestion: Suggestion;
+	appendMessage: string;
+	id: string;
+	title: string;
+	kind: ArtifactKind;
+	clear: null;
+	finish: null;
+	"chat-title": string;
 };
 
 export type ChatMessage = UIMessage<
-  MessageMetadata,
-  CustomUIDataTypes,
-  ChatTools
+	MessageMetadata,
+	CustomUIDataTypes,
+	ChatTools
 >;
 
 export type Attachment = {
-  name: string;
-  url: string;
-  contentType: string;
+	name: string;
+	url: string;
+	contentType: string;
 };
