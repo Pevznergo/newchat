@@ -1225,10 +1225,14 @@ async function showPremiumMenu(ctx: any) {
 
 // --- Profile Helpers ---
 
-function getProfileKeyboard() {
+function getProfileKeyboard(isPremium = false) {
+  const mainButton = isPremium
+    ? { text: "📦 Дополнительные запросы", callback_data: "open_packets" }
+    : { text: "🚀 Подключить Премиум", callback_data: "open_premium" };
+
   return {
     inline_keyboard: [
-      [{ text: "🚀 Подключить Премиум", callback_data: "open_premium" }],
+      [mainButton],
       [{ text: "🔙 Назад", callback_data: "menu_start" }],
     ],
   };
@@ -1257,8 +1261,22 @@ async function showAccountInfo(ctx: any, user: any) {
     clanInfoText = `\n🏰 Клан: ${clanData.name} (Ур. ${clanLevel})\nРоль: ${role}`;
   }
 
-  // Get clan benefits config
-  const config = getLevelConfig(clanLevel);
+  // Get clan benefits config from DB (use cached levels if available)
+  let clanTextLimit = 15; // defaults
+  let clanImageLimit = 0;
+
+  if (clanData && CACHED_CLAN_LEVELS) {
+    const levelData = CACHED_CLAN_LEVELS.find((l) => l.level === clanLevel);
+    if (levelData) {
+      clanTextLimit = levelData.weeklyTextCredits;
+      clanImageLimit = levelData.weeklyImageGenerations;
+    }
+  } else {
+    // Fallback to hardcoded config if DB not available
+    const config = getLevelConfig(clanLevel);
+    clanTextLimit = config.benefits.weeklyTextCredits;
+    clanImageLimit = config.benefits.weeklyImageGenerations;
+  }
 
   // Get Plan Name
   let planName = isPremium ? "Премиум 🚀" : "Стандартный";
@@ -1276,19 +1294,16 @@ async function showAccountInfo(ctx: any, user: any) {
 
     // ADD: Show clan free limits for premium users
     const clanTextUsed = user.weeklyTextUsage || 0;
-    const clanTextLimit = config.benefits.weeklyTextCredits;
     const clanImageUsed = user.weeklyImageUsage || 0;
-    const clanImageLimit = config.benefits.weeklyImageGenerations;
 
     usageText += `\n🎁 Клан (бесплатно): ${clanTextUsed}/${clanTextLimit} запросов/нед`;
     if (clanImageLimit > 0) {
-      usageText += `\n🎁 Клан (бесплатно): ${clanImageUsed}/${clanImageLimit} генераций/нед`;
+      usageText += `\n🎁 Клан (бесплатно): ${clanImageUsed}/${clanImageLimit} генераций изображений/нед`;
     }
   } else {
     // Free: Track weekly text usage vs Clan Level Limit
-    const textLimit = config.benefits.weeklyTextCredits;
     const used = user.weeklyTextUsage || 0;
-    usageText = `${used}/${textLimit} кредитов (нед.)`;
+    usageText = `${used}/${clanTextLimit} кредитов (нед.)`;
     planName = `Free (Клан Ур. ${clanLevel})`;
   }
 
@@ -1306,27 +1321,36 @@ async function showAccountInfo(ctx: any, user: any) {
   const currentModelKey = user.selectedModel || "model_gpt4omini";
   const currentModelName = MODEL_NAMES[currentModelKey] || currentModelKey;
 
-  const text = `👤 <b>Мой профиль</b>:
-ID: ${user.telegramId || "N/A"}
-Подписка: ${planName}
-Выбрана модель: ${currentModelName} /model${clanInfoText}
-
-📊 <b>Статистика использования</b>
-${usageText}
-
+  // Conditional promotion text based on subscription status
+  let promotionText = "";
+  if (isPremium) {
+    promotionText = `
+💎 Нужно еще больше? Купить дополнительные запросы!
+`;
+  } else {
+    promotionText = `
 Нужно больше? Подключите /premium или развивайте Клан!
 
 🚀 <b>Подписка Премиум</b>:
  └ 3000 кредитов
  └ Доступ ко всем моделям
  └ Приоритетная скорость
- 
+ `;
+  }
+
+  const text = `👤 <b>Мой профиль</b>:
+ID: ${user.telegramId || "N/A"}
+Подписка: ${planName}
+Выбрана модель: ${currentModelName} /model${clanInfoText}
+
+📊 <b>Статистика использования</b>
+${usageText}${promotionText}
 🏰 <b>Мой Клан</b>: /clan
 `;
 
   await ctx.reply(text, {
     parse_mode: "HTML",
-    reply_markup: getProfileKeyboard(),
+    reply_markup: getProfileKeyboard(isPremium),
   });
 }
 
