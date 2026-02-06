@@ -17,14 +17,22 @@ const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron authorization (bypass in development)
+    // Verify cron authorization (bypass in development or if no secret set)
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
+    console.log("[Cron] Starting message processing...", {
+      env: process.env.NODE_ENV,
+      hasSecret: !!cronSecret,
+      authHeader,
+    });
+
     if (
-      process.env.NODE_ENV !== "development" &&
-      (!cronSecret || authHeader !== `Bearer ${cronSecret}`)
+      process.env.NODE_ENV === "production" &&
+      cronSecret &&
+      authHeader !== `Bearer ${cronSecret}`
     ) {
+      console.warn("[Cron] Unauthorized attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -104,9 +112,12 @@ export async function GET(request: NextRequest) {
       failed: failedCount,
       total: pendingMessages.length,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Message sending error:", error);
-    return NextResponse.json({ error: "Sending failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Sending failed" },
+      { status: 500 }
+    );
   }
 }
 

@@ -10,7 +10,13 @@ export default function ProcessQueueButton() {
     try {
       const res = await fetch("/api/cron/send-messages");
       const data = await res.json();
-      alert(`Processed: ${data.sent} sent, ${data.failed} failed`);
+
+      if (data.error) {
+        alert(`Error: ${data.error}`);
+        return;
+      }
+
+      alert(`Processed: ${data.sent ?? 0} sent, ${data.failed ?? 0} failed`);
       window.location.reload();
     } catch (e) {
       alert("Failed to run cron");
