@@ -107,14 +107,31 @@ export default async function BroadcastsPage() {
 
                   <div className="flex flex-col gap-2 ml-4">
                     {campaign.status === "draft" && (
+                      <>
+                        <Link
+                          className="px-4 py-2 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-lg text-sm hover:bg-zinc-700 hover:text-zinc-200 transition-colors text-center"
+                          href={`/admin/messages/broadcasts/${campaign.id}/edit`}
+                        >
+                          Edit
+                        </Link>
+                        <Link
+                          className="px-4 py-2 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm hover:bg-emerald-600/20 transition-colors text-center"
+                          href={`/admin/messages/broadcasts/${campaign.id}`}
+                        >
+                          Manage
+                        </Link>
+                      </>
+                    )}
+                    {campaign.status === "scheduled" && (
                       <Link
-                        className="px-4 py-2 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm hover:bg-emerald-600/20 transition-colors text-center"
+                        className="px-4 py-2 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-lg text-sm hover:bg-zinc-700 hover:text-zinc-200 transition-colors text-center"
                         href={`/admin/messages/broadcasts/${campaign.id}`}
                       >
-                        Start Sending
+                        Details
                       </Link>
                     )}
-                    {campaign.status === "sending" && (
+                    {(campaign.status === "sending" ||
+                      campaign.status === "pending") && (
                       <Link
                         className="px-4 py-2 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-lg text-sm hover:bg-blue-600/20 transition-colors text-center"
                         href={`/admin/messages/broadcasts/${campaign.id}`}
@@ -128,6 +145,14 @@ export default async function BroadcastsPage() {
                         href={`/admin/messages/broadcasts/${campaign.id}`}
                       >
                         View Report
+                      </Link>
+                    )}
+                    {campaign.status === "failed" && (
+                      <Link
+                        className="px-4 py-2 bg-red-800/10 text-red-400 border border-red-700/20 rounded-lg text-sm hover:bg-red-800/20 transition-colors text-center"
+                        href={`/admin/messages/broadcasts/${campaign.id}`}
+                      >
+                        View Errors
                       </Link>
                     )}
                   </div>
@@ -161,6 +186,8 @@ function StatusBadge({ status }: { status: string }) {
     sending: "bg-blue-500/10 text-blue-400 border-blue-500/20",
     completed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
     cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
+    pending: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    failed: "bg-red-500/10 text-red-400 border-red-500/20",
   };
 
   return (

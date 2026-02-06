@@ -372,6 +372,8 @@ export async function startBroadcastCampaign(campaignId: string) {
   }
 }
 
+// ... (existing content)
+
 export async function getBroadcastStats(campaignId: string) {
   try {
     if (!campaignId || campaignId === "undefined") {
@@ -391,5 +393,65 @@ export async function getBroadcastStats(campaignId: string) {
   } catch (error) {
     console.error("Failed to get broadcast stats", error);
     return { total: 0, sent: 0, failed: 0, pending: 0 };
+  }
+}
+
+export async function getBroadcastCampaign(id: string) {
+  try {
+    const [campaign] = await db
+      .select()
+      .from(broadcastCampaign)
+      .where(eq(broadcastCampaign.id, id));
+    return campaign || null;
+  } catch (error) {
+    console.error("Failed to get broadcast campaign", error);
+    return null;
+  }
+}
+
+export async function updateBroadcastCampaign(
+  id: string,
+  data: Partial<typeof broadcastCampaign.$inferInsert>
+) {
+  try {
+    const [campaign] = await db
+      .update(broadcastCampaign)
+      .set(data)
+      .where(eq(broadcastCampaign.id, id))
+      .returning();
+    return campaign || null;
+  } catch (error) {
+    console.error("Failed to update broadcast campaign", error);
+    return null;
+  }
+}
+
+export async function getFollowUpRule(id: string) {
+  try {
+    const [rule] = await db
+      .select()
+      .from(followUpRule)
+      .where(eq(followUpRule.id, id));
+    return rule || null;
+  } catch (error) {
+    console.error("Failed to get follow-up rule", error);
+    return null;
+  }
+}
+
+export async function updateFollowUpRule(
+  id: string,
+  data: Partial<typeof followUpRule.$inferInsert>
+) {
+  try {
+    const [rule] = await db
+      .update(followUpRule)
+      .set(data)
+      .where(eq(followUpRule.id, id))
+      .returning();
+    return rule || null;
+  } catch (error) {
+    console.error("Failed to update follow-up rule", error);
+    return null;
   }
 }
