@@ -94,12 +94,7 @@ export default async function FollowUpRulesPage() {
                           {rule.targetAudience || template.targetAudience}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm text-zinc-500">Sent Count</p>
-                        <p className="font-medium text-zinc-300">
-                          {rule.sentCount}
-                        </p>
-                      </div>
+
                       <div>
                         <p className="text-sm text-zinc-500">Priority</p>
                         <p className="font-medium text-zinc-300">
@@ -114,7 +109,7 @@ export default async function FollowUpRulesPage() {
                       </div>
                     </div>
 
-                    {rule.conditions &&
+                    {!!rule.conditions &&
                       Object.keys(rule.conditions as object).length > 0 && (
                         <div className="mt-4 pt-4 border-t border-zinc-800/50">
                           <p className="text-xs text-zinc-500 mb-1">
