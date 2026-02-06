@@ -410,24 +410,26 @@ function getVideoModelKeyboard(
   _isPremium: boolean,
   _clanLevel = 1
 ) {
-  // Logic remains same for top-level menu
-  // ... (Lines 294-309 omitted for brevity, will replace with full block if needed or just function sig)
-  // Actually, getVideoModelKeyboard calls sub-menus? No, it returns menu to SELECT Veo or Sora.
-  // Then "menu_video_veo" callback calls getVeoVariantKeyboard.
-  // So we need to update getVeoVariantKeyboard signature and logic.
-  // Let's replace the whole block of video keyboard functions.
-
   const isVeoSelected = selectedModel?.startsWith("model_video_veo");
   const isSoraSelected = selectedModel?.startsWith("model_video_sora");
+  const isKlingSelected = selectedModel === "model_video_kling";
 
   const veoLabel = isVeoSelected ? "✅ Veo" : "Veo";
   const soraLabel = isSoraSelected ? "✅ Sora" : "Sora";
+  const klingLabel = isKlingSelected ? "✅ 🎬 Kling Motion" : "🎬 Kling Motion";
+  const pikaLabel = "Pika (Soon)";
+  const hailuoLabel = "Hailuo (Soon)";
 
   return {
     inline_keyboard: [
       [
         { text: veoLabel, callback_data: "menu_video_veo" },
         { text: soraLabel, callback_data: "menu_video_sora" },
+      ],
+      [{ text: klingLabel, callback_data: "menu_video_kling_motion" }],
+      [
+        { text: pikaLabel, callback_data: "menu_video_pika" },
+        { text: hailuoLabel, callback_data: "menu_video_hailuo" },
       ],
       [{ text: "🔙 Назад", callback_data: "menu_start" }],
     ],
@@ -1279,7 +1281,8 @@ async function showVideoMenu(ctx: any, user: any) {
 
   const videoMenuText = `Выберите сервис для создания ролика:
 
-🎬 Veo 3.1, Sora 2 создают видео по описанию или изображению`;
+🎬 Veo 3.1, Sora 2 — видео по описанию или фото
+🌟 Kling Motion — оживление фото пресетами`;
 
   // Calculate Clan Level for Visual Locks
   const clanData = await getUserClan(user.id);
@@ -2412,6 +2415,11 @@ bot.on("callback_query:data", async (ctx) => {
       return;
     }
 
+    if (data === "menu_video_pika" || data === "menu_video_hailuo") {
+      await safeAnswerCallbackQuery(ctx, "Этот сервис скоро появится! ⏳");
+      return;
+    }
+
     if (data.startsWith("set_kling_motion_")) {
       const motionId = data.replace("set_kling_motion_", "");
       const motion = KLING_MOTIONS.find((m) => m.id === motionId);
@@ -2465,13 +2473,16 @@ bot.on("callback_query:data", async (ctx) => {
     }
 
     if (data === "menu_video") {
-      await ctx.editMessageText("Выберите сервис для создания ролика:", {
-        reply_markup: getVideoModelKeyboard(
-          currentModelId,
-          !!user.hasPaid,
-          clanLevel
-        ),
-      });
+      await ctx.editMessageText(
+        "Выберите сервис для создания ролика:\n\n🎬 Veo 3.1, Sora 2 — видео по описанию или фото\n🌟 Kling Motion — оживление фото пресетами",
+        {
+          reply_markup: getVideoModelKeyboard(
+            currentModelId,
+            !!user.hasPaid,
+            clanLevel
+          ),
+        }
+      );
       await safeAnswerCallbackQuery(ctx);
       return;
     }
