@@ -376,7 +376,14 @@ export async function startBroadcastCampaign(campaignId: string) {
 
 export async function getBroadcastStats(campaignId: string) {
   try {
-    if (!campaignId || campaignId === "undefined") {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (
+      !campaignId ||
+      campaignId === "undefined" ||
+      !uuidRegex.test(campaignId)
+    ) {
+      console.warn(`Invalid campaign ID for stats: ${campaignId}`);
       return { total: 0, sent: 0, failed: 0, pending: 0 };
     }
     const [stats] = await db
