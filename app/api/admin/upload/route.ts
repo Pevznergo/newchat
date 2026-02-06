@@ -1,78 +1,83 @@
-import { put } from "@vercel/blob";
+import { Bot, InputFile } from "grammy";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 
+const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
+const STORAGE_CHANNEL_ID = process.env.TELEGRAM_STORAGE_CHANNEL_ID;
+
 // Schema for admin uploads (allows video, larger size)
 const AdminFileSchema = z.object({
-	file: z
-		.instanceof(Blob)
-		.refine((file) => file.size <= 50 * 1024 * 1024, {
-			// 50MB limit
-			message: "File size should be less than 50MB",
-		})
-		.refine(
-			(file) =>
-				[
-					"image/jpeg",
-					"image/png",
-					"image/webp",
-					"image/gif",
-					"video/mp4",
-					"video/quicktime",
-					"video/webm",
-				].includes(file.type),
-			{
-				message:
-					"File type must be an image (JPEG, PNG, WEBP, GIF) or video (MP4, MOV, WEBM)",
-			},
-		),
+  file: z.instanceof(Blob).refine((file) => file.size <= 50 * 1024 * 1024, {
+    // 50MB limit
+    message: "File size should be less than 50MB",
+  }),
 });
 
 export async function POST(request: Request) {
-	const session = await auth();
+  const session = await auth();
 
-	// Basic auth check - arguably should accept admin only
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-	// TODO: Add admin role check if available on session
-	// if (!session.user.isAdmin) ...
+  if (!STORAGE_CHANNEL_ID) {
+    return NextResponse.json(
+      { error: "TELEGRAM_STORAGE_CHANNEL_ID not configured" },
+      { status: 500 }
+    );
+  }
 
-	try {
-		const formData = await request.formData();
-		const file = formData.get("file") as Blob;
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as Blob;
 
-		if (!file) {
-			return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-		}
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
 
-		const validatedFile = AdminFileSchema.safeParse({ file });
+    const validatedFile = AdminFileSchema.safeParse({ file });
 
-		if (!validatedFile.success) {
-			const errorMessage = validatedFile.error.errors
-				.map((error) => error.message)
-				.join(", ");
+    if (!validatedFile.success) {
+      const errorMessage = validatedFile.error.errors
+        .map((error) => error.message)
+        .join(", ");
 
-			return NextResponse.json({ error: errorMessage }, { status: 400 });
-		}
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
 
-		const filename = (formData.get("file") as File).name;
-		// Add timestamp/random to filename to avoid collisions
-		const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(7)}-${filename}`;
+    const filename = (formData.get("file") as File).name;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const inputFile = new InputFile(buffer, filename);
 
-		// Note: This requires BLOB_READ_WRITE_TOKEN env var
-		const blob = await put(uniqueFilename, file, {
-			access: "public",
-		});
+    let result: any;
+    const mimeType = file.type;
 
-		return NextResponse.json(blob);
-	} catch (error) {
-		console.error("Upload failed details:", error);
-		return NextResponse.json(
-			{ error: `Upload failed: ${(error as Error).message}` },
-			{ status: 500 },
-		);
-	}
+    if (mimeType.startsWith("image/")) {
+      result = await bot.api.sendPhoto(STORAGE_CHANNEL_ID, inputFile);
+    } else if (mimeType.startsWith("video/")) {
+      result = await bot.api.sendVideo(STORAGE_CHANNEL_ID, inputFile);
+    } else {
+      result = await bot.api.sendDocument(STORAGE_CHANNEL_ID, inputFile);
+    }
+
+    // Extract file_id from search for 'file_id' in result object
+    let fileId = "";
+    if (result.photo) {
+      fileId = result.photo.at(-1).file_id;
+    } else if (result.video) {
+      fileId = result.video.file_id;
+    } else if (result.document) {
+      fileId = result.document.file_id;
+    }
+
+    return NextResponse.json({ url: fileId, file_id: fileId });
+  } catch (error) {
+    console.error("Telegram upload failed:", error);
+    return NextResponse.json(
+      { error: `Telegram upload failed: ${(error as Error).message}` },
+      { status: 500 }
+    );
+  }
 }
