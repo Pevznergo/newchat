@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TemplateActions from "@/components/admin/messages/TemplateActions";
 import { getMessageTemplates } from "@/lib/db/queries";
 
 export default async function TemplatesListPage() {
@@ -116,18 +117,7 @@ export default async function TemplatesListPage() {
                       {new Date(template.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        className="text-blue-400 hover:text-blue-300 mr-4 transition-colors"
-                        href={`/admin/messages/templates/${template.id}`}
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        type="button"
-                      >
-                        Delete
-                      </button>
+                      <TemplateActions id={template.id} />
                     </td>
                   </tr>
                 ))}

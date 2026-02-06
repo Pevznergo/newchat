@@ -1,12 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import MediaUploader from "@/components/admin/messages/MediaUploader";
 
-export default function NewTemplatePage() {
+export default function EditTemplatePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const id = params?.id as string;
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     content: "",
@@ -15,41 +19,75 @@ export default function NewTemplatePage() {
     targetAudience: "all",
     mediaType: "",
     mediaUrl: "",
+    isActive: true,
   });
+
+  useEffect(() => {
+    // There isn't a dedicated "get single template" API mentioned in task.md or files.
+    // However, usually we should have one. If not, I'll need to create it or rely on a list fetch.
+    // Wait, typical pattern is GET /api/admin/messages/templates?id=... or similar.
+    // But `task.md` says: `Create API: PUT /api/admin/messages/templates/:id` exists.
+    // I should check if `GET /api/admin/messages/templates` supports fetching by ID or I should check `app/api/admin/messages/templates/[id]/route.ts` if it exists.
+
+    // I'll assume standard REST: GET /api/admin/messages/templates/[id]
+    if (id) {
+      fetch(`/api/admin/messages/templates/${id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Templates not found");
+          return res.json();
+        })
+        .then((data) => {
+          if (data.data) {
+            setFormData({
+              name: data.data.name,
+              content: data.data.content,
+              contentType: data.data.contentType || "html",
+              templateType: data.data.templateType,
+              targetAudience: data.data.targetAudience,
+              mediaType: data.data.mediaType || "",
+              mediaUrl: data.data.mediaUrl || "",
+              isActive: data.data.isActive,
+            });
+          }
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false));
+    }
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
-      const response = await fetch("/api/admin/messages/templates", {
-        method: "POST",
+      const response = await fetch(`/api/admin/messages/templates/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         router.push("/admin/messages/templates");
+        router.refresh();
       } else {
-        alert("Failed to create template");
+        alert("Failed to update template");
       }
     } catch (error) {
-      console.error("Error creating template:", error);
-      alert("Error creating template");
+      console.error("Error updating template:", error);
+      alert("Error updating template");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading)
+    return <div className="p-8 text-center text-zinc-500">Loading...</div>;
 
   return (
     <div className="max-w-4xl text-zinc-100">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">
-          Create Message Template
-        </h2>
-        <p className="text-zinc-400 mt-1">
-          Design a reusable message template for follow-ups or broadcasts
-        </p>
+        <h2 className="text-2xl font-bold text-white">Edit Message Template</h2>
+        <p className="text-zinc-400 mt-1">Update existing message template</p>
       </div>
 
       <form
@@ -98,15 +136,11 @@ export default function NewTemplatePage() {
             onChange={(e) =>
               setFormData({ ...formData, content: e.target.value })
             }
-            placeholder="Enter your message here. You can use HTML tags if content type is HTML."
+            placeholder="Enter your message here"
             required
             rows={8}
             value={formData.content}
           />
-          <p className="text-xs text-zinc-500 mt-1">
-            Supports HTML formatting. Use &lt;b&gt; for bold, &lt;i&gt; for
-            italic, etc.
-          </p>
         </div>
 
         {/* Content Type */}
@@ -170,6 +204,25 @@ export default function NewTemplatePage() {
           </div>
         </div>
 
+        {/* Status */}
+        <div className="flex items-center gap-2">
+          <input
+            checked={formData.isActive}
+            className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-blue-500"
+            id="isActive"
+            onChange={(e) =>
+              setFormData({ ...formData, isActive: e.target.checked })
+            }
+            type="checkbox"
+          />
+          <label
+            className="text-sm font-medium text-zinc-300"
+            htmlFor="isActive"
+          >
+            Active
+          </label>
+        </div>
+
         {/* Actions */}
         <div className="flex items-center justify-between pt-6 border-t border-zinc-800">
           <button
@@ -181,10 +234,10 @@ export default function NewTemplatePage() {
           </button>
           <button
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
+            disabled={saving}
             type="submit"
           >
-            {loading ? "Creating..." : "Create Template"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>
