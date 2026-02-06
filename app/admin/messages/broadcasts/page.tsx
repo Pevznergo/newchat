@@ -1,10 +1,16 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import BroadcastStatusFilter from "@/components/admin/messages/BroadcastStatusFilter";
 import ProcessQueueButton from "@/components/admin/messages/ProcessQueueButton";
 import { getBroadcastCampaigns } from "@/lib/db/messaging-queries";
 
-export default async function BroadcastsPage() {
-  const campaignsData = await getBroadcastCampaigns();
+export default async function BroadcastsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status } = await searchParams;
+  const campaignsData = await getBroadcastCampaigns(status);
 
   return (
     <div className="space-y-6 text-zinc-100">
@@ -17,6 +23,7 @@ export default async function BroadcastsPage() {
           </p>
         </div>
         <div className="flex gap-3">
+          <BroadcastStatusFilter />
           <ProcessQueueButton />
           <Link
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"

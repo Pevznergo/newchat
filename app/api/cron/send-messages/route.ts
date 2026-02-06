@@ -3,6 +3,7 @@ import { Bot } from "grammy";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
+  checkAndUpdateCampaignStatus,
   getPendingMessages,
   markMessageAsFailed,
   markMessageAsSent,
@@ -90,6 +91,11 @@ export async function GET(request: NextRequest) {
 
         // Track in Mixpanel
         await trackMessageInMixpanel(send, template, user);
+
+        // Check if campaign is completed (if broadcast)
+        if (send.broadcastId) {
+          await checkAndUpdateCampaignStatus(send.broadcastId);
+        }
 
         sentCount++;
       } catch (error) {

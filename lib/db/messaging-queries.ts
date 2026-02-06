@@ -248,8 +248,14 @@ export async function getUsersForFollowUp(rule: {
 // BROADCAST CAMPAIGNS QUERIES
 // =========================================================================
 
-export async function getBroadcastCampaigns() {
+export async function getBroadcastCampaigns(status?: string) {
   try {
+    const conditions = [];
+
+    if (status && status !== "all") {
+      conditions.push(eq(broadcastCampaign.status, status));
+    }
+
     return await db
       .select()
       .from(broadcastCampaign)
@@ -257,6 +263,7 @@ export async function getBroadcastCampaigns() {
         messageTemplate,
         eq(broadcastCampaign.templateId, messageTemplate.id)
       )
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(broadcastCampaign.createdAt));
   } catch (error) {
     console.error("Failed to get broadcast campaigns", error);
@@ -369,6 +376,40 @@ export async function startBroadcastCampaign(campaignId: string) {
   } catch (error) {
     console.error("Failed to start broadcast campaign", error);
     return null;
+  }
+}
+
+export async function checkAndUpdateCampaignStatus(campaignId: string) {
+  try {
+    // Check if there are any pending messages
+    const [pending] = await db
+      .select({ count: count() })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.broadcastId, campaignId),
+          eq(messageSend.status, "pending")
+        )
+      );
+
+    if (pending.count === 0) {
+      // Mark campaign as completed
+      await db
+        .update(broadcastCampaign)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(broadcastCampaign.id, campaignId),
+            eq(broadcastCampaign.status, "sending")
+          )
+        );
+      console.log(`Campaign ${campaignId} marked as completed`);
+    }
+  } catch (error) {
+    console.error("Failed to update campaign status", error);
   }
 }
 
