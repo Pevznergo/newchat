@@ -18,7 +18,7 @@ export default function ProcessQueueButton() {
 
 			alert(`Processed: ${data.sent ?? 0} sent, ${data.failed ?? 0} failed`);
 			window.location.reload();
-		} catch (e) {
+		} catch (_e) {
 			alert("Failed to run cron");
 		} finally {
 			setLoading(false);
