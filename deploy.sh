@@ -75,17 +75,23 @@ fi
 echo "⏰ Setting up cron job..."
 # Use cookie jar to handle redirects (e.g. to /api/auth/guest and back)
 # And add Authorization header for security/bypass if applicable
-CRON_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer a7ab21860984bcb13fbe46841168132b' -s http://localhost:3000/api/cron/stats >> /dev/null 2>&1"
-RENEWAL_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer a7ab21860984bcb13fbe46841168132b' -s http://localhost:3000/api/cron/subscription-renewal >> /dev/null 2>&1"
+SECRET="a7ab21860984bcb13fbe46841168132b"
+STATS_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer $SECRET' -s http://localhost:3000/api/cron/stats >> /dev/null 2>&1"
+RENEWAL_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer $SECRET' -s http://localhost:3000/api/cron/subscription-renewal >> /dev/null 2>&1"
+SEND_MESSAGES_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer $SECRET' -s http://localhost:3000/api/cron/send-messages >> /dev/null 2>&1"
+PROCESS_FOLLOW_UPS_CMD="curl -L -c /tmp/cron_cookies.txt -b /tmp/cron_cookies.txt -H 'Authorization: Bearer $SECRET' -s http://localhost:3000/api/cron/process-follow-ups >> /dev/null 2>&1"
 
-CRON_JOB="0 7,19 * * * $CRON_CMD"
+STATS_JOB="0 7,19 * * * $STATS_CMD"
 RENEWAL_JOB="0 9 * * * $RENEWAL_CMD"
+SEND_MESSAGES_JOB="* * * * * $SEND_MESSAGES_CMD"
+FOLLOW_UP_JOB="*/10 * * * * $PROCESS_FOLLOW_UPS_CMD"
 
 # Combine jobs (newline separated)
-ALL_JOBS="$CRON_JOB
-$RENEWAL_JOB"
+ALL_JOBS="$STATS_JOB
+$RENEWAL_JOB
+$SEND_MESSAGES_JOB
+$FOLLOW_UP_JOB"
 
-# Check if cron job already exists (checking the command part only)
 # Check if cron job already exists (checking the command part only)
 # We wipe our specific jobs and re-add them to ensure they are up to date
 echo "🔄 Updating crontab..."
