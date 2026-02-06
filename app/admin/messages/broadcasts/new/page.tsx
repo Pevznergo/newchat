@@ -27,8 +27,7 @@ export default function NewBroadcastPage() {
       .then((data) => setTemplates(data.data || []));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async (type: "draft" | "start") => {
     setLoading(true);
 
     try {
@@ -40,6 +39,7 @@ export default function NewBroadcastPage() {
         );
       }
 
+      // Create Campaign
       const response = await fetch("/api/admin/messages/broadcasts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,7 +51,27 @@ export default function NewBroadcastPage() {
       });
 
       if (response.ok) {
-        router.push("/admin/messages/broadcasts");
+        const data = await response.json();
+        const campaignId = data.data.id;
+
+        if (type === "start") {
+          // Start sending immediately
+          const startResponse = await fetch(
+            `/api/admin/messages/broadcasts/${campaignId}/send`,
+            {
+              method: "POST",
+            }
+          );
+
+          if (startResponse.ok) {
+            router.push(`/admin/messages/broadcasts/${campaignId}`);
+          } else {
+            alert("Campaign created but failed to start sending");
+            router.push("/admin/messages/broadcasts");
+          }
+        } else {
+          router.push("/admin/messages/broadcasts");
+        }
       } else {
         alert("Failed to create campaign");
       }
@@ -76,7 +96,10 @@ export default function NewBroadcastPage() {
 
       <form
         className="space-y-6 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 shadow-2xl backdrop-blur-sm"
-        onSubmit={handleSubmit}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleCreate("draft");
+        }}
       >
         {/* Campaign Name */}
         <div>
@@ -213,13 +236,30 @@ export default function NewBroadcastPage() {
           >
             Cancel
           </button>
-          <button
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading || !formData.templateId}
-            type="submit"
-          >
-            {loading ? "Creating..." : "Create Campaign"}
-          </button>
+          <div className="flex gap-4">
+            <button
+              className="px-6 py-2 bg-zinc-800 text-zinc-400 rounded-lg hover:bg-zinc-700 hover:text-zinc-200 transition-colors"
+              disabled={loading}
+              onClick={(e) => {
+                e.preventDefault();
+                handleCreate("draft");
+              }}
+              type="button"
+            >
+              {loading ? "Saving..." : "Create Draft"}
+            </button>
+            <button
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || !formData.templateId}
+              onClick={(e) => {
+                e.preventDefault();
+                handleCreate("start");
+              }}
+              type="button"
+            >
+              {loading ? "Starting..." : "Create & Start Now"}
+            </button>
+          </div>
         </div>
       </form>
     </div>
