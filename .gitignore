@@ -61,3 +61,6 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+
+# Static assets
+/public/
