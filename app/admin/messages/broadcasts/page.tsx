@@ -1,4 +1,6 @@
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import ProcessQueueButton from "@/components/admin/messages/ProcessQueueButton";
 import { getBroadcastCampaigns } from "@/lib/db/messaging-queries";
 
 export default async function BroadcastsPage() {
@@ -14,15 +16,17 @@ export default async function BroadcastsPage() {
             Create and manage manual mass messaging campaigns
           </p>
         </div>
-        <Link
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all font-medium"
-          href="/admin/messages/broadcasts/new"
-        >
-          + New Campaign
-        </Link>
+        <div className="flex gap-3">
+          <ProcessQueueButton />
+          <Link
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
+            href="/admin/messages/broadcasts/new"
+          >
+            <Plus className="w-4 h-4" />
+            New Campaign
+          </Link>
+        </div>
       </div>
-
-      {/* Campaigns List */}
       <div className="space-y-4">
         {campaignsData.length === 0 ? (
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-12 text-center backdrop-blur-sm">
@@ -162,8 +166,6 @@ export default async function BroadcastsPage() {
           })
         )}
       </div>
-
-      {/* Info Box */}
       <div className="bg-blue-900/10 border border-blue-800/30 rounded-xl p-4">
         <h4 className="font-semibold text-blue-400 mb-2">
           💡 Broadcast Campaigns
@@ -175,6 +177,7 @@ export default async function BroadcastsPage() {
           <li>• Messages are sent by the cron job every minute</li>
         </ul>
       </div>
+      ;
     </div>
   );
 }

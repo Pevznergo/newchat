@@ -139,7 +139,7 @@ export default function BroadcastForm({
           <option value="">Select a template...</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name} ({t.targetAudience})
+              {t.name}
             </option>
           ))}
         </select>

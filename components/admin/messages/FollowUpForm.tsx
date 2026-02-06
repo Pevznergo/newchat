@@ -15,7 +15,7 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
     templateId: initialData?.templateId || "",
     triggerType: initialData?.triggerType || "after_registration",
     triggerDelayHours: initialData?.triggerDelayHours || 24,
-    targetAudience: initialData?.targetAudience || "",
+    targetAudience: initialData?.targetAudience || "all",
     maxSendsPerUser: initialData?.maxSendsPerUser || 1,
     priority: initialData?.priority || 0,
     conditions: initialData?.conditions
@@ -99,7 +99,7 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
           <option value="">Select a template...</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name} ({t.targetAudience})
+              {t.name}
             </option>
           ))}
         </select>
@@ -160,10 +160,10 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
         </div>
       </div>
 
-      {/* Audience Override */}
+      {/* Audience */}
       <div>
         <label className="block text-sm font-medium text-zinc-400 mb-2">
-          Target Audience (Override)
+          Target Audience
         </label>
         <select
           className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 focus:border-blue-500 outline-none"
@@ -172,7 +172,6 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
           }
           value={formData.targetAudience}
         >
-          <option value="">Use template's audience</option>
           <option value="all">All Users</option>
           <option value="free">Free Users Only</option>
           <option value="premium">Premium Users Only</option>

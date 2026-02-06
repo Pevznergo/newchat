@@ -71,39 +71,20 @@ export default function NewTemplatePage() {
         </div>
 
         {/* Template Type */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Template Type *
-            </label>
-            <select
-              className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 focus:border-blue-500 outline-none"
-              onChange={(e) =>
-                setFormData({ ...formData, templateType: e.target.value })
-              }
-              value={formData.templateType}
-            >
-              <option value="follow_up">Follow-up</option>
-              <option value="broadcast">Broadcast</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Target Audience *
-            </label>
-            <select
-              className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 focus:border-blue-500 outline-none"
-              onChange={(e) =>
-                setFormData({ ...formData, targetAudience: e.target.value })
-              }
-              value={formData.targetAudience}
-            >
-              <option value="all">All Users</option>
-              <option value="free">Free Users Only</option>
-              <option value="premium">Premium Users Only</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-400 mb-2">
+            Template Type *
+          </label>
+          <select
+            className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 focus:border-blue-500 outline-none"
+            onChange={(e) =>
+              setFormData({ ...formData, templateType: e.target.value })
+            }
+            value={formData.templateType}
+          >
+            <option value="follow_up">Follow-up</option>
+            <option value="broadcast">Broadcast</option>
+          </select>
         </div>
 
         {/* Message Content */}
