@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 
-const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
-const STORAGE_CHANNEL_ID = process.env.TELEGRAM_STORAGE_CHANNEL_ID;
+const bot = new Bot((process.env.TELEGRAM_BOT_TOKEN || "").trim());
+const STORAGE_CHANNEL_ID = process.env.TELEGRAM_STORAGE_CHANNEL_ID?.trim();
 
 // Schema for admin uploads (allows video, larger size)
 const AdminFileSchema = z.object({

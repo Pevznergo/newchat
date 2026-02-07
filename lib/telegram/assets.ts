@@ -1,13 +1,14 @@
+import fs from "node:fs";
+import path from "node:path";
 import { eq } from "drizzle-orm";
-import fs from "fs";
 import { type Context, InputFile } from "grammy";
-import path from "path";
 import { db } from "@/lib/db";
 import { cachedAssets } from "@/lib/db/schema";
 
 // Channel ID to upload caching files to (User must provide this via env or hardcode)
-const FILES_CHANNEL_ID =
-  process.env.TELEGRAM_STORAGE_CHANNEL_ID || "-100YOURCHANNELID";
+const FILES_CHANNEL_ID = (
+  process.env.TELEGRAM_STORAGE_CHANNEL_ID || "-100YOURCHANNELID"
+).trim();
 
 /**
  * Smart caching for Telegram files.
