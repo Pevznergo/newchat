@@ -2449,7 +2449,6 @@ bot.on("callback_query:data", async (ctx) => {
         await ctx.replyWithVideo(fileSource, {
           caption: `Движение: <b>${motion.label}</b>\n\n${motion.description}`,
           parse_mode: "HTML",
-          supports_streaming: true,
         });
 
         // 3. Send instructions
