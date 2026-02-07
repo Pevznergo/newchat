@@ -423,11 +423,11 @@ function getVideoModelKeyboard(
 
   return {
     inline_keyboard: [
+      [{ text: klingLabel, callback_data: "menu_video_kling_motion" }],
       [
         { text: veoLabel, callback_data: "menu_video_veo" },
         { text: soraLabel, callback_data: "menu_video_sora" },
       ],
-      [{ text: klingLabel, callback_data: "menu_video_kling_motion" }],
       [
         { text: pikaLabel, callback_data: "menu_video_pika" },
         { text: hailuoLabel, callback_data: "menu_video_hailuo" },
