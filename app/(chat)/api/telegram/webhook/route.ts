@@ -61,7 +61,6 @@ import {
 } from "@/lib/db/queries";
 import { shortLinks } from "@/lib/db/schema";
 import { createYookassaPayment } from "@/lib/payment";
-import { getTelegramFileId } from "@/lib/telegram/assets";
 import { generateUUID } from "@/lib/utils";
 import {
   identifyBackendUser,
@@ -2439,14 +2438,7 @@ bot.on("callback_query:data", async (ctx) => {
       // 2. Send reference video from public folder
       const videoPath = path.join(process.cwd(), "public", motion.video);
       try {
-        const fileSource = await getTelegramFileId(
-          ctx,
-          `kling_motion_${motion.id}`,
-          videoPath,
-          "video"
-        );
-
-        await ctx.replyWithVideo(fileSource, {
+        await ctx.replyWithVideo(new InputFile(videoPath), {
           caption: `Движение: <b>${motion.label}</b>\n\n${motion.description}`,
           parse_mode: "HTML",
         });
