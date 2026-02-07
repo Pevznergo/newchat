@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
 import { eq } from "drizzle-orm";
+import fs from "fs";
 import { type Context, InputFile } from "grammy";
+import path from "path";
 import { db } from "@/lib/db";
 import { cachedAssets } from "@/lib/db/schema";
 
