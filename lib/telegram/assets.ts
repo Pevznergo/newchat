@@ -1,7 +1,5 @@
 import { eq } from "drizzle-orm";
-import fs from "fs";
 import { type Context, InputFile } from "grammy";
-import path from "path";
 import { db } from "@/lib/db";
 import { cachedAssets } from "@/lib/db/schema";
 
@@ -39,12 +37,9 @@ export async function getTelegramFileId(
 
     // Try uploading to dedicated channel if ID is set
     // Note: Bot must be admin in channel
-    // Note: Bot must be admin in channel
-
     if (FILES_CHANNEL_ID && FILES_CHANNEL_ID !== "-100YOURCHANNELID") {
       try {
-        const fileName = path.basename(filePath);
-        const file = new InputFile(fs.createReadStream(filePath), fileName);
+        const file = new InputFile(filePath);
         let sentMsg: any;
 
         if (type === "video") {
