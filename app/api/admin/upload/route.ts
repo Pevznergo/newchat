@@ -46,7 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    const filename = (formData.get("file") as File).name;
+    const originalFilename = (formData.get("file") as File).name;
+    // Sanitize filename to prevent "string pattern" errors in Content-Disposition or InputFile
+    // Replace non-alphanumeric chars (except dot and hyphen) with underscore
+    const filename = originalFilename.replace(/[^a-zA-Z0-9.-]/g, "_");
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const inputFile = new InputFile(buffer, filename);
