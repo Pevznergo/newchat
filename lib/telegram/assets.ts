@@ -44,15 +44,14 @@ export async function getTelegramFileId(
     if (FILES_CHANNEL_ID && FILES_CHANNEL_ID !== "-100YOURCHANNELID") {
       try {
         const fileName = path.basename(filePath);
-        const file = new InputFile(fs.createReadStream(filePath), fileName);
+        const fileBuffer = fs.readFileSync(filePath);
+        const file = new InputFile(fileBuffer, fileName);
         let sentMsg: any;
 
         if (type === "video") {
           sentMsg = await ctx.api.sendVideo(FILES_CHANNEL_ID, file, {
             caption: `Cache: ${key}`,
             supports_streaming: true,
-            width: 720,
-            height: 1280,
           });
           fileId = sentMsg.video?.file_id;
         } else if (type === "photo") {
