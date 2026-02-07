@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
 import { eq } from "drizzle-orm";
+import fs from "fs";
 import { type Context, InputFile } from "grammy";
+import path from "path";
 import { db } from "@/lib/db";
 import { cachedAssets } from "@/lib/db/schema";
 
@@ -39,15 +39,13 @@ export async function getTelegramFileId(
 
     // Try uploading to dedicated channel if ID is set
     // Note: Bot must be admin in channel
-    // Note: Bot must be admin in channel
 
     if (FILES_CHANNEL_ID && FILES_CHANNEL_ID !== "-100YOURCHANNELID") {
       console.log(`[Assets] Uploading to channel: ${FILES_CHANNEL_ID}`);
       try {
         const fileName = path.basename(filePath);
-        const fileBuffer = fs.readFileSync(filePath);
-        // Explicitly set filename to ensure mime type detection
-        const file = new InputFile(fileBuffer, fileName);
+        // Use stream instead of buffer for better memory usage and safety
+        const file = new InputFile(fs.createReadStream(filePath), fileName);
         let sentMsg: any;
 
         if (type === "video") {
@@ -83,7 +81,7 @@ export async function getTelegramFileId(
           console.log(`[Cache Saved] ${key} -> ${fileId}`);
           return fileId;
         }
-      } catch (uploadError) {
+      } catch (uploadError: any) {
         console.warn(
           `Failed to upload to cache channel ${FILES_CHANNEL_ID}:`,
           uploadError
@@ -94,12 +92,11 @@ export async function getTelegramFileId(
 
     // Fallback: If channel upload failed or not configured, return InputFile
     // Pass InputFile to caller, they will send it.
-    // OPTIONAL: We could capture the file_id AFTER sending to user, but that requires
-    // intercepting the SendMessage result in the route handler.
-    // For now, simpler implementation: Return InputFile.
-    return new InputFile(filePath);
+    console.log(`[Assets] Fallback to InputFile for ${filePath}`);
+    return new InputFile(fs.createReadStream(filePath));
   } catch (error) {
     console.error("Error in getTelegramFileId:", error);
-    return new InputFile(filePath);
+    // Absolute fallback
+    return new InputFile(fs.createReadStream(filePath));
   }
 }
