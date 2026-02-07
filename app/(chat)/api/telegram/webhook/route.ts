@@ -2450,8 +2450,6 @@ bot.on("callback_query:data", async (ctx) => {
           caption: `Движение: <b>${motion.label}</b>\n\n${motion.description}`,
           parse_mode: "HTML",
           supports_streaming: true,
-          width: 720,
-          height: 1280,
         });
 
         // 3. Send instructions

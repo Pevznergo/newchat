@@ -46,8 +46,6 @@ export async function getTelegramFileId(
           sentMsg = await ctx.api.sendVideo(FILES_CHANNEL_ID, file, {
             caption: `Cache: ${key}`,
             supports_streaming: true,
-            width: 720,
-            height: 1280,
           });
           fileId = sentMsg.video?.file_id;
         } else if (type === "photo") {
