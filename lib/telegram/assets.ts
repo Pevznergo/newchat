@@ -42,17 +42,25 @@ export async function getTelegramFileId(
     // Note: Bot must be admin in channel
 
     if (FILES_CHANNEL_ID && FILES_CHANNEL_ID !== "-100YOURCHANNELID") {
+      console.log(`[Assets] Uploading to channel: ${FILES_CHANNEL_ID}`);
       try {
         const fileName = path.basename(filePath);
         const fileBuffer = fs.readFileSync(filePath);
+        // Explicitly set filename to ensure mime type detection
         const file = new InputFile(fileBuffer, fileName);
         let sentMsg: any;
 
         if (type === "video") {
+          console.log(`[Assets] Sending video ${fileName} to channel...`);
           sentMsg = await ctx.api.sendVideo(FILES_CHANNEL_ID, file, {
             caption: `Cache: ${key}`,
             supports_streaming: true,
+            width: 720,
+            height: 1280,
           });
+          console.log(
+            `[Assets] Video sent. File ID: ${sentMsg.video?.file_id}`
+          );
           fileId = sentMsg.video?.file_id;
         } else if (type === "photo") {
           sentMsg = await ctx.api.sendPhoto(FILES_CHANNEL_ID, file, {
