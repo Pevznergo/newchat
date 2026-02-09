@@ -125,7 +125,7 @@
 		"@types/react": "^18",
 		"@types/react-dom": "^18",
 		"@types/react-syntax-highlighter": "^15.5.13",
-		"drizzle-kit": "^0.31.8",
+		"drizzle-kit": "^0.30.5",
 		"postcss": "^8",
 		"tailwindcss": "^4.1.13",
 		"tsx": "^4.19.1",
