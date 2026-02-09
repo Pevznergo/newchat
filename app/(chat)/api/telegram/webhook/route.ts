@@ -59,7 +59,7 @@ import {
 	updateUserTracking,
 	upsertAiModel,
 } from "@/lib/db/queries";
-import { shortLinks } from "@/lib/db/schema";
+import { cachedAssets, shortLinks } from "@/lib/db/schema";
 import { createYookassaPayment } from "@/lib/payment";
 import { generateUUID } from "@/lib/utils";
 import {
@@ -2441,13 +2441,56 @@ bot.on("callback_query:data", async (ctx) => {
 				// ignore
 			}
 
-			// 2. Send reference video from public folder
-			const videoPath = path.join(process.cwd(), "public", motion.video);
+			// 2. Check Cache for Video
+			const videoPathReference = `kling_motion_${motion.id}`; // Unique key for this local file asset
+			let videoToSend: string | InputFile = "";
+			let isCached = false;
+
 			try {
-				await ctx.replyWithVideo(new InputFile(videoPath), {
+				const [cached] = await db
+					.select()
+					.from(cachedAssets)
+					.where(eq(cachedAssets.url, videoPathReference))
+					.limit(1);
+
+				if (cached) {
+					console.log(`[Bot] Using cached asset for ${videoPathReference}`);
+					videoToSend = cached.fileId;
+					isCached = true;
+				}
+			} catch (e) {
+				console.error("Cache lookup failed:", e);
+			}
+
+			if (!isCached) {
+				const videoPath = path.join(process.cwd(), "public", motion.video);
+				videoToSend = new InputFile(videoPath);
+			}
+
+			try {
+				const sentMessage = await ctx.replyWithVideo(videoToSend, {
 					caption: `Движение: <b>${motion.label}</b>\n\n${motion.description}`,
 					parse_mode: "HTML",
 				});
+
+				// Save to Cache if not cached
+				if (!isCached && sentMessage.video) {
+					try {
+						await db
+							.insert(cachedAssets)
+							.values({
+								url: videoPathReference,
+								fileId: sentMessage.video.file_id,
+								fileType: "video",
+							})
+							.onConflictDoNothing();
+						console.log(
+							`[Bot] Cached asset ${videoPathReference} -> ${sentMessage.video.file_id}`,
+						);
+					} catch (saveError) {
+						console.error("[Bot] Failed to save asset to cache:", saveError);
+					}
+				}
 
 				// 3. Send instructions
 				await ctx.reply(
