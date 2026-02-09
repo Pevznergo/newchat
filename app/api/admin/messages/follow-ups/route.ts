@@ -39,6 +39,21 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		// Handle Retroactive Sending
+		if (body.sendToExisting) {
+			// Trigger async processing (fire and forget, or await if critical)
+			// Awaiting here to ensure we report errors if it fails immediately,
+			// though for large sets this might be slow.
+			// Given it's an admin action, waiting is acceptable for feedback.
+			const { processRetroactiveFollowUp } = await import(
+				"@/lib/db/messaging-queries"
+			);
+			// Run in background to avoid timeout
+			processRetroactiveFollowUp(rule.id).catch((err) =>
+				console.error("Background retroactive process failed", err),
+			);
+		}
+
 		return NextResponse.json({ data: rule }, { status: 201 });
 	} catch (error) {
 		console.error("POST /api/admin/messages/follow-ups error:", error);

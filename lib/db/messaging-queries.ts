@@ -244,6 +244,110 @@ export async function getUsersForFollowUp(rule: {
 	}
 }
 
+export async function processRetroactiveFollowUp(ruleId: string) {
+	try {
+		// 1. Get the rule
+		const rule = await getFollowUpRule(ruleId);
+		if (!rule) {
+			console.error(`Rule ${ruleId} not found for retroactive processing`);
+			return false;
+		}
+
+		console.log(`Starting retroactive processing for rule ${ruleId}`);
+
+		// 2. Define cutoff time (users must be older than this)
+		const cutoffDate = new Date();
+		cutoffDate.setHours(cutoffDate.getHours() - rule.triggerDelayHours);
+
+		// 3. Build conditions for eligible users
+		const conditions = [];
+
+		// Audience filter
+		if (rule.targetAudience === "premium") {
+			conditions.push(eq(user.hasPaid, true));
+		} else if (rule.targetAudience === "free") {
+			conditions.push(eq(user.hasPaid, false));
+		}
+
+		// Trigger-specific conditions
+		if (rule.triggerType === "after_registration") {
+			// User created BEFORE the delay passed (e.g. > 24 hours ago)
+			conditions.push(lte(user.createdAt, cutoffDate));
+		} else if (rule.triggerType === "after_last_message") {
+			// User visited BEFORE the delay passed
+			conditions.push(lte(user.lastVisit, cutoffDate));
+		} else if (rule.triggerType === "inactive_user") {
+			// Same as after_last_message for now
+			conditions.push(lte(user.lastVisit, cutoffDate));
+		} else {
+			console.warn(`Trigger type ${rule.triggerType} skipped for retroactive`);
+			return false;
+		}
+
+		// 4. Find users who match criteria AND HAVE NOT received this rule yet
+		// We fetch users and then filter or use a subquery if possible.
+		// Drizzle left join approach:
+		// Select user where... AND not exists (select 1 from messageSend where ...)
+
+		// Since "Not Exists" can be complex in Drizzle builders, let's fetch candidates
+		// and filter in memory if dataset isn't huge, or use raw SQL for performance.
+		// For safety and performance on larger sets, let's try a left join approach.
+
+		const candidates = await db
+			.select({
+				user: user,
+				sentId: messageSend.id,
+			})
+			.from(user)
+			.leftJoin(
+				messageSend,
+				and(
+					eq(messageSend.userId, user.id),
+					eq(messageSend.followUpRuleId, ruleId),
+				),
+			)
+			.where(and(...conditions))
+			.limit(5000); // Safety limit
+
+		// Filter out those who have a sentId (meaning they already got it)
+		const eligibleUsers = candidates
+			.filter((row) => !row.sentId)
+			.map((row) => row.user);
+
+		console.log(
+			`Found ${eligibleUsers.length} eligible users for retroactive send`,
+		);
+
+		if (eligibleUsers.length === 0) {
+			return true;
+		}
+
+		// 5. Batch insert pending messages
+		// Chunking to avoid parameter limits
+		const chunkSize = 100;
+		for (let i = 0; i < eligibleUsers.length; i += chunkSize) {
+			const chunk = eligibleUsers.slice(i, i + chunkSize);
+			const values = chunk.map((u) => ({
+				userId: u.id,
+				templateId: rule.templateId,
+				followUpRuleId: rule.id,
+				sendType: "follow_up" as const,
+				status: "pending" as const,
+				scheduledAt: new Date(), // Send immediately
+				retryCount: 0,
+			}));
+
+			await db.insert(messageSend).values(values);
+		}
+
+		console.log(`Successfully scheduled ${eligibleUsers.length} messages`);
+		return true;
+	} catch (error) {
+		console.error("Failed to process retroactive follow-up", error);
+		return false;
+	}
+}
+
 // =========================================================================
 // BROADCAST CAMPAIGNS QUERIES
 // =========================================================================

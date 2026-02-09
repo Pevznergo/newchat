@@ -21,6 +21,7 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
 		conditions: initialData?.conditions
 			? JSON.stringify(initialData.conditions, null, 2)
 			: "",
+		sendToExisting: false,
 	});
 
 	useEffect(() => {
@@ -62,6 +63,7 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
 					triggerDelayHours: Number(formData.triggerDelayHours),
 					maxSendsPerUser: Number(formData.maxSendsPerUser),
 					priority: Number(formData.priority),
+					sendToExisting: formData.sendToExisting,
 				}),
 			});
 
@@ -238,6 +240,34 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
 				<p className="text-xs text-zinc-500 mt-1">
 					Additional filtering conditions as JSON object
 				</p>
+			</div>
+
+			{/* Retroactive Send Option */}
+			<div className="border-t border-zinc-800 pt-6">
+				<div className="flex items-start gap-3">
+					<input
+						checked={formData.sendToExisting}
+						className="mt-1 w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 focus:ring-blue-500/50"
+						id="sendToExisting"
+						onChange={(e) =>
+							setFormData({ ...formData, sendToExisting: e.target.checked })
+						}
+						type="checkbox"
+					/>
+					<div>
+						<label
+							className="block text-sm font-medium text-zinc-200"
+							htmlFor="sendToExisting"
+						>
+							Send to eligible users now
+						</label>
+						<p className="text-xs text-zinc-500 mt-1">
+							If checked, this message will be sent immediately to all existing
+							users who already meet the time criteria (e.g. registered &gt; 24h
+							ago) and haven't received it yet.
+						</p>
+					</div>
+				</div>
 			</div>
 
 			{/* Actions */}
