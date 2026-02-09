@@ -46,18 +46,37 @@ export default function MediaUploader({
 					const video = document.createElement("video");
 					video.preload = "metadata";
 					video.src = URL.createObjectURL(file);
+					video.muted = true;
+					video.playsInline = true;
 
 					await new Promise<void>((resolve, reject) => {
 						video.onloadedmetadata = () => {
-							URL.revokeObjectURL(video.src);
-							resolve();
+							video.currentTime = 0.5; // Seek to 0.5s to get a frame (avoid black start)
 						};
+						video.onseeked = () => resolve();
 						video.onerror = () => reject(new Error("Invalid video file"));
 					});
 
 					formData.append("width", video.videoWidth.toString());
 					formData.append("height", video.videoHeight.toString());
 					formData.append("duration", Math.ceil(video.duration).toString());
+
+					// Generate thumbnail
+					const canvas = document.createElement("canvas");
+					canvas.width = video.videoWidth;
+					canvas.height = video.videoHeight;
+					const ctx = canvas.getContext("2d");
+					if (ctx) {
+						ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+						const blob = await new Promise<Blob | null>((resolve) =>
+							canvas.toBlob(resolve, "image/jpeg", 0.7),
+						);
+						if (blob) {
+							formData.append("thumb", blob, "thumbnail.jpg");
+						}
+					}
+
+					URL.revokeObjectURL(video.src);
 				} catch (e) {
 					console.warn("Could not extract video metadata:", e);
 				}

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
 			let videoWidth: number | undefined;
 			let videoHeight: number | undefined;
 			let videoDuration: number | undefined;
+			let thumbnailBuffer: Buffer | null = null;
 
 			bb.on("field", (name, val) => {
 				if (name === "width") videoWidth = parseInt(val);
@@ -57,6 +58,21 @@ export async function POST(request: Request) {
 
 			bb.on("file", async (name, fileStream, info) => {
 				const { filename, mimeType } = info;
+
+				// Handle thumbnail upload (must be before the main file in FormData)
+				if (name === "thumb") {
+					console.log("[Admin Upload] thumb received");
+					const chunks: Uint8Array[] = [];
+					fileStream.on("data", (chunk) => chunks.push(chunk));
+					fileStream.on("end", () => {
+						thumbnailBuffer = Buffer.concat(chunks);
+						console.log(
+							`[Admin Upload] Thumbnail buffered: ${thumbnailBuffer.length} bytes`,
+						);
+					});
+					return;
+				}
+
 				console.log(
 					`[Admin Upload] Stream received: ${filename}, Type: ${mimeType}`,
 				);
@@ -76,17 +92,22 @@ export async function POST(request: Request) {
 						console.log(
 							`[Admin Upload] Sending video with dimensions: ${videoWidth}x${videoHeight}, duration: ${videoDuration}`,
 						);
+
+						const videoOptions: any = { supports_streaming: true };
+						if (videoWidth) videoOptions.width = videoWidth;
+						if (videoHeight) videoOptions.height = videoHeight;
+						if (videoDuration) videoOptions.duration = videoDuration;
+						if (thumbnailBuffer) {
+							videoOptions.thumbnail = new InputFile(
+								thumbnailBuffer,
+								"thumb.jpg",
+							);
+						}
+
 						result = await bot.api.sendVideo(
 							STORAGE_CHANNEL_ID,
 							inputFile,
-							videoWidth && videoHeight
-								? {
-										width: videoWidth,
-										height: videoHeight,
-										duration: videoDuration,
-										supports_streaming: true,
-									}
-								: { supports_streaming: true },
+							videoOptions,
 						);
 					} else {
 						result = await bot.api.sendDocument(STORAGE_CHANNEL_ID, inputFile);
@@ -116,7 +137,9 @@ export async function POST(request: Request) {
 					reject(err);
 				} finally {
 					// Ensure stream is consumed if error occurred
-					fileStream.resume();
+					if (name !== "thumb") {
+						fileStream.resume();
+					}
 				}
 			});
 
