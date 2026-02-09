@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { Readable } from "stream";
 import { auth } from "@/app/(auth)/auth";
 
-const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
 const STORAGE_CHANNEL_ID = process.env.TELEGRAM_STORAGE_CHANNEL_ID;
 
 // Schema for admin uploads not used in streaming mode
@@ -18,6 +17,16 @@ export async function POST(request: Request) {
 		console.warn("[Admin Upload] Unauthorized access attempt");
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
+
+	if (!process.env.TELEGRAM_BOT_TOKEN) {
+		console.error("[Admin Upload] TELEGRAM_BOT_TOKEN missing");
+		return NextResponse.json(
+			{ error: "TELEGRAM_BOT_TOKEN not configured" },
+			{ status: 500 },
+		);
+	}
+
+	const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
 
 	if (!STORAGE_CHANNEL_ID) {
 		console.error("[Admin Upload] TELEGRAM_STORAGE_CHANNEL_ID missing");
