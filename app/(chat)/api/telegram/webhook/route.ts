@@ -2405,7 +2405,12 @@ bot.on("callback_query:data", async (ctx) => {
 		const currentModelId = user.selectedModel || "";
 
 		if (data === "menu_video_kling_motion") {
-			await ctx.editMessageText(
+			try {
+				await ctx.deleteMessage();
+			} catch {
+				// ignore
+			}
+			await ctx.reply(
 				"<b>🎬 Kling Motion</b>\n\nВыберите видео с нужным движением:",
 				{
 					parse_mode: "HTML",
