@@ -1,5 +1,6 @@
 import { Bot, InputFile } from "grammy";
 import { NextResponse } from "next/server";
+import { Readable } from "stream";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 
@@ -58,11 +59,12 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: errorMessage }, { status: 400 });
 		}
 
-		// Convert to Buffer for reliable handling with Grammy
-		console.log("[Admin Upload] Converting file to buffer...");
-		const arrayBuffer = await file.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
-		const inputFile = new InputFile(buffer, filename);
+		// Convert to Stream for efficient piping to Telegram (avoids loading full file into RAM)
+		console.log("[Admin Upload] Creating stream pipeline to Telegram...");
+
+		// Convert Web Stream (Blob) to Node Stream
+		const nodeStream = Readable.fromWeb(file.stream() as any);
+		const inputFile = new InputFile(nodeStream, filename);
 
 		console.log("[Admin Upload] Sending to Telegram...");
 		let result: any;
