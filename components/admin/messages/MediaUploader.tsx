@@ -39,6 +39,30 @@ export default function MediaUploader({
 			}
 
 			const formData = new FormData();
+
+			// If it's a video, try to get dimensions and duration
+			if (mediaType === "video") {
+				try {
+					const video = document.createElement("video");
+					video.preload = "metadata";
+					video.src = URL.createObjectURL(file);
+
+					await new Promise<void>((resolve, reject) => {
+						video.onloadedmetadata = () => {
+							URL.revokeObjectURL(video.src);
+							resolve();
+						};
+						video.onerror = () => reject(new Error("Invalid video file"));
+					});
+
+					formData.append("width", video.videoWidth.toString());
+					formData.append("height", video.videoHeight.toString());
+					formData.append("duration", Math.ceil(video.duration).toString());
+				} catch (e) {
+					console.warn("Could not extract video metadata:", e);
+				}
+			}
+
 			formData.append("file", file);
 
 			const response = await fetch("/api/admin/upload", {
@@ -52,7 +76,7 @@ export default function MediaUploader({
 				try {
 					const data = JSON.parse(text);
 					errorMessage = data.error || errorMessage;
-				} catch (e) {
+				} catch {
 					console.error("Non-JSON error response:", text);
 					errorMessage = `Server Error (${response.status}): ${text.slice(0, 100)}`;
 				}

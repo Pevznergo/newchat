@@ -45,6 +45,16 @@ export async function POST(request: Request) {
 
 			let fileStreamDetected = false;
 
+			let videoWidth: number | undefined;
+			let videoHeight: number | undefined;
+			let videoDuration: number | undefined;
+
+			bb.on("field", (name, val) => {
+				if (name === "width") videoWidth = parseInt(val);
+				if (name === "height") videoHeight = parseInt(val);
+				if (name === "duration") videoDuration = parseInt(val);
+			});
+
 			bb.on("file", async (name, fileStream, info) => {
 				const { filename, mimeType } = info;
 				console.log(
@@ -63,7 +73,21 @@ export async function POST(request: Request) {
 					if (mimeType.startsWith("image/")) {
 						result = await bot.api.sendPhoto(STORAGE_CHANNEL_ID, inputFile);
 					} else if (mimeType.startsWith("video/")) {
-						result = await bot.api.sendVideo(STORAGE_CHANNEL_ID, inputFile);
+						console.log(
+							`[Admin Upload] Sending video with dimensions: ${videoWidth}x${videoHeight}, duration: ${videoDuration}`,
+						);
+						result = await bot.api.sendVideo(
+							STORAGE_CHANNEL_ID,
+							inputFile,
+							videoWidth && videoHeight
+								? {
+										width: videoWidth,
+										height: videoHeight,
+										duration: videoDuration,
+										supports_streaming: true,
+									}
+								: { supports_streaming: true },
+						);
 					} else {
 						result = await bot.api.sendDocument(STORAGE_CHANNEL_ID, inputFile);
 					}

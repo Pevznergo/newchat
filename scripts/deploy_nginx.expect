@@ -1,0 +1,27 @@
+#!/usr/bin/expect -f
+set timeout 20
+set ip [lindex $argv 0]
+set user [lindex $argv 1]
+set password [lindex $argv 2]
+set local_config [lindex $argv 3]
+set remote_config "/etc/nginx/sites-available/aporto.tech"
+
+# 1. Upload config
+spawn scp -o StrictHostKeyChecking=no $local_config $user@$ip:$remote_config
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}
+
+# 2. Test and Reload Nginx
+spawn ssh -o StrictHostKeyChecking=no $user@$ip "nginx -t && nginx -s reload"
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}
