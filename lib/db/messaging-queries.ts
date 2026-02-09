@@ -591,6 +591,8 @@ export async function getFollowUpRule(id: string) {
 	}
 }
 
+// ... (existing code)
+
 export async function updateFollowUpRule(
 	id: string,
 	data: Partial<typeof followUpRule.$inferInsert>,
@@ -605,5 +607,18 @@ export async function updateFollowUpRule(
 	} catch (error) {
 		console.error("Failed to update follow-up rule", error);
 		return null;
+	}
+}
+
+export async function deleteFollowUpRule(id: string) {
+	try {
+		const [deleted] = await db
+			.delete(followUpRule)
+			.where(eq(followUpRule.id, id))
+			.returning();
+		return !!deleted;
+	} catch (error) {
+		console.error("Failed to delete follow-up rule", error);
+		return false;
 	}
 }
