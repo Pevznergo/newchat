@@ -47,13 +47,12 @@ export default function MediaUploader({
 			});
 
 			if (!response.ok) {
+				const text = await response.text();
 				let errorMessage = "Upload failed";
 				try {
-					const data = await response.json();
+					const data = JSON.parse(text);
 					errorMessage = data.error || errorMessage;
 				} catch (e) {
-					// Failed to parse JSON, try text
-					const text = await response.text();
 					console.error("Non-JSON error response:", text);
 					errorMessage = `Server Error (${response.status}): ${text.slice(0, 100)}`;
 				}
