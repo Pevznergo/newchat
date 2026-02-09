@@ -1,0 +1,14 @@
+#!/usr/bin/expect -f
+set timeout 300
+set ip [lindex $argv 0]
+set user [lindex $argv 1]
+set password [lindex $argv 2]
+
+spawn ssh -o StrictHostKeyChecking=no $user@$ip "cd /var/www/aporto.tech && ./deploy.sh"
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}
