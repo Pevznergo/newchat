@@ -2464,7 +2464,50 @@ bot.on("callback_query:data", async (ctx) => {
 
 			if (!isCached) {
 				const videoPath = path.join(process.cwd(), "public", motion.video);
-				videoToSend = new InputFile(videoPath);
+
+				// Try to upload to Storage Channel first if configured
+				const storageChannelId = process.env.TELEGRAM_STORAGE_CHANNEL_ID;
+				if (storageChannelId) {
+					try {
+						console.log(
+							`[Bot] Uploading ${videoPathReference} to storage channel: ${storageChannelId}`,
+						);
+						const storageMessage = await ctx.api.sendVideo(
+							storageChannelId,
+							new InputFile(videoPath),
+							{
+								caption: `Cache: ${videoPathReference}`,
+							},
+						);
+
+						if (storageMessage.video) {
+							videoToSend = storageMessage.video.file_id;
+							isCached = true; // technically it's now "cached" in Telegram via storage channel
+
+							// Save to DB immediately
+							await db
+								.insert(cachedAssets)
+								.values({
+									url: videoPathReference,
+									fileId: storageMessage.video.file_id,
+									fileType: "video",
+								})
+								.onConflictDoNothing();
+							console.log(
+								`[Bot] Cached asset ${videoPathReference} -> ${storageMessage.video.file_id} (from Storage Channel)`,
+							);
+						}
+					} catch (storageError) {
+						console.error(
+							"[Bot] Failed to upload to storage channel:",
+							storageError,
+						);
+						// Fallback to local file
+						videoToSend = new InputFile(videoPath);
+					}
+				} else {
+					videoToSend = new InputFile(videoPath);
+				}
 			}
 
 			try {
@@ -2473,7 +2516,7 @@ bot.on("callback_query:data", async (ctx) => {
 					parse_mode: "HTML",
 				});
 
-				// Save to Cache if not cached
+				// Save to Cache if not cached (and wasn't saved via storage channel)
 				if (!isCached && sentMessage.video) {
 					try {
 						await db
