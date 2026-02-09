@@ -6,6 +6,7 @@ export function register() {
 	if (process.env.NEXT_RUNTIME === "nodejs") {
 		console.log("[Scheduler] Initializing internal cron scheduler...");
 
+		// Import handlers dynamically to avoid build-time issues
 		const runStatsJob = async () => {
 			try {
 				console.log("[Scheduler] Triggering stats job...");
@@ -27,16 +28,60 @@ export function register() {
 			}
 		};
 
+		const runMessageJob = async () => {
+			try {
+				const { processPendingMessages } = await import("@/lib/cron-handlers");
+				await processPendingMessages();
+			} catch (error) {
+				console.error("[Scheduler] Error running message job:", error);
+			}
+		};
+
+		const runFollowUpJob = async () => {
+			try {
+				const { processFollowUpRules } = await import("@/lib/cron-handlers");
+				await processFollowUpRules();
+			} catch (error) {
+				console.error("[Scheduler] Error running follow-up job:", error);
+			}
+		};
+
+		const runRenewalJob = async () => {
+			try {
+				const { processSubscriptionRenewals } = await import(
+					"@/lib/cron-handlers"
+				);
+				await processSubscriptionRenewals();
+			} catch (error) {
+				console.error("[Scheduler] Error running renewal job:", error);
+			}
+		};
+
 		// Check time every minute
 		setInterval(() => {
 			const now = new Date();
-			// Run at 4:00 and 16:00 UTC (which is roughly 07:00 and 19:00 MSK)
-			if (now.getUTCMinutes() === 0) {
-				const currentHour = now.getUTCHours();
-				if (currentHour === 4 || currentHour === 16) {
+			const minutes = now.getUTCMinutes();
+			const hours = now.getUTCHours();
+
+			// 1. Stats Job: Run at 4:00 and 16:00 UTC (07:00 and 19:00 MSK)
+			if (minutes === 0) {
+				if (hours === 4 || hours === 16) {
 					runStatsJob();
 				}
 			}
-		}, 60 * 1000);
+
+			// 2. Messaging Job: Run every minute
+			runMessageJob();
+
+			// 3. Follow-up Job: Run every 10 minutes (at :00, :10, :20, etc.)
+			if (minutes % 10 === 0) {
+				runFollowUpJob();
+			}
+
+			// 4. Renewal Job: Run every hour (at :00)
+			if (minutes === 0) {
+				runRenewalJob();
+			}
+		}, 60 * 1000); // Check every 60 seconds
 	}
 }
