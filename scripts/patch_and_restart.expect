@@ -1,0 +1,27 @@
+#!/usr/bin/expect -f
+set timeout 600
+set ip [lindex $argv 0]
+set user [lindex $argv 1]
+set password [lindex $argv 2]
+set local_file [lindex $argv 3]
+set remote_file [lindex $argv 4]
+
+# 1. Upload the file
+spawn scp -o StrictHostKeyChecking=no $local_file $user@$ip:$remote_file
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}
+
+# 2. Rebuild and Restart
+spawn ssh -o StrictHostKeyChecking=no $user@$ip "cd /var/www/aporto.tech && pnpm run build && pm2 restart ai-chatbot"
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}
