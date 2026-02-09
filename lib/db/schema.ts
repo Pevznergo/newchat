@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	integer,
 	json,
 	pgTable,
@@ -25,66 +26,77 @@ export const clan = pgTable("clans", {
 
 export type Clan = InferSelectModel<typeof clan>;
 
-export const user = pgTable("User", {
-	id: uuid("id").primaryKey().notNull().defaultRandom(),
-	email: varchar("email", { length: 64 }), // nullable for Telegram users
-	password: varchar("password", { length: 64 }),
-	googleId: varchar("googleId", { length: 255 }),
-	telegramId: varchar("telegramId", { length: 255 }),
+export const user = pgTable(
+	"User",
+	{
+		id: uuid("id").primaryKey().notNull().defaultRandom(),
+		email: varchar("email", { length: 64 }), // nullable for Telegram users
+		password: varchar("password", { length: 64 }),
+		googleId: varchar("googleId", { length: 255 }),
+		telegramId: varchar("telegramId", { length: 255 }),
 
-	// Clan fields
-	clanId: integer("clan_id").references(() => clan.id),
-	clanRole: varchar("clan_role", { enum: ["owner", "admin", "member"] })
-		.default("member")
-		.notNull(),
+		// Clan fields
+		clanId: integer("clan_id").references(() => clan.id),
+		clanRole: varchar("clan_role", { enum: ["owner", "admin", "member"] })
+			.default("member")
+			.notNull(),
 
-	// Tracking fields for QR codes and UTM
-	startParam: varchar("start_param", { length: 50 }), // QR code source tracking
-	utmSource: varchar("utm_source", { length: 255 }),
-	utmMedium: varchar("utm_medium", { length: 255 }),
-	utmCampaign: varchar("utm_campaign", { length: 255 }),
-	utmContent: varchar("utm_content", { length: 255 }),
+		// Tracking fields for QR codes and UTM
+		startParam: varchar("start_param", { length: 50 }), // QR code source tracking
+		utmSource: varchar("utm_source", { length: 255 }),
+		utmMedium: varchar("utm_medium", { length: 255 }),
+		utmCampaign: varchar("utm_campaign", { length: 255 }),
+		utmContent: varchar("utm_content", { length: 255 }),
 
-	// Telegram-specific fields
-	balance: varchar("balance", { length: 255 }).default("0"), // Token balance for AI requests
-	points: varchar("points", { length: 255 }).default("0"),
-	spinsCount: varchar("spins_count", { length: 255 }).default("0"),
-	dailyStreak: varchar("daily_streak", { length: 255 }).default("0"),
-	lastDailyClaim: timestamp("last_daily_claim"),
-	lastResetDate: timestamp("last_reset_date"), // Tracks when the weekly limit was last reset
-	lastVisit: timestamp("last_visit").defaultNow(),
+		// Telegram-specific fields
+		balance: varchar("balance", { length: 255 }).default("0"), // Token balance for AI requests
+		points: varchar("points", { length: 255 }).default("0"),
+		spinsCount: varchar("spins_count", { length: 255 }).default("0"),
+		dailyStreak: varchar("daily_streak", { length: 255 }).default("0"),
+		lastDailyClaim: timestamp("last_daily_claim"),
+		lastResetDate: timestamp("last_reset_date"), // Tracks when the weekly limit was last reset
+		lastVisit: timestamp("last_visit").defaultNow(),
 
-	// Weekly Usage Tracking (New Limit System)
-	// Weekly Usage Tracking (New Limit System)
-	weeklyTextUsage: integer("weekly_text_usage").default(0),
-	weeklyImageUsage: integer("weekly_image_usage").default(0),
+		// Weekly Usage Tracking (New Limit System)
+		// Weekly Usage Tracking (New Limit System)
+		weeklyTextUsage: integer("weekly_text_usage").default(0),
+		weeklyImageUsage: integer("weekly_image_usage").default(0),
 
-	// Free Resources
-	freeImagesCount: integer("free_images_count").default(0),
+		// Free Resources
+		freeImagesCount: integer("free_images_count").default(0),
 
-	// Purchased Extra Requests
-	extraRequests: integer("extra_requests").default(0),
+		// Purchased Extra Requests
+		extraRequests: integer("extra_requests").default(0),
 
-	// Purchased Extra Requests
+		// Purchased Extra Requests
 
-	// User status fields
-	isActive: boolean("is_active").default(false),
-	isAdmin: boolean("is_admin").default(false),
-	hasPaid: boolean("has_paid").default(false),
-	phone: varchar("phone", { length: 50 }),
-	lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
-	requestCount: integer("request_count").default(0), // Keeping for historical/total stats? Or deprecating? Let's keep for total.
+		// User status fields
+		isActive: boolean("is_active").default(false),
+		isAdmin: boolean("is_admin").default(false),
+		hasPaid: boolean("has_paid").default(false),
+		phone: varchar("phone", { length: 50 }),
+		lastMessageId: varchar("last_message_id", { length: 50 }), // For idempotency
+		requestCount: integer("request_count").default(0), // Keeping for historical/total stats? Or deprecating? Let's keep for total.
 
-	// Bot preferences
-	selectedModel: varchar("selected_model", { length: 100 }).default(
-		"model_gpt4omini",
-	),
-	preferences: json("preferences"), // For storing user preferences like aspect_ratio
+		// Bot preferences
+		selectedModel: varchar("selected_model", { length: 100 }).default(
+			"model_gpt4omini",
+		),
+		preferences: json("preferences"), // For storing user preferences like aspect_ratio
 
-	// Standard fields
-	name: varchar("name", { length: 255 }),
-	createdAt: timestamp("created_at").defaultNow(),
-});
+		// Standard fields
+		name: varchar("name", { length: 255 }),
+		createdAt: timestamp("created_at").defaultNow(),
+	},
+	(table) => {
+		return {
+			createdAtIdx: index("user_created_at_idx").on(table.createdAt),
+			lastVisitIdx: index("user_last_visit_idx").on(table.lastVisit),
+			hasPaidIdx: index("user_has_paid_idx").on(table.hasPaid),
+			telegramIdIdx: index("user_telegram_id_idx").on(table.telegramId),
+		};
+	},
+);
 
 export type User = InferSelectModel<typeof user>;
 
