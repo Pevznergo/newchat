@@ -61,3 +61,29 @@ export async function PUT(
 		);
 	}
 }
+
+export async function DELETE(
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> },
+) {
+	try {
+		const { id } = await params;
+		const { deleteFollowUpRule } = await import("@/lib/db/messaging-queries");
+		const deleted = await deleteFollowUpRule(id);
+
+		if (!deleted) {
+			return NextResponse.json(
+				{ error: "Failed to delete rule" },
+				{ status: 500 },
+			);
+		}
+
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error("Error deleting rule:", error);
+		return NextResponse.json(
+			{ error: "Failed to delete rule" },
+			{ status: 500 },
+		);
+	}
+}
