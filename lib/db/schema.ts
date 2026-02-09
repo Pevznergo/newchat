@@ -491,3 +491,13 @@ export const broadcastCampaign = pgTable("BroadcastCampaign", {
 });
 
 export type BroadcastCampaign = InferSelectModel<typeof broadcastCampaign>;
+
+export const cachedAssets = pgTable("cached_assets", {
+	id: uuid("id").primaryKey().notNull().defaultRandom(),
+	url: text("url").unique().notNull(), // The source URL (e.g. https://.../video.mp4)
+	fileId: varchar("file_id", { length: 255 }).notNull(), // Telegram File ID
+	fileType: varchar("file_type", { length: 50 }).notNull(), // photo, video, document
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CachedAsset = InferSelectModel<typeof cachedAssets>;

@@ -16,7 +16,8 @@ import {
 	getExpiringSubscriptions,
 	getTariffBySlug,
 } from "@/lib/db/queries";
-import { messageSend } from "@/lib/db/schema";
+import { cachedAssets, messageSend } from "@/lib/db/schema";
+
 import { identifyBackendUser, trackBackendEvent } from "@/lib/mixpanel";
 import { createRecurringPayment } from "@/lib/payment";
 
@@ -105,54 +106,98 @@ export async function processPendingMessages() {
 				// Send message via Telegram
 				let sentMessage: any;
 				if (template.mediaUrl) {
+					// 1. Check Cache
+					// We try to find a cached file_id for this URL
+					let mediaToSend: string = template.mediaUrl;
+					let isCached = false;
+
+					try {
+						const [cached] = await db
+							.select()
+							.from(cachedAssets)
+							.where(eq(cachedAssets.url, template.mediaUrl))
+							.limit(1);
+
+						if (cached) {
+							console.log(
+								`[Scheduler] Using cached asset for ${template.mediaUrl}`,
+							);
+							mediaToSend = cached.fileId;
+							isCached = true;
+						}
+					} catch (cacheError) {
+						console.error("[Scheduler] Cache lookup failed:", cacheError);
+					}
+
+					// 2. Send Media
 					if (template.mediaType === "photo") {
-						sentMessage = await bot.api.sendPhoto(
-							telegramId,
-							template.mediaUrl,
-							{
+						sentMessage = await bot.api.sendPhoto(telegramId, mediaToSend, {
+							caption: template.content,
+							...options,
+						});
+					} else if (template.mediaType === "video") {
+						try {
+							sentMessage = await bot.api.sendVideo(telegramId, mediaToSend, {
 								caption: template.content,
 								...options,
-							},
-						);
-					} else if (template.mediaType === "video") {
-						console.log(
-							`[Scheduler] Sending VIDEO to ${telegramId}. URL/ID: ${template.mediaUrl}`,
-						);
-						try {
-							sentMessage = await bot.api.sendVideo(
-								telegramId,
-								template.mediaUrl,
-								{
-									caption: template.content,
-									...options,
-								},
-							);
-							console.log(
-								`[Scheduler] Video sent successfully. Message ID: ${sentMessage.message_id}`,
-							);
+							});
 						} catch (videoError: any) {
 							console.error(
 								`[Scheduler] Video send failed for user ${telegramId}:`,
 								videoError.message,
 							);
-							throw videoError; // Re-throw to be caught by outer catch
+							throw videoError;
 						}
 					} else if (template.mediaType === "document") {
-						sentMessage = await bot.api.sendDocument(
-							telegramId,
-							template.mediaUrl,
-							{
-								caption: template.content,
-								...options,
-							},
-						);
+						sentMessage = await bot.api.sendDocument(telegramId, mediaToSend, {
+							caption: template.content,
+							...options,
+						});
 					} else {
-						// Fallback to text if media type unknown but URL exists
+						// Fallback
 						sentMessage = await bot.api.sendMessage(
 							telegramId,
 							template.content,
 							options,
 						);
+					}
+
+					// 3. Save to Cache (if not already cached and we sent a URL)
+					if (!isCached && sentMessage) {
+						try {
+							let fileId = null;
+							if (template.mediaType === "photo" && sentMessage.photo) {
+								// Determine best quality photo
+								fileId =
+									sentMessage.photo[sentMessage.photo.length - 1].file_id;
+							} else if (template.mediaType === "video" && sentMessage.video) {
+								fileId = sentMessage.video.file_id;
+							} else if (
+								template.mediaType === "document" &&
+								sentMessage.document
+							) {
+								fileId = sentMessage.document.file_id;
+							}
+
+							if (fileId) {
+								await db
+									.insert(cachedAssets)
+									.values({
+										url: template.mediaUrl,
+										fileId: fileId,
+										fileType: template.mediaType || "unknown",
+									})
+									.onConflictDoNothing(); // Safety
+								console.log(
+									`[Scheduler] Cached asset ${template.mediaUrl} -> ${fileId}`,
+								);
+							}
+						} catch (saveError) {
+							console.error(
+								"[Scheduler] Failed to save asset to cache:",
+								saveError,
+							);
+						}
 					}
 				} else {
 					sentMessage = await bot.api.sendMessage(
