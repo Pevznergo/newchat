@@ -52,10 +52,8 @@ export default async function FollowUpRulesPage() {
 						}
 
 						return (
-						return (
 							<FollowUpRuleItem key={rule.id} rule={rule} template={template} />
 						);
-						)
 					})
 				)}
 			</div>
