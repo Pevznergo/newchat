@@ -47,6 +47,13 @@ export async function POST(request: Request) {
     }
 
     const filename = (formData.get("file") as File).name;
+    console.log(
+      `[Admin Upload] Processing file: ${filename}, Size: ${file.size}, Type: ${file.type}`
+    );
+    console.log(
+      `[Admin Upload] Storage Channel: ${STORAGE_CHANNEL_ID}, Token length: ${bot.token?.length}`
+    );
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const inputFile = new InputFile(buffer, filename);

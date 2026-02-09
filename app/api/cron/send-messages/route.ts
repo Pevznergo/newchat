@@ -83,14 +83,28 @@ export async function GET(request: NextRequest) {
               }
             );
           } else if (template.mediaType === "video") {
-            sentMessage = await bot.api.sendVideo(
-              telegramId,
-              template.mediaUrl,
-              {
-                caption: template.content,
-                ...options,
-              }
+            console.log(
+              `[Cron] Sending VIDEO to ${telegramId}. URL/ID: ${template.mediaUrl}`
             );
+            try {
+              sentMessage = await bot.api.sendVideo(
+                telegramId,
+                template.mediaUrl,
+                {
+                  caption: template.content,
+                  ...options,
+                }
+              );
+              console.log(
+                `[Cron] Video sent successfully. Message ID: ${sentMessage.message_id}`
+              );
+            } catch (videoError: any) {
+              console.error(
+                `[Cron] Video send failed for user ${telegramId}:`,
+                videoError.message
+              );
+              throw videoError; // Re-throw to be caught by outer catch
+            }
           } else if (template.mediaType === "document") {
             sentMessage = await bot.api.sendDocument(
               telegramId,
