@@ -1,6 +1,18 @@
 // Messaging system queries - imported from main queries.ts
 import "server-only";
-import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gte,
+	isNotNull,
+	like,
+	lte,
+	ne,
+	not,
+	sql,
+} from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
 	broadcastCampaign,
@@ -10,199 +22,7 @@ import {
 	user,
 } from "./schema";
 
-// =========================================================================
-// FOLLOW-UP RULES QUERIES
-// =========================================================================
-
-export async function getActiveFollowUpRules() {
-	try {
-		return await db
-			.select()
-			.from(followUpRule)
-			.leftJoin(
-				messageTemplate,
-				eq(followUpRule.templateId, messageTemplate.id),
-			)
-			.where(eq(followUpRule.isActive, true))
-			.orderBy(desc(followUpRule.priority));
-	} catch (error) {
-		console.error("Failed to get active follow-up rules", error);
-		return [];
-	}
-}
-
-export async function getFollowUpRules(opts?: { isActive?: boolean }) {
-	try {
-		const conditions = [];
-		if (opts?.isActive !== undefined) {
-			conditions.push(eq(followUpRule.isActive, opts.isActive));
-		}
-
-		return await db
-			.select()
-			.from(followUpRule)
-			.leftJoin(
-				messageTemplate,
-				eq(followUpRule.templateId, messageTemplate.id),
-			)
-			.where(conditions.length > 0 ? and(...conditions) : undefined)
-			.orderBy(desc(followUpRule.priority));
-	} catch (error) {
-		console.error("Failed to get follow-up rules", error);
-		return [];
-	}
-}
-
-export async function createFollowUpRule(data: {
-	templateId: string;
-	triggerType: string;
-	triggerDelayHours: number;
-	conditions?: any;
-	targetAudience?: string;
-	maxSendsPerUser?: number;
-	priority?: number;
-}) {
-	try {
-		const [rule] = await db
-			.insert(followUpRule)
-			.values({
-				templateId: data.templateId,
-				triggerType: data.triggerType,
-				triggerDelayHours: data.triggerDelayHours,
-				conditions: data.conditions,
-				targetAudience: data.targetAudience,
-				maxSendsPerUser: data.maxSendsPerUser || 1,
-				priority: data.priority || 0,
-				isActive: true,
-			})
-			.returning();
-
-		return rule;
-	} catch (error) {
-		console.error("Failed to create follow-up rule", error);
-		return null;
-	}
-}
-
-// =========================================================================
-// MESSAGE SENDS QUERIES FOR CRON
-// =========================================================================
-
-export async function getPendingMessages(limit = 100) {
-	try {
-		return await db
-			.select()
-			.from(messageSend)
-			.leftJoin(messageTemplate, eq(messageSend.templateId, messageTemplate.id))
-			.leftJoin(user, eq(messageSend.userId, user.id))
-			.where(
-				and(
-					eq(messageSend.status, "pending"),
-					lte(messageSend.scheduledAt, new Date()),
-				),
-			)
-			.limit(limit);
-	} catch (error) {
-		console.error("Failed to get pending messages", error);
-		return [];
-	}
-}
-
-export async function scheduleMessage(data: {
-	userId: string;
-	templateId: string;
-	followUpRuleId?: string;
-	sendType: string;
-	scheduledAt?: Date;
-}) {
-	try {
-		const [send] = await db
-			.insert(messageSend)
-			.values({
-				userId: data.userId,
-				templateId: data.templateId,
-				followUpRuleId: data.followUpRuleId,
-				sendType: data.sendType,
-				status: "pending",
-				scheduledAt: data.scheduledAt || new Date(),
-			})
-			.returning();
-
-		return send;
-	} catch (error) {
-		console.error("Failed to schedule message", error);
-		return null;
-	}
-}
-
-export async function markMessageAsSent(
-	id: string,
-	telegramMessageId: string,
-	telegramChatId: string,
-) {
-	try {
-		const [send] = await db
-			.update(messageSend)
-			.set({
-				status: "sent",
-				sentAt: new Date(),
-				telegramMessageId,
-				telegramChatId,
-			})
-			.where(eq(messageSend.id, id))
-			.returning();
-
-		return send;
-	} catch (error) {
-		console.error("Failed to mark message as sent", error);
-		return null;
-	}
-}
-
-export async function markMessageAsFailed(
-	id: string,
-	errorMessage: string,
-	retryCount: number,
-) {
-	try {
-		const [send] = await db
-			.update(messageSend)
-			.set({
-				status: "failed",
-				errorMessage,
-				retryCount,
-			})
-			.where(eq(messageSend.id, id))
-			.returning();
-
-		return send;
-	} catch (error) {
-		console.error("Failed to mark message as failed", error);
-		return null;
-	}
-}
-
-export async function hasReceivedFollowUp(
-	userId: string,
-	followUpRuleId: string,
-): Promise<boolean> {
-	try {
-		const [result] = await db
-			.select({ count: count() })
-			.from(messageSend)
-			.where(
-				and(
-					eq(messageSend.userId, userId),
-					eq(messageSend.followUpRuleId, followUpRuleId),
-				),
-			);
-
-		return (result?.count ?? 0) > 0;
-	} catch (error) {
-		console.error("Failed to check follow-up", error);
-		return false;
-	}
-}
+// ... (existing code)
 
 export async function getUsersForFollowUp(rule: {
 	triggerType: string;
@@ -214,7 +34,8 @@ export async function getUsersForFollowUp(rule: {
 		const cutoffDate = new Date();
 		cutoffDate.setHours(cutoffDate.getHours() - rule.triggerDelayHours);
 
-		const conditions = [];
+		// Basic filters: Valid Telegram users only (no missing IDs)
+		const conditions = [isNotNull(user.telegramId), ne(user.telegramId, "")];
 
 		// Audience filter
 		if (rule.targetAudience === "premium") {
@@ -260,7 +81,8 @@ export async function processRetroactiveFollowUp(ruleId: string) {
 		cutoffDate.setHours(cutoffDate.getHours() - rule.triggerDelayHours);
 
 		// 3. Build conditions for eligible users
-		const conditions = [];
+		// Basic filters: Valid Telegram users only (no missing IDs)
+		const conditions = [isNotNull(user.telegramId), ne(user.telegramId, "")];
 
 		// Audience filter
 		if (rule.targetAudience === "premium") {
@@ -307,6 +129,7 @@ export async function processRetroactiveFollowUp(ruleId: string) {
 				),
 			)
 			.where(and(...conditions))
+
 			.limit(5000); // Safety limit
 
 		// Filter out those who have a sentId (meaning they already got it)
