@@ -25,7 +25,7 @@ export async function GET() {
 			.values({
 				name: templateName,
 				content: "Test content",
-				type: "follow_up",
+				templateType: "follow_up",
 				targetAudience: "all",
 			})
 			.returning();
