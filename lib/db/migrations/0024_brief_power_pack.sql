@@ -1,0 +1,1 @@
+ALTER TABLE "FollowUpRule" ADD COLUMN "days_of_week" json;
