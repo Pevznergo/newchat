@@ -1,5 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { refreshClanLevel } from "@/lib/db/queries";
 import { clan, user } from "@/lib/db/schema";
 
 async function handleUserDeparture(userId: string, currentClanId: number) {
@@ -50,6 +51,9 @@ async function handleUserDeparture(userId: string, currentClanId: number) {
 			clanRole: "member", // Reset role to member
 		})
 		.where(eq(user.id, userId));
+
+	// Refresh level for the OLD clan
+	await refreshClanLevel(currentClanId);
 }
 
 export async function createClan(userId: string, name: string) {
@@ -93,6 +97,9 @@ export async function createClan(userId: string, name: string) {
 			})
 			.where(eq(user.id, userId));
 
+		// Refresh level (though it should be 1 initially, maybe counts/pro update?)
+		await refreshClanLevel(newClan.id);
+
 		return { success: true, clan: newClan };
 	} catch (error) {
 		console.error("Create clan failed", error);
@@ -131,6 +138,9 @@ export async function joinClan(userId: string, inviteCode: string) {
 				clanRole: "member",
 			})
 			.where(eq(user.id, userId));
+
+		// Refresh level for NEW clan
+		await refreshClanLevel(targetClan.id);
 
 		return { success: true, clan: targetClan };
 	} catch (error) {
