@@ -629,6 +629,16 @@ export async function updateFollowUpRule(
 
 export async function deleteFollowUpRule(id: string) {
 	try {
+		// First delete associated pending messages
+		await db
+			.delete(messageSend)
+			.where(
+				and(
+					eq(messageSend.followUpRuleId, id),
+					eq(messageSend.status, "pending"),
+				),
+			);
+
 		const [deleted] = await db
 			.delete(followUpRule)
 			.where(eq(followUpRule.id, id))
@@ -636,6 +646,26 @@ export async function deleteFollowUpRule(id: string) {
 		return !!deleted;
 	} catch (error) {
 		console.error("Failed to delete follow-up rule", error);
+		return false;
+	}
+}
+
+export async function deleteBroadcastCampaign(id: string) {
+	try {
+		// First delete associated pending messages
+		await db
+			.delete(messageSend)
+			.where(
+				and(eq(messageSend.broadcastId, id), eq(messageSend.status, "pending")),
+			);
+
+		const [deleted] = await db
+			.delete(broadcastCampaign)
+			.where(eq(broadcastCampaign.id, id))
+			.returning();
+		return !!deleted;
+	} catch (error) {
+		console.error("Failed to delete broadcast campaign", error);
 		return false;
 	}
 }
