@@ -876,7 +876,10 @@ export async function incrementWeeklyTextUsage(userId: string, amount: number) {
 	try {
 		await db
 			.update(user)
-			.set({ weeklyTextUsage: sql`${user.weeklyTextUsage} + ${amount}` })
+			.set({
+				weeklyTextUsage: sql`${user.weeklyTextUsage} + ${amount}`,
+				lastVisit: new Date(),
+			})
 			.where(eq(user.id, userId));
 	} catch (error) {
 		console.error("Failed to increment weekly text usage", error);
@@ -890,7 +893,10 @@ export async function incrementWeeklyImageUsage(
 	try {
 		await db
 			.update(user)
-			.set({ weeklyImageUsage: sql`${user.weeklyImageUsage} + ${amount}` })
+			.set({
+				weeklyImageUsage: sql`${user.weeklyImageUsage} + ${amount}`,
+				lastVisit: new Date(),
+			})
 			.where(eq(user.id, userId));
 	} catch (error) {
 		console.error("Failed to increment weekly image usage", error);
