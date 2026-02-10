@@ -3115,9 +3115,9 @@ bot.on("callback_query:data", async (ctx) => {
 
 		// Special handling for Internet Search Models
 		if (
-			data === "model_perplexity" ||
-			data === "model_grok41" ||
-			data === "model_deepresearch"
+			data === "model_gpt52_web" ||
+			data === "model_gpt41_web" ||
+			data === "model_gpt_4osearch_web"
 		) {
 			try {
 				await ctx.deleteMessage();
