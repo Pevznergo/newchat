@@ -1,3 +1,4 @@
+import { autoRetry } from "@grammyjs/auto-retry";
 import { eq } from "drizzle-orm";
 import { Bot } from "grammy";
 import { db } from "@/lib/db";
@@ -23,6 +24,7 @@ import { createRecurringPayment } from "@/lib/payment";
 
 // Initialize bot
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
+bot.api.config.use(autoRetry());
 
 // Helper to track messages in Mixpanel
 async function trackMessageInMixpanel(send: any, template: any, user: any) {

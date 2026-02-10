@@ -73,7 +73,10 @@ if (!token) {
 	throw new Error("TELEGRAM_BOT_TOKEN environment variable is not defined");
 }
 
+import { autoRetry } from "@grammyjs/auto-retry";
+
 const bot = new Bot(token);
+bot.api.config.use(autoRetry());
 
 export const maxDuration = 60;
 
