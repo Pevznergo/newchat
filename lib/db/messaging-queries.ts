@@ -273,7 +273,10 @@ export async function getUsersForFollowUp(rule: {
 			windowEnd.setHours(windowEnd.getHours() - 1); // 1-hour window
 			conditions.push(gte(user.createdAt, windowEnd));
 			conditions.push(lte(user.createdAt, cutoffDate));
-		} else if (rule.triggerType === "after_last_message") {
+		} else if (
+			rule.triggerType === "after_last_message" ||
+			rule.triggerType === "inactive_user"
+		) {
 			conditions.push(lte(user.lastVisit, cutoffDate));
 		}
 
