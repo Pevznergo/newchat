@@ -3113,6 +3113,21 @@ bot.on("callback_query:data", async (ctx) => {
 			return;
 		}
 
+		// Special handling for Internet Search Models
+		if (
+			data === "model_perplexity" ||
+			data === "model_grok41" ||
+			data === "model_deepresearch"
+		) {
+			try {
+				await ctx.deleteMessage();
+			} catch (_e) {
+				/* ignore */
+			}
+			await safeAnswerCallbackQuery(ctx, "Модель выбрана!");
+			return;
+		}
+
 		// Determine which keyboard to use based on model type
 		// Calculate Clan Level for Visual Locks
 		const clanData = await getUserClan(user.id);
@@ -4646,7 +4661,9 @@ bot.on("message:photo", async (ctx) => {
 						m.role === "user"
 							? // Simple text mapping for history, preserving images might be complex in this DB schema
 								// if parts are not stored fully. Assuming parts has text.
-								(m.parts as any[]).map((p) => p.text).join("\n")
+								(m.parts as any[])
+									.map((p) => p.text)
+									.join("\n")
 							: (m.parts as any[]).map((p) => p.text).join("\n"),
 				}));
 
