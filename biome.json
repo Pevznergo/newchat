@@ -1,4 +1,17 @@
 {
+	"files": {
+		"includes": [
+			"app/**",
+			"lib/**",
+			"components/**",
+			"scripts/**",
+			"instrumentation.ts",
+			"middleware.ts",
+			"*.ts",
+			"*.tsx",
+			"*.json"
+		]
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {

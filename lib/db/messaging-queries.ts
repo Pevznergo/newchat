@@ -16,6 +16,7 @@ import {
 import { db } from "@/lib/db";
 import {
 	broadcastCampaign,
+	clan,
 	followUpRule,
 	messageSend,
 	messageTemplate,
@@ -109,6 +110,7 @@ export async function getPendingMessages(limit = 100) {
 			.from(messageSend)
 			.leftJoin(messageTemplate, eq(messageSend.templateId, messageTemplate.id))
 			.leftJoin(user, eq(messageSend.userId, user.id))
+			.leftJoin(clan, eq(user.clanId, clan.id))
 			.where(
 				and(
 					eq(messageSend.status, "pending"),

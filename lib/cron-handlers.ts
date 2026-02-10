@@ -1,5 +1,5 @@
 import { autoRetry } from "@grammyjs/auto-retry";
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { Bot } from "grammy";
 import { CLAN_LEVELS } from "@/lib/clan/config";
 import { db } from "@/lib/db";
@@ -20,7 +20,6 @@ import {
 } from "@/lib/db/queries";
 import {
 	cachedAssets,
-	clan,
 	messageSend,
 	messageTemplate,
 	user,
@@ -118,7 +117,7 @@ export async function processPendingMessages() {
 
 				// Replace {{name}}
 				if (content.includes("{{name}}")) {
-					const name = user.firstName || "User";
+					const name = user.name || "User";
 					content = content.replace(/{{name}}/g, name);
 				}
 
@@ -133,25 +132,13 @@ export async function processPendingMessages() {
 					// Checking msgRow structure: it has User.
 
 					let credits = 15; // Default for Level 1
-					if (msgRow.Clan && msgRow.Clan.level) {
-						const levelConfig = CLAN_LEVELS[msgRow.Clan.level];
+					if (msgRow.clans?.level) {
+						const levelConfig = CLAN_LEVELS[msgRow.clans.level];
 						if (levelConfig) {
 							credits = levelConfig.benefits.weeklyTextCredits;
 						}
 					}
 					content = content.replace(/{{credits}}/g, credits.toString());
-				}
-
-				// Prepare message options
-				const options: any = {
-					parse_mode: template.contentType === "html" ? "HTML" : undefined,
-				};
-
-				// Add inline keyboard if exists
-				if (template.inlineKeyboard) {
-					options.reply_markup = {
-						inline_keyboard: template.inlineKeyboard,
-					};
 				}
 
 				// Send message via Telegram
