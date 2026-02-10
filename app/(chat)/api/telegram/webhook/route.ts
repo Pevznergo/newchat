@@ -953,8 +953,29 @@ async function checkAndEnforceLimits(
 				modelId.includes("sora") ||
 				modelId.includes("kling"))
 		) {
-			await ctx.reply("🔒 Видео-модели доступны только в Premium подписке.");
-			return false;
+			// Video models allowed for Premium OR Clan Level 5+
+			if (clanLevel < 5) {
+				await ctx.reply(
+					"🔒 Видео-модели доступны только в Premium подписке или в Клане 5-го уровня.",
+					{
+						reply_markup: {
+							inline_keyboard: [
+								[
+									{
+										text: "🏰 Мой Клан",
+										web_app: { url: "https://aporto.tech/app" },
+									},
+									{
+										text: "💎 Premium",
+										callback_data: "open_premium_subs",
+									},
+								],
+							],
+						},
+					},
+				);
+				return false;
+			}
 		}
 
 		if (isImage) {
