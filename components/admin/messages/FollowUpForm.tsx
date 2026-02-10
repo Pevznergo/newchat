@@ -21,6 +21,8 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
 		conditions: initialData?.conditions
 			? JSON.stringify(initialData.conditions, null, 2)
 			: "",
+		daysOfWeek: initialData?.daysOfWeek || [],
+		sendTimeStart: initialData?.sendTimeStart || "",
 		sendToExisting: false,
 	});
 
@@ -60,9 +62,10 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
 				body: JSON.stringify({
 					...formData,
 					conditions: parsedConditions,
-					triggerDelayHours: Number(formData.triggerDelayHours),
 					maxSendsPerUser: Number(formData.maxSendsPerUser),
 					priority: Number(formData.priority),
+					daysOfWeek: formData.daysOfWeek,
+					sendTimeStart: formData.sendTimeStart,
 					sendToExisting: formData.sendToExisting,
 				}),
 			});
@@ -159,6 +162,68 @@ export default function FollowUpForm({ initialData }: FollowUpFormProps) {
 					<p className="text-xs text-zinc-500 mt-1">
 						Send message X hours after trigger event
 					</p>
+				</div>
+			</div>
+
+			{/* Schedule */}
+			<div className="border-t border-zinc-800 pt-6">
+				<label className="block text-sm font-medium text-zinc-400 mb-4">
+					Schedule (Optional)
+				</label>
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div>
+						<label className="block text-xs font-medium text-zinc-500 mb-2 uppercase">
+							Days of Week
+						</label>
+						<div className="flex flex-wrap gap-2">
+							{["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => (
+								<label
+									key={day}
+									className={`px-3 py-1.5 rounded-lg text-sm border cursor-pointer transition-colors ${
+										formData.daysOfWeek.includes(day)
+											? "bg-blue-600/20 border-blue-500/50 text-blue-200"
+											: "bg-zinc-950 border-zinc-700 text-zinc-400 hover:border-zinc-600"
+									}`}
+								>
+									<input
+										checked={formData.daysOfWeek.includes(day)}
+										className="hidden"
+										onChange={(e) => {
+											const checked = e.target.checked;
+											setFormData((prev) => ({
+												...prev,
+												daysOfWeek: checked
+													? [...prev.daysOfWeek, day]
+													: prev.daysOfWeek.filter((d: string) => d !== day),
+											}));
+										}}
+										type="checkbox"
+									/>
+									{day.charAt(0).toUpperCase() + day.slice(1)}
+								</label>
+							))}
+						</div>
+						<p className="text-xs text-zinc-500 mt-2">
+							Only send on these days (leave empty for any day)
+						</p>
+					</div>
+
+					<div>
+						<label className="block text-xs font-medium text-zinc-500 mb-2 uppercase">
+							Time (UTC)
+						</label>
+						<input
+							className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 focus:border-blue-500 outline-none transition-all placeholder:text-zinc-600"
+							onChange={(e) =>
+								setFormData({ ...formData, sendTimeStart: e.target.value })
+							}
+							type="time"
+							value={formData.sendTimeStart}
+						/>
+						<p className="text-xs text-zinc-500 mt-2">
+							Only send after this time
+						</p>
+					</div>
 				</div>
 			</div>
 

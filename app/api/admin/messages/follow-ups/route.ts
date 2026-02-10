@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
 			targetAudience: body.targetAudience,
 			maxSendsPerUser: body.maxSendsPerUser || 1,
 			priority: body.priority || 0,
+			daysOfWeek: body.daysOfWeek,
+			sendTimeStart: body.sendTimeStart,
 		});
 
 		if (!rule) {

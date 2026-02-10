@@ -409,6 +409,7 @@ export const followUpRule = pgTable("FollowUpRule", {
 	// Schedule
 	sendTimeStart: varchar("send_time_start", { length: 5 }), // HH:MM format
 	sendTimeEnd: varchar("send_time_end", { length: 5 }), // HH:MM format
+	daysOfWeek: json("days_of_week"), // ["mon", "tue", ...]
 
 	// Status
 	isActive: boolean("is_active").default(true),

@@ -42,6 +42,8 @@ export async function PUT(
 			targetAudience: body.targetAudience,
 			maxSendsPerUser: body.maxSendsPerUser,
 			priority: body.priority,
+			daysOfWeek: body.daysOfWeek,
+			sendTimeStart: body.sendTimeStart,
 			isActive: body.isActive,
 		});
 

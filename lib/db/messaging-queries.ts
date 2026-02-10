@@ -7,10 +7,8 @@ import {
 	eq,
 	gte,
 	isNotNull,
-	like,
 	lte,
 	ne,
-	not,
 	sql,
 } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -76,6 +74,8 @@ export async function createFollowUpRule(data: {
 	targetAudience?: string;
 	maxSendsPerUser?: number;
 	priority?: number;
+	daysOfWeek?: any;
+	sendTimeStart?: string;
 }) {
 	try {
 		const [rule] = await db
@@ -88,6 +88,8 @@ export async function createFollowUpRule(data: {
 				targetAudience: data.targetAudience,
 				maxSendsPerUser: data.maxSendsPerUser || 1,
 				priority: data.priority || 0,
+				daysOfWeek: data.daysOfWeek,
+				sendTimeStart: data.sendTimeStart,
 				isActive: true,
 			})
 			.returning();
@@ -217,6 +219,31 @@ export async function hasReceivedFollowUp(
 	} catch (error) {
 		console.error("Failed to check follow-up", error);
 		return false;
+	}
+}
+
+export async function getFollowUpStats(userId: string, followUpRuleId: string) {
+	try {
+		const [stats] = await db
+			.select({
+				count: count(),
+				lastSentAt: sql<Date>`MAX(${messageSend.createdAt})`,
+			})
+			.from(messageSend)
+			.where(
+				and(
+					eq(messageSend.userId, userId),
+					eq(messageSend.followUpRuleId, followUpRuleId),
+				),
+			);
+
+		return {
+			count: stats?.count ?? 0,
+			lastSentAt: stats?.lastSentAt ? new Date(stats.lastSentAt) : null,
+		};
+	} catch (error) {
+		console.error("Failed to get follow-up stats", error);
+		return { count: 0, lastSentAt: null };
 	}
 }
 

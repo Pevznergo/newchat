@@ -6,9 +6,9 @@ import { db } from "@/lib/db";
 import {
 	checkAndUpdateCampaignStatus,
 	getActiveFollowUpRules,
+	getFollowUpStats,
 	getPendingMessages,
 	getUsersForFollowUp,
-	hasReceivedFollowUp,
 	markMessageAsFailed,
 	markMessageAsSent,
 	scheduleMessage,
@@ -318,6 +318,32 @@ export async function processFollowUpRules() {
 			const rule = ruleRow.FollowUpRule;
 			const template = ruleRow.MessageTemplate;
 
+			// Check Day of Week
+			if (
+				rule.daysOfWeek &&
+				Array.isArray(rule.daysOfWeek) &&
+				rule.daysOfWeek.length > 0
+			) {
+				const today = new Date()
+					.toLocaleDateString("en-US", { weekday: "short" })
+					.toLowerCase();
+				if (!rule.daysOfWeek.includes(today)) {
+					continue;
+				}
+			}
+
+			// Check Time
+			if (rule.sendTimeStart) {
+				const now = new Date();
+				const [hours, minutes] = rule.sendTimeStart.split(":").map(Number);
+				const ruleTime = new Date();
+				ruleTime.setHours(hours, minutes, 0, 0);
+
+				if (now < ruleTime) {
+					continue;
+				}
+			}
+
 			// Find eligible users for this rule
 			const usersToTarget = await getUsersForFollowUp({
 				triggerType: rule.triggerType,
@@ -329,20 +355,36 @@ export async function processFollowUpRules() {
 
 			// Schedule messages for eligible users
 			for (const user of usersToTarget) {
-				// Check if already received this follow-up
-				const alreadyReceived = await hasReceivedFollowUp(user.id, rule.id);
+				// Check stats
+				const stats = await getFollowUpStats(user.id, rule.id);
 
-				if (!alreadyReceived) {
-					await scheduleMessage({
-						userId: user.id,
-						templateId: template.id,
-						followUpRuleId: rule.id,
-						sendType: "follow_up",
-						scheduledAt: new Date(),
-					});
-
-					totalProcessed++;
+				// Check max sends
+				if (rule.maxSendsPerUser && stats.count >= rule.maxSendsPerUser) {
+					continue;
 				}
+
+				// Check frequency (don't send twice in same day)
+				if (stats.lastSentAt) {
+					const now = new Date();
+					const lastSent = new Date(stats.lastSentAt);
+					if (
+						now.getDate() === lastSent.getDate() &&
+						now.getMonth() === lastSent.getMonth() &&
+						now.getFullYear() === lastSent.getFullYear()
+					) {
+						continue;
+					}
+				}
+
+				await scheduleMessage({
+					userId: user.id,
+					templateId: template.id,
+					followUpRuleId: rule.id,
+					sendType: "follow_up",
+					scheduledAt: new Date(),
+				});
+
+				totalProcessed++;
 			}
 		}
 
