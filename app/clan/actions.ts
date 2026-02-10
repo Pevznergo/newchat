@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import {
+	calculateClanLevel,
+	getNextLevelRequirements as getNextLevelReq,
+} from "@/lib/clan/logic";
+import {
 	createTelegramUser,
 	updateClanName as dbUpdateClanName,
 	getClanLevels,
@@ -24,46 +28,6 @@ function parseInitData(initData: string) {
 	} catch {
 		return null;
 	}
-}
-
-// Helper to calculate level (Same as in route.ts/plan)
-function calculateClanLevel(totalMembers: number, proMembers: number) {
-	if (totalMembers >= 15 && proMembers >= 3) {
-		return 5;
-	}
-	if (proMembers >= 2) {
-		return 4;
-	}
-	if (totalMembers >= 10 && proMembers >= 1) {
-		return 3;
-	}
-	if (totalMembers >= 2) {
-		return 2;
-	}
-	return 1;
-}
-
-function getNextLevelRequirements(
-	level: number,
-	totalMembers: number,
-	proMembers: number,
-) {
-	if (level >= 5) {
-		return "МАКС. УРОВЕНЬ";
-	}
-	if (level === 4) {
-		return `Нужно еще ${Math.max(0, 15 - totalMembers)} чел. и ${Math.max(0, 3 - proMembers)} Pro`;
-	}
-	if (level === 3) {
-		return `Нужно еще ${Math.max(0, 2 - proMembers)} Pro`;
-	} // Lvl 3->4 needs 2 Pro
-	if (level === 2) {
-		return `Нужно еще ${Math.max(0, 10 - totalMembers)} чел. и 1 Pro`;
-	}
-	if (level === 1) {
-		return `Нужно еще ${Math.max(0, 2 - totalMembers)} чел.`;
-	}
-	return "";
 }
 
 export async function fetchClanData(initData: string) {
@@ -102,12 +66,15 @@ export async function fetchClanData(initData: string) {
 	const calculatedLevel = calculateClanLevel(
 		counts.totalMembers,
 		counts.proMembers,
+		clanLevels,
 	);
-	const nextReq = getNextLevelRequirements(
+	const nextReqData = getNextLevelReq(
 		calculatedLevel,
 		counts.totalMembers,
 		counts.proMembers,
+		clanLevels,
 	);
+	const nextReq = nextReqData?.description || "МАКС. УРОВЕНЬ";
 
 	return {
 		inClan: true,
