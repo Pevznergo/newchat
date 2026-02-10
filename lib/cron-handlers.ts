@@ -1,6 +1,7 @@
 import { autoRetry } from "@grammyjs/auto-retry";
 import { eq } from "drizzle-orm";
 import { Bot } from "grammy";
+import { CLAN_LEVELS } from "@/lib/clan/config";
 import { db } from "@/lib/db";
 import {
 	checkAndUpdateCampaignStatus,
@@ -17,7 +18,13 @@ import {
 	getExpiringSubscriptions,
 	getTariffBySlug,
 } from "@/lib/db/queries";
-import { cachedAssets, messageSend } from "@/lib/db/schema";
+import {
+	cachedAssets,
+	clan,
+	messageSend,
+	messageTemplate,
+	user,
+} from "@/lib/db/schema";
 
 import { identifyBackendUser, trackBackendEvent } from "@/lib/mixpanel";
 import { createRecurringPayment } from "@/lib/payment";
@@ -105,7 +112,50 @@ export async function processPendingMessages() {
 					};
 				}
 
+				// Variable Substitution
+				// Replace {{name}} and {{credits}}
+				let content = template.content;
+
+				// Replace {{name}}
+				if (content.includes("{{name}}")) {
+					const name = user.firstName || "User";
+					content = content.replace(/{{name}}/g, name);
+				}
+
+				// Replace {{credits}}
+				if (content.includes("{{credits}}")) {
+					// We need clan level to determine credits
+					// If we joined clan in getPendingMessages we would have it.
+					// But current getPendingMessages might not join clan.
+					// Let's rely on user.clanId if available, or just fetch it?
+					// Optimization: Update getPendingMessages to join clan?
+					// Or just fetch here if needed.
+					// Checking msgRow structure: it has User.
+
+					let credits = 15; // Default for Level 1
+					if (msgRow.Clan && msgRow.Clan.level) {
+						const levelConfig = CLAN_LEVELS[msgRow.Clan.level];
+						if (levelConfig) {
+							credits = levelConfig.benefits.weeklyTextCredits;
+						}
+					}
+					content = content.replace(/{{credits}}/g, credits.toString());
+				}
+
+				// Prepare message options
+				const options: any = {
+					parse_mode: template.contentType === "html" ? "HTML" : undefined,
+				};
+
+				// Add inline keyboard if exists
+				if (template.inlineKeyboard) {
+					options.reply_markup = {
+						inline_keyboard: template.inlineKeyboard,
+					};
+				}
+
 				// Send message via Telegram
+
 				let sentMessage: any;
 				if (template.mediaUrl) {
 					// 1. Check Cache
@@ -134,13 +184,13 @@ export async function processPendingMessages() {
 					// 2. Send Media
 					if (template.mediaType === "photo") {
 						sentMessage = await bot.api.sendPhoto(telegramId, mediaToSend, {
-							caption: template.content,
+							caption: content,
 							...options,
 						});
 					} else if (template.mediaType === "video") {
 						try {
 							sentMessage = await bot.api.sendVideo(telegramId, mediaToSend, {
-								caption: template.content,
+								caption: content,
 								...options,
 							});
 						} catch (videoError: any) {
@@ -152,7 +202,7 @@ export async function processPendingMessages() {
 						}
 					} else if (template.mediaType === "document") {
 						sentMessage = await bot.api.sendDocument(telegramId, mediaToSend, {
-							caption: template.content,
+							caption: content,
 							...options,
 						});
 					} else {
@@ -202,11 +252,7 @@ export async function processPendingMessages() {
 						}
 					}
 				} else {
-					sentMessage = await bot.api.sendMessage(
-						telegramId,
-						template.content,
-						options,
-					);
+					sentMessage = await bot.api.sendMessage(telegramId, content, options);
 				}
 
 				// Mark as sent
@@ -395,6 +441,81 @@ export async function processSubscriptionRenewals() {
 		return { success: true, results };
 	} catch (error) {
 		console.error("[Scheduler] Renewal Error:", error);
+		return { success: false, error: "Internal Server Error" };
+	}
+}
+
+/**
+ * Weekly Limit Reminder
+ * Sends a reminder to all FREE users about their unused tokens.
+ * Runs every Wednesday at 11:00 UTC+3 (08:00 UTC).
+ */
+export async function processWeeklyLimitReminders() {
+	console.log("[Scheduler] Processing weekly limit reminders...");
+	try {
+		// 1. Find the template
+		const templateName = "Weekly Limit Reminder";
+		const template = await db.query.messageTemplate.findFirst({
+			where: eq(messageTemplate.name, templateName),
+		});
+
+		if (!template) {
+			console.warn(
+				`[Scheduler] Template '${templateName}' not found. Skipping.`,
+			);
+			return { success: false, error: "Template not found" };
+		}
+
+		// 2. Find eligible users (Free users)
+		// We want ALL free users who have a telegramId
+		// Batch this if userbase is huge, but for now fetch all.
+		// Also join with Clan to filter or just to check eligibility?
+		// Requirement: "Free users".
+		const freeUsers = await db.query.user.findMany({
+			where: and(
+				eq(user.hasPaid, false),
+				isNotNull(user.telegramId),
+				ne(user.telegramId, ""),
+			),
+			columns: { id: true },
+		});
+
+		console.log(
+			`[Scheduler] Found ${freeUsers.length} free users for reminder.`,
+		);
+
+		if (freeUsers.length === 0) {
+			return { success: true, scheduled: 0 };
+		}
+
+		// 3. Schedule messages
+		// Bulk insert or loop? Bulk is better.
+		const scheduledAt = new Date(); // Send now
+
+		// Chunking
+		const chunkSize = 1000;
+		let totalScheduled = 0;
+
+		for (let i = 0; i < freeUsers.length; i += chunkSize) {
+			const chunk = freeUsers.slice(i, i + chunkSize);
+			const values = chunk.map((u) => ({
+				userId: u.id,
+				templateId: template.id,
+				sendType: "broadcast" as const, // Or new type 'system_reminder'? 'broadcast' fits.
+				status: "pending" as const,
+				scheduledAt: scheduledAt,
+				// No broadcastId strictly needed unless we create a campaign wrapper.
+				// Let's treating it as ad-hoc system message.
+			}));
+
+			await db.insert(messageSend).values(values);
+			totalScheduled += chunk.length;
+		}
+
+		console.log(`[Scheduler] Scheduled ${totalScheduled} weekly reminders.`);
+		return { success: true, scheduled: totalScheduled };
+	} catch (error) {
+		console.error("[Scheduler] Weekly Reminder Error:", error);
 		return { success: false, error: "Internal Server Error" };
 	}
 }

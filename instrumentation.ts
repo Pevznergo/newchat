@@ -57,11 +57,23 @@ export function register() {
 			}
 		};
 
+		const runWeeklyReminderJob = async () => {
+			try {
+				const { processWeeklyLimitReminders } = await import(
+					"@/lib/cron-handlers"
+				);
+				await processWeeklyLimitReminders();
+			} catch (error) {
+				console.error("[Scheduler] Error running weekly reminder job:", error);
+			}
+		};
+
 		// Check time every minute
 		setInterval(() => {
 			const now = new Date();
 			const minutes = now.getUTCMinutes();
 			const hours = now.getUTCHours();
+			const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 3 = Wednesday
 
 			// 1. Stats Job: Run at 4:00 and 16:00 UTC (07:00 and 19:00 MSK)
 			if (minutes === 0) {
@@ -81,6 +93,11 @@ export function register() {
 			// 4. Renewal Job: Run every hour (at :00)
 			if (minutes === 0) {
 				runRenewalJob();
+			}
+
+			// 5. Weekly Reminder Job: Run every Wednesday at 11:00 MSK (08:00 UTC)
+			if (day === 3 && hours === 8 && minutes === 0) {
+				runWeeklyReminderJob();
 			}
 		}, 60 * 1000); // Check every 60 seconds
 	}
