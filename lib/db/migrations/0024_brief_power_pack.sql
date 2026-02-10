@@ -1,1 +1,1 @@
-ALTER TABLE "FollowUpRule" ADD COLUMN "days_of_week" json;
+ALTER TABLE "FollowUpRule" ADD COLUMN IF NOT EXISTS "days_of_week" json;
