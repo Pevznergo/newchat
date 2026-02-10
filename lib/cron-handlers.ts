@@ -225,8 +225,26 @@ export async function processPendingMessages() {
 				}
 
 				sentCount++;
-			} catch (error) {
+			} catch (error: any) {
 				console.error(`[Scheduler] Failed to send message ${send.id}:`, error);
+
+				// Check for blocked bot
+				if (
+					error.error_code === 403 &&
+					(error.description?.includes("blocked") ||
+						error.message?.includes("blocked"))
+				) {
+					console.warn(
+						`[Scheduler] User ${user.id} (TG: ${telegramId}) blocked the bot. Tracking event.`,
+					);
+					trackBackendEvent("block_bot", user.id, {
+						source: "scheduler_error",
+						message_id: send.id,
+					});
+
+					// Optionally mark user as inactive in DB?
+					// await db.update(user).set({ isActive: false }).where(eq(user.id, user.id));
+				}
 
 				// Mark as failed
 				await markMessageAsFailed(
