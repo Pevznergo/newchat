@@ -2,11 +2,18 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
 	aiModel,
+	broadcastCampaign,
+	cachedAssets,
 	chat,
-	clan, // added
+	clan,
+	clanLevel,
 	document,
+	followUpRule,
 	message,
 	messageDeprecated,
+	messageSend,
+	messageTemplate,
+	shortLinks,
 	stream,
 	subscription,
 	suggestion,
@@ -19,10 +26,18 @@ import {
 
 const schema = {
 	aiModel,
+	broadcastCampaign,
+	cachedAssets,
 	chat,
+	clan,
+	clanLevel,
 	document,
+	followUpRule,
 	message,
 	messageDeprecated,
+	messageSend,
+	messageTemplate,
+	shortLinks,
 	stream,
 	subscription,
 	suggestion,
@@ -31,7 +46,6 @@ const schema = {
 	userConsent,
 	vote,
 	voteDeprecated,
-	clan, // added
 };
 
 // Prevent multiple connections in development
