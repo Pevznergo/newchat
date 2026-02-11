@@ -110,7 +110,7 @@ export async function validateGiftCode(code: string): Promise<{
 		return { valid: false, error: "Срок действия кода истёк" };
 	}
 
-	if (giftCodeRecord.currentUses >= giftCodeRecord.maxUses) {
+	if ((giftCodeRecord.currentUses ?? 0) >= (giftCodeRecord.maxUses ?? 1)) {
 		return { valid: false, error: "Код уже использован" };
 	}
 
