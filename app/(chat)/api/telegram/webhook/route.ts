@@ -936,7 +936,11 @@ async function checkAndEnforceLimits(
 	// Quick hack: NANO_BANANA_ID or other image models.
 	// For now, let's track separately.
 	// We need to know if it's image to check image usage.
-	const isImage = requestType === "image";
+	const isImage =
+		modelId === NANO_BANANA_ID ||
+		modelId?.includes("image") ||
+		modelId?.includes("midjourney") ||
+		modelId?.includes("ideogram");
 
 	if (user.hasPaid) {
 		// 1. Paid User Logic
