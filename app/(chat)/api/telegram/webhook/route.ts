@@ -1,7 +1,7 @@
 import path from "node:path";
 import { generateText, tool } from "ai";
 import { eq } from "drizzle-orm";
-import { Bot, InputFile, webhookCallback } from "grammy";
+import { Bot, InputFile, } from "grammy";
 import OpenAI from "openai";
 import { z } from "zod";
 import {
@@ -1869,6 +1869,8 @@ bot.command("start", async (ctx) => {
 		console.error("Error in /start command:", error);
 		await ctx.reply("Sorry, I encountered an error. Please try again later.");
 	}
+}
+}
 });
 
 bot.command("pin_clan", async (ctx) => {
@@ -1897,6 +1899,7 @@ bot.command("pin_clan", async (ctx) => {
 		console.error("Error pinning clan message:", error);
 		await ctx.reply("Не удалось закрепить сообщение.");
 	}
+}
 });
 
 // --- Clan Callbacks ---
@@ -1935,6 +1938,7 @@ bot.callbackQuery(/^join_clan_(.+)$/, async (ctx) => {
 		console.error("Join clan callback error", e);
 		await ctx.answerCallbackQuery("Произошла ошибка.");
 	}
+}
 });
 
 bot.callbackQuery("delete_message", async (ctx) => {
@@ -1943,6 +1947,7 @@ bot.callbackQuery("delete_message", async (ctx) => {
 	} catch {
 		// ignore
 	}
+}
 });
 
 bot.command("clan", async (ctx) => {
@@ -1959,6 +1964,7 @@ bot.command("clan", async (ctx) => {
 			],
 		},
 	});
+}
 });
 
 bot.hears("⚔️ Мой клан", async (ctx) => {
@@ -2000,6 +2006,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
 			],
 		},
 	});
+}
 });
 
 bot.callbackQuery("clan_create", async (ctx) => {
@@ -2010,6 +2017,7 @@ bot.callbackQuery("clan_create", async (ctx) => {
 		},
 	);
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 bot.callbackQuery("clan_join", async (ctx) => {
@@ -2020,6 +2028,7 @@ bot.callbackQuery("clan_join", async (ctx) => {
 		},
 	);
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 bot.callbackQuery("clan_leave", async (ctx) => {
@@ -2035,6 +2044,7 @@ bot.callbackQuery("clan_leave", async (ctx) => {
 		await ctx.reply(`Ошибка: ${result.error}`);
 	}
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 bot.callbackQuery("clan_invite_link", async (ctx) => {
@@ -2047,6 +2057,7 @@ bot.callbackQuery("clan_invite_link", async (ctx) => {
 		);
 	}
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 async function showClanMenu(ctx: any, user: any) {
@@ -2138,6 +2149,7 @@ bot.hears("🛠 Готовые сценарии", async (ctx) => {
 			inline_keyboard: buttons,
 		},
 	});
+}
 });
 
 // 2. Handle Category Selection
@@ -2171,6 +2183,7 @@ bot.callbackQuery(/^scenarios_cat_(.+)$/, async (ctx) => {
 		},
 	);
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 // 3. Handle Item Selection (Show Prompt)
@@ -2228,6 +2241,7 @@ bot.callbackQuery(/^scenario_item_(.+)$/, async (ctx) => {
 
 	await ctx.reply(responseText, { parse_mode: "HTML" });
 	await safeAnswerCallbackQuery(ctx, "Скопируйте текст и отправьте боту");
+}
 });
 
 // 4. Back Button Handler
@@ -2253,6 +2267,7 @@ bot.callbackQuery("scenarios_back", async (ctx) => {
 		},
 	);
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 bot.command("clear", async (ctx) => {
@@ -2288,6 +2303,7 @@ bot.command("clear", async (ctx) => {
 		console.error("Error in /clear command:", error);
 		await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
 	}
+}
 });
 
 bot.command("account", async (ctx) => {
@@ -2298,11 +2314,13 @@ bot.command("account", async (ctx) => {
 	}
 	const [user] = await getUserByTelegramId(telegramId);
 	await showAccountInfo(ctx, user);
+}
 });
 
 bot.command("premium", async (ctx) => {
 	await safeDeleteMessage(ctx);
 	await showPremiumMenu(ctx);
+}
 });
 
 bot.command("unsubscribe", async (ctx) => {
@@ -2368,6 +2386,7 @@ bot.command("unsubscribe", async (ctx) => {
 		console.error("Error in /unsubscribe:", error);
 		await ctx.reply("Произошла ошибка. Попробуйте позже.");
 	}
+}
 });
 
 bot.command("deletecontext", async (ctx) => {
@@ -2401,6 +2420,7 @@ bot.command("deletecontext", async (ctx) => {
 		console.error("Error in /deletecontext command:", error);
 		await ctx.reply("Не удалось очистить историю. Попробуйте позже.");
 	}
+}
 });
 
 bot.command("photo", async (ctx) => {
@@ -2413,6 +2433,7 @@ bot.command("photo", async (ctx) => {
 	if (user) {
 		await showImageMenu(ctx, user);
 	}
+}
 });
 
 bot.command("video", async (ctx) => {
@@ -2425,6 +2446,7 @@ bot.command("video", async (ctx) => {
 	if (user) {
 		await showVideoMenu(ctx, user);
 	}
+}
 });
 
 bot.command("s", async (ctx) => {
@@ -2437,6 +2459,7 @@ bot.command("s", async (ctx) => {
 	if (user) {
 		await showSearchMenu(ctx, user);
 	}
+}
 });
 
 bot.command("model", async (ctx) => {
@@ -2450,21 +2473,25 @@ bot.command("model", async (ctx) => {
 	if (user) {
 		await showModelMenu(ctx, user);
 	}
+}
 });
 
 bot.command("settings", async (ctx) => {
 	await safeDeleteMessage(ctx);
 	await showSettingsMenu(ctx);
+}
 });
 
 bot.command("help", async (ctx) => {
 	await safeDeleteMessage(ctx);
 	await showHelp(ctx);
+}
 });
 
 bot.command("privacy", async (ctx) => {
 	await safeDeleteMessage(ctx);
 	await showPrivacy(ctx);
+}
 });
 
 // --- Callback Query Handler ---
@@ -3639,11 +3666,13 @@ bot.on("callback_query:data", async (ctx) => {
 
 	await safeAnswerCallbackQuery(ctx);
 	await safeAnswerCallbackQuery(ctx);
+}
 });
 
 // Checkout Handlers for Stars
 bot.on("pre_checkout_query", async (ctx) => {
 	await ctx.answerPreCheckoutQuery(true);
+}
 });
 
 bot.on("message:successful_payment", async (ctx) => {
@@ -3692,6 +3721,7 @@ bot.on("message:successful_payment", async (ctx) => {
 		console.error("Error processing successful_payment:", error);
 		await ctx.reply("⚠️ Оплата принята, но произошла ошибка активации.");
 	}
+}
 });
 
 // --- Message Handlers ---
@@ -4606,6 +4636,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 		console.error("Telegram Webhook Error:", error);
 		await ctx.reply("Sorry, something went wrong processing your message.");
 	}
+}
 });
 
 // --- Photo Message Handler ---
@@ -5056,12 +5087,13 @@ bot.on("message:photo", async (ctx) => {
 			await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
 			return;
 		}
+	}
 		await incrementUserRequestCount(user.id, cost); // Charge for Image Edit
-	} catch (error) 
+	} catch (error) { 
 		console.error("Photo Processing Error:", error);
 		await ctx.reply(
 			"Произошла ошибка при обработке изображения. Попробуйте позже.",
 		);
+}
 });
 
-export const _POST = webhookCallback(bot, "std/http");
