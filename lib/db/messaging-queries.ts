@@ -134,6 +134,27 @@ export async function scheduleMessage(data: {
 	scheduledAt?: Date;
 }) {
 	try {
+		// Check for existing message (pending or sent) to prevent duplicates
+		if (data.followUpRuleId) {
+			const existingConditions = [
+				eq(messageSend.userId, data.userId),
+				eq(messageSend.followUpRuleId, data.followUpRuleId),
+			];
+
+			const existing = await db
+				.select()
+				.from(messageSend)
+				.where(and(...existingConditions))
+				.limit(1);
+
+			if (existing.length > 0) {
+				console.log(
+					`[scheduleMessage] Message already exists for user ${data.userId} and follow-up rule ${data.followUpRuleId}, skipping`,
+				);
+				return existing[0];
+			}
+		}
+
 		const [send] = await db
 			.insert(messageSend)
 			.values({
@@ -227,7 +248,7 @@ export async function getFollowUpStats(userId: string, followUpRuleId: string) {
 		const [stats] = await db
 			.select({
 				count: count(),
-				lastSentAt: sql<Date>`MAX(${messageSend.createdAt})`,
+				lastSentAt: sql<Date>`MAX(${messageSend.sentAt})`,
 			})
 			.from(messageSend)
 			.where(
