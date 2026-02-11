@@ -141,27 +141,25 @@ export default function MediaUploader({
 				{mediaUrl ? (
 					<div className="relative group">
 						{mediaUrl.startsWith("http") ? (
-							<>
-								{mediaType === "photo" ? (
-									<div className="relative h-48 w-full rounded-lg overflow-hidden bg-zinc-900">
-										<Image
-											alt="Media preview"
-											className="object-contain"
-											fill
-											src={mediaUrl}
-											unoptimized // Allow external URLs
-										/>
-									</div>
-								) : (
-									<video
-										className="w-full h-48 rounded-lg bg-black cursor-pointer"
-										controls
+							mediaType === "photo" ? (
+								<div className="relative h-48 w-full rounded-lg overflow-hidden bg-zinc-900">
+									<Image
+										alt="Media preview"
+										className="object-contain"
+										fill
 										src={mediaUrl}
-									>
-										<track kind="captions" />
-									</video>
-								)}
-							</>
+										unoptimized // Allow external URLs
+									/>
+								</div>
+							) : (
+								<video
+									className="w-full h-48 rounded-lg bg-black cursor-pointer"
+									controls
+									src={mediaUrl}
+								>
+									<track kind="captions" />
+								</video>
+							)
 						) : (
 							<div className="h-48 w-full flex flex-col items-center justify-center bg-zinc-900 rounded-lg border border-zinc-800">
 								{mediaType === "photo" ? (
