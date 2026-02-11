@@ -14,6 +14,7 @@ import {
 	entitlementsByUserType,
 	SUBSCRIPTION_LIMITS,
 } from "@/lib/ai/entitlements";
+import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createClan, joinClan, leaveClan } from "@/lib/clan/actions";
@@ -5057,12 +5058,11 @@ bot.on("message:photo", async (ctx) => {
 			return;
 		}
 		await incrementUserRequestCount(user.id, cost); // Charge for Image Edit
-	} catch (error) { { 
+	} catch (error) { 
 		console.error("Photo Processing Error:", error);
 		await ctx.reply(
 			"Произошла ошибка при обработке изображения. Попробуйте позже.",
 		);
-}
 });
 
 export const POST = webhookCallback(bot, "std/http");

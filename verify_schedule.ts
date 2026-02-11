@@ -5,14 +5,14 @@ import {
 	createFollowUpRule,
 	deleteFollowUpRule,
 } from "./lib/db/messaging-queries";
-import { messageTemplate } from "./lib/db/schema";
+import { followUpRule, messageTemplate } from "./lib/db/schema";
 
 async function verifyScheduledFollowUps() {
 	console.log("Starting verification of Scheduled Follow-up Rules...");
 
 	// 1. Setup: Create a test template
 	let templateId: string | null = null;
-	const templateName = `Verification Template ${Date.now()}`;
+	const templateName = "Verification Template " + Date.now();
 	try {
 		const [template] = await db
 			.insert(messageTemplate)
