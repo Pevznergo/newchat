@@ -1,11 +1,21 @@
+import { eq } from "drizzle-orm";
 import { Bot } from "grammy";
 import { type NextRequest, NextResponse } from "next/server";
 import { processPendingMessages } from "@/lib/cron-handlers";
+import { db } from "@/lib/db";
+import {
+	checkAndUpdateCampaignStatus,
+	getPendingMessages,
+	markMessageAsFailed,
+	markMessageAsSent,
+} from "@/lib/db/messaging-queries";
+import { messageSend } from "@/lib/db/schema";
+import { identifyBackendUser, trackBackendEvent } from "@/lib/mixpanel";
 
 // Cron job to send pending messages
 // Schedule: Every 1 minute via Vercel Cron or external scheduler
 
-const _bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
+const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
 
 export async function GET(request: NextRequest) {
 	try {
