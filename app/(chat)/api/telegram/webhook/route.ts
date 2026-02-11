@@ -3943,7 +3943,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 		const selectedModelId = user.selectedModel || "model_gpt4omini";
 
 		// Track Request (Now safe to use selectedModelId)
-		trackBackendEvent("Request: Chat", user.id.toString(), {
+		trackBackendEvent("Request: Chat", telegramId, {
 			param_model: selectedModelId,
 			param_type: "text",
 			param_cost: cost,
@@ -4425,16 +4425,17 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						);
 
 						// Track
-						trackBackendEvent("Model: Request", user.id.toString(), {
+						trackBackendEvent("Model: Request", ctx.from.id.toString(), {
 							model: targetModelId,
 							type: "image",
-							status: "success",
+							status: "attempt",
+							prompt_length: prompt.length,
 						});
 					}
 				} catch (e) {
 					console.error("Tool Image Gen Error:", e);
 					await ctx.reply(
-						"Не удалось сгенерировать изображение. Попробуйте еще раз.",
+						"Не удалось сгенестрировать изображение. Попробуйте еще раз.",
 					);
 				}
 				return;

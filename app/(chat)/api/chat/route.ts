@@ -290,7 +290,18 @@ export async function POST(request: Request) {
 		// Track Request (fire and forget)
 		if (process.env.MIXPANEL_TOKEN) {
 			const { trackBackendEvent } = await import("@/lib/mixpanel");
-			trackBackendEvent("Request: Chat", session.user.id, {
+			const { db } = await import("@/lib/db");
+			const { user } = await import("@/lib/db/schema");
+			const { eq } = await import("drizzle-orm");
+
+			// Get telegramId for consistent Mixpanel tracking
+			const userRecord = await db.query.user.findFirst({
+				where: eq(user.id, session.user.id),
+				columns: { telegramId: true },
+			});
+			const userIdStr = userRecord?.telegramId?.toString() || session.user.id;
+
+			trackBackendEvent("Request: Chat", userIdStr, {
 				param_model: selectedChatModel,
 				param_type: "text", // Web chat is currently text-focused
 				param_source: "web",
