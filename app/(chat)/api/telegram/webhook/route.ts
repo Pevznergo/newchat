@@ -16,7 +16,6 @@ import {
 } from "@/lib/ai/entitlements";
 import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
-import { getImageModels } from "@/lib/db/image-models-queries";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createClan, joinClan, leaveClan } from "@/lib/clan/actions";
 import { NANO_BANANA_ID } from "@/lib/clan/config";
@@ -27,6 +26,7 @@ import {
 } from "@/lib/clan/logic";
 import { SCENARIOS } from "@/lib/content/scenarios";
 import { db } from "@/lib/db";
+import { getImageModels } from "@/lib/db/image-models-queries";
 import {
 	addExtraRequests,
 	cancelUserSubscription,
@@ -1286,7 +1286,7 @@ async function showImageMenu(ctx: any, user: any) {
 			"🍌 Nano Banana – ИИ-фотошоп от Google.\n\n" +
 			"🌅 FLUX 2 – создание изображений по вашему описанию.",
 		{
-			reply_markup: getImageModelKeyboard(
+			reply_markup: await getImageModelKeyboard(
 				currentModel,
 				user?.hasPaid,
 				clanLevel,
@@ -3244,7 +3244,7 @@ bot.on("callback_query:data", async (ctx) => {
 		try {
 			let keyboard: { inline_keyboard: any[][] };
 			if (data.startsWith("model_image_")) {
-				keyboard = getImageModelKeyboard(data, !!user.hasPaid, clanLevel);
+				keyboard = await getImageModelKeyboard(data, !!user.hasPaid, clanLevel);
 			} else if (data.startsWith("model_video_")) {
 				keyboard = getVideoModelKeyboard(data, !!user.hasPaid, clanLevel);
 			} else if (
@@ -3290,7 +3290,10 @@ bot.on("callback_query:data", async (ctx) => {
 					"🍌 Nano Banana – ИИ-фотошоп от Google.\n\n" +
 					"🌅 FLUX 2 – создание изображений по вашему описанию.",
 				{
-					reply_markup: getImageModelKeyboard(currentModel, !!user?.hasPaid),
+					reply_markup: await getImageModelKeyboard(
+						currentModel,
+						!!user?.hasPaid,
+					),
 				},
 			);
 			await safeAnswerCallbackQuery(ctx, "Условия приняты!");
