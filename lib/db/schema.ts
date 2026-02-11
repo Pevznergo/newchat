@@ -502,3 +502,82 @@ export const cachedAssets = pgTable("cached_assets", {
 });
 
 export type CachedAsset = InferSelectModel<typeof cachedAssets>;
+
+// =========================================================================
+// GIFT CODE SYSTEM
+// =========================================================================
+
+export const giftCode = pgTable(
+	"gift_code",
+	{
+		id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+		// Code Properties
+		code: varchar("code", { length: 32 }).unique().notNull(), // e.g. "GIFT-XMAS-2024-ABC123"
+		codeType: varchar("code_type", { length: 20 }).notNull(), // 'premium_week', 'premium_month', 'premium_year'
+
+		// Activation Details
+		durationDays: integer("duration_days").notNull(), // 7, 30, 365
+
+		// Usage Tracking
+		isActive: boolean("is_active").default(true),
+		maxUses: integer("max_uses").default(1), // Usually 1, but can be reusable
+		currentUses: integer("current_uses").default(0),
+
+		// Monetization (for future sales)
+		priceRub: integer("price_rub"), // Price when sold
+		campaignName: varchar("campaign_name", { length: 100 }), // e.g. "Black Friday 2024"
+
+		// Metadata
+		createdBy: varchar("created_by", { length: 255 }), // Admin user who created it
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		expiresAt: timestamp("expires_at"), // Optional: code expiration date
+
+		// Single-use tracking (for max_uses = 1)
+		activatedBy: uuid("activated_by").references(() => user.id),
+		activatedAt: timestamp("activated_at"),
+	},
+	(table) => ({
+		codeIdx: index("gift_code_code_idx").on(table.code),
+		activeIdx: index("gift_code_active_idx").on(
+			table.isActive,
+			table.expiresAt,
+		),
+		campaignIdx: index("gift_code_campaign_idx").on(table.campaignName),
+	}),
+);
+
+export type GiftCode = InferSelectModel<typeof giftCode>;
+
+export const giftCodeActivation = pgTable(
+	"gift_code_activation",
+	{
+		id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+		// Relations
+		giftCodeId: uuid("gift_code_id")
+			.notNull()
+			.references(() => giftCode.id, { onDelete: "cascade" }),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => user.id),
+
+		// Activation details
+		activatedAt: timestamp("activated_at").defaultNow().notNull(),
+		subscriptionId: uuid("subscription_id").references(() => subscription.id),
+
+		// Analytics
+		userTelegramId: varchar("user_telegram_id", { length: 255 }),
+		userSource: varchar("user_source", { length: 50 }), // 'link', 'qr', 'manual'
+	},
+	(table) => ({
+		uniqueActivation: index("gift_activation_unique_idx").on(
+			table.giftCodeId,
+			table.userId,
+		),
+		codeIdx: index("gift_activation_code_idx").on(table.giftCodeId),
+		userIdx: index("gift_activation_user_idx").on(table.userId),
+	}),
+);
+
+export type GiftCodeActivation = InferSelectModel<typeof giftCodeActivation>;

@@ -1573,6 +1573,67 @@ bot.command("start", async (ctx) => {
 		const startParam =
 			payload && typeof payload === "string" ? payload.trim() : undefined;
 
+		// Handle Gift Code Activation
+		if (startParam?.startsWith("gift_")) {
+			const giftCode = startParam.replace("gift_", "");
+			console.log(`Gift code activation attempt: ${giftCode}`);
+
+			// Import gift queries
+			const { activateGiftCode } = await import("@/lib/db/gift-queries");
+			const { getUserByTelegramId, createTelegramUser } = await import(
+				"@/lib/db/queries"
+			);
+
+			// Get or create user
+			let [user] = await getUserByTelegramId(telegramId);
+			if (!user) {
+				[user] = await createTelegramUser(telegramId);
+			}
+
+			// Activate gift code
+			const result = await activateGiftCode(
+				giftCode,
+				user.id,
+				telegramId,
+				"link",
+			);
+
+			if (result.success) {
+				const durationText = result.subscription?.endDate
+					? new Date(result.subscription.endDate).toLocaleDateString("ru-RU")
+					: "неизвестно";
+
+				await ctx.reply(
+					`🎁 Поздравляем! Подарок активирован!\n\n` +
+						`✨ Премиум подписка активна\n` +
+						`📅 Действует до: ${durationText}\n\n` +
+						`Теперь вам доступны все возможности бота!`,
+					{ reply_markup: getMainKeyboard() },
+				);
+
+				// Track in Mixpanel
+				trackBackendEvent("Gift Code: Activated", telegramId, {
+					code: giftCode,
+					source: "deep_link",
+				});
+			} else {
+				await ctx.reply(
+					`❌ Не удалось активировать код\n\n` +
+						`Причина: ${result.error}\n\n` +
+						`Если проблема повторяется, обратитесь в поддержку.`,
+				);
+
+				// Track failed activation
+				trackBackendEvent("Gift Code: Failed", telegramId, {
+					code: giftCode,
+					error: result.error,
+					source: "deep_link",
+				});
+			}
+
+			return; // Exit after handling gift code
+		}
+
 		// Analytics: Determine Source and Campaign
 		let sourceType = "Organic";
 		let campaignTracking: any = {};
