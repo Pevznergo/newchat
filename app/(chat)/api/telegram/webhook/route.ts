@@ -366,11 +366,12 @@ function getModelKeyboard(
 	};
 }
 
-function getImageModelKeyboard(
+async function getImageModelKeyboard(
 	selectedModel: string | undefined,
 	isPremium: boolean,
 	clanLevel = 1,
 ) {
+	const IMAGE_MODELS = await getImageModels();
 	const buttons = Object.entries(IMAGE_MODELS).map(([key, model]) => {
 		// Fetch DB config for this model
 		// Note: Cache should be loaded by ensureDataLoaded() in handler
@@ -4048,6 +4049,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 
 		// --- Image Generation Flow ---
 		if (selectedModelId?.startsWith("model_image_")) {
+			const IMAGE_MODELS = await getImageModels();
 			const imageModelConfig = IMAGE_MODELS[selectedModelId];
 
 			if (!imageModelConfig || !imageModelConfig.enabled) {
@@ -4714,6 +4716,7 @@ bot.on("message:photo", async (ctx) => {
 
 		// If it is an image model, proceed with Image Editing flow
 		if (selectedModelId.startsWith("model_image_")) {
+			const IMAGE_MODELS = await getImageModels();
 			const imageModelConfig = IMAGE_MODELS[selectedModelId];
 
 			if (!imageModelConfig || !imageModelConfig.enabled) {
@@ -4851,6 +4854,7 @@ bot.on("message:photo", async (ctx) => {
 			return;
 		}
 
+		const IMAGE_MODELS = await getImageModels();
 		const imageModelConfig = IMAGE_MODELS[selectedModelId];
 
 		if (!imageModelConfig || !imageModelConfig.enabled) {
