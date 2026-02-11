@@ -4243,31 +4243,26 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 					}
 
 					case "google": {
-						const { GoogleGenerativeAI } = await import(
-							"@google/generative-ai"
-						);
+						const { experimental_generateImage } = await import("ai");
+						const { google } = await import("@ai-sdk/google");
 
-						const genAI = new GoogleGenerativeAI(
-							process.env.GOOGLE_API_KEY || "",
-						);
-						const model = genAI.getGenerativeModel({
-							model: "gemini-2.5-flash-image",
+						// Strip "google/" prefix if present
+						const modelId = imageModelConfig.id.replace(/^google\//, "");
+
+						const { image } = await experimental_generateImage({
+							model: google.image(modelId),
+							prompt: text,
+							n: 1,
+							providerOptions: {
+								google: {
+									aspectRatio: "1:1",
+									safetySettings: [],
+								},
+							},
 						});
 
-						const result = await model.generateContent(text);
-						const response = await result.response;
-
-						// Extract image from response
-						let imageData: string | null = null;
-						for (const part of response.candidates?.[0]?.content?.parts || []) {
-							if (part.inlineData) {
-								imageData = part.inlineData.data;
-								break;
-							}
-						}
-
-						if (imageData) {
-							const buffer = Buffer.from(imageData, "base64");
+						if (image?.base64) {
+							const buffer = Buffer.from(image.base64, "base64");
 							await ctx.replyWithPhoto(
 								new InputFile(buffer, `image_${Date.now()}.png`),
 								{
@@ -4882,90 +4877,17 @@ bot.on("message:photo", async (ctx) => {
 		const file = await ctx.api.getFile(photo.file_id);
 		const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
+		// Download and convert to base64
+		const imageResponse = await fetch(fileUrl);
+		const imageBuffer = await imageResponse.arrayBuffer();
+		const base64Image = Buffer.from(imageBuffer).toString("base64");
+		const mimeType = "image/jpeg"; // Telegram usually sends JPEG
+
 		await ctx.replyWithChatAction("upload_photo");
 		await ctx.reply(`🎨 Обрабатываю изображение (${imageModelConfig.name})...`);
 
-		// Handle different image editing providers
-		switch (imageModelConfig.provider) {
-			case "openai": {
-				// OpenAI supports direct URLs
-				const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-				
-				const response = await openai.chat.completions.create({
-					model: imageModelConfig.id.replace(/^openai\//, ""),
-					messages: [
-						{
-							role: "user",
-							content: [
-								{
-									type: "image_url",
-									image_url: { url: fileUrl },
-								},
-								{
-									type: "text",
-									text: caption || "Опиши это изображение",
-								},
-							],
-						},
-					],
-				});
-				
-				const message = response.choices?.[0]?.message;
-				if (message?.content) {
-					await ctx.reply(message.content);
-				} else {
-					throw new Error("No response from OpenAI");
-				}
-				break;
-			}
-			
-			case "google": {
-				// Google requires image data - fetch from URL
-				const { GoogleGenerativeAI } = await import("@google/generative-ai");
-				const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
-				const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" });
-				
-				// Fetch image from Telegram
-				const imageResponse = await fetch(fileUrl);
-				const imageBuffer = await imageResponse.arrayBuffer();
-				const base64Image = Buffer.from(imageBuffer).toString("base64");
-				
-				const result = await model.generateContent([
-					{
-						inlineData: {
-							data: base64Image,
-							mimeType: "image/jpeg",
-						},
-					},
-					caption || "Edit this image",
-				]);
-				
-				const response = await result.response;
-				
-				// Check for image in response
-				let imageData: string | null = null;
-				for (const part of response.candidates?.[0]?.content?.parts || []) {
-					if (part.inlineData) {
-						imageData = part.inlineData.data;
-						break;
-					}
-				}
-				
-				if (imageData) {
-					const buffer = Buffer.from(imageData, "base64");
-					await ctx.replyWithPhoto(
-						new InputFile(buffer, `edited_${Date.now()}.png`),
-						{ caption: "Сделано в @aporto_bot" },
-					);
-				} else if (response.text()) {
-					await ctx.reply(response.text());
-				} else {
-					throw new Error("No response from Google");
-				}
-				break;
-			}
-			
-			case "openrouter": {
+		// Handle OpenRouter image models
+		if (imageModelConfig.provider === "openrouter") {
 			const apiKey = process.env.OPENROUTER_API_KEY;
 			if (!apiKey) {
 				throw new Error("Missing OPENROUTER_API_KEY");
@@ -4993,7 +4915,7 @@ bot.on("message:photo", async (ctx) => {
 									{
 										type: "image_url",
 										image_url: {
-											url: fileUrl,
+											url: `data:${mimeType};base64,${base64Image}`,
 										},
 									},
 									{
@@ -5050,20 +4972,17 @@ bot.on("message:photo", async (ctx) => {
 			} else {
 				throw new Error("No content or images in response");
 			}
-					break;
-		}
-		
-		default: {
+		} else {
 			await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
 			return;
 		}
 		await incrementUserRequestCount(user.id, cost); // Charge for Image Edit
-	} catch (error) 
+	} catch (error) {
 		console.error("Photo Processing Error:", error);
 		await ctx.reply(
-}
 			"Произошла ошибка при обработке изображения. Попробуйте позже.",
 		);
+	}
 });
 
 export const POST = webhookCallback(bot, "std/http");
