@@ -1264,9 +1264,18 @@ async function showImageMenu(ctx: any, user: any) {
 		);
 	}
 
-	await ctx.reply("Выберите модель для создания изображений:", {
-		reply_markup: getImageModelKeyboard(currentModel, user?.hasPaid, clanLevel),
-	});
+	await ctx.reply(
+		"🌠 GPT Image 1.5 от OpenAI – генерация и редактирование изображений.\n\n" +
+			"🍌 Nano Banana – ИИ-фотошоп от Google.\n\n" +
+			"🌅 FLUX 2 – создание изображений по вашему описанию.",
+		{
+			reply_markup: getImageModelKeyboard(
+				currentModel,
+				user?.hasPaid,
+				clanLevel,
+			),
+		},
+	);
 }
 
 async function showSearchMenu(ctx: any, user: any) {
@@ -3199,9 +3208,14 @@ bot.on("callback_query:data", async (ctx) => {
 				? user.selectedModel
 				: "model_image_nano_banana";
 
-			await ctx.reply("Выберите модель для создания изображений:", {
-				reply_markup: getImageModelKeyboard(currentModel, !!user?.hasPaid),
-			});
+			await ctx.reply(
+				"🌠 GPT Image 1.5 от OpenAI – генерация и редактирование изображений.\n\n" +
+					"🍌 Nano Banana – ИИ-фотошоп от Google.\n\n" +
+					"🌅 FLUX 2 – создание изображений по вашему описанию.",
+				{
+					reply_markup: getImageModelKeyboard(currentModel, !!user?.hasPaid),
+				},
+			);
 			await safeAnswerCallbackQuery(ctx, "Условия приняты!");
 		} catch (e) {
 			console.error("Consent error:", e);
