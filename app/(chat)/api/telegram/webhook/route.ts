@@ -16,6 +16,7 @@ import {
 } from "@/lib/ai/entitlements";
 import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
+import { getImageModels } from "@/lib/db/image-models-queries";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createClan, joinClan, leaveClan } from "@/lib/clan/actions";
 import { NANO_BANANA_ID } from "@/lib/clan/config";
