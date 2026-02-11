@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy, RefreshCw, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
 interface GiftCode {
@@ -20,6 +21,7 @@ export default function GiftsPage() {
 	const [codes, setCodes] = useState<GiftCode[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [generating, setGenerating] = useState(false);
+	const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
 	// Form state
 	const [codeType, setCodeType] = useState("premium_month");
@@ -108,39 +110,51 @@ export default function GiftsPage() {
 	const copyLink = (code: string) => {
 		const link = `https://t.me/aporto_bot?start=gift_${code}`;
 		navigator.clipboard.writeText(link);
-		alert("Ссылка скопирована!");
+		setCopiedCode(code);
+		setTimeout(() => setCopiedCode(null), 2000);
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-8">
+		<div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 font-sans">
 			<div className="max-w-7xl mx-auto">
-				<h1 className="text-3xl font-bold mb-8">Подарочные коды</h1>
+				<div className="flex justify-between items-center mb-8">
+					<div>
+						<h1 className="text-3xl font-bold tracking-tight text-white mb-2">
+							🎁 Gift Codes
+						</h1>
+						<p className="text-zinc-400">
+							Create and manage promotional subscription codes
+						</p>
+					</div>
+				</div>
 
 				{/* Generation Form */}
-				<div className="bg-white rounded-lg shadow p-6 mb-8">
-					<h2 className="text-xl font-semibold mb-4">Создать коды</h2>
+				<div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mb-8 shadow-2xl backdrop-blur-sm">
+					<h2 className="text-xl font-semibold mb-4 text-white">
+						Create New Codes
+					</h2>
 					<form onSubmit={handleGenerate} className="space-y-4">
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div>
-								<label className="block text-sm font-medium mb-2">
-									Тип подписки
+								<label className="block text-sm font-medium mb-2 text-zinc-300">
+									Subscription Type
 								</label>
 								<select
 									value={codeType}
 									onChange={(e) => setCodeType(e.target.value)}
-									className="w-full border rounded p-2"
+									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
 								>
-									<option value="premium_week">Неделя</option>
-									<option value="premium_month">Месяц</option>
-									<option value="premium_3months">3 месяца</option>
-									<option value="premium_6months">6 месяцев</option>
-									<option value="premium_year">Год</option>
+									<option value="premium_week">Week</option>
+									<option value="premium_month">Month</option>
+									<option value="premium_3months">3 Months</option>
+									<option value="premium_6months">6 Months</option>
+									<option value="premium_year">Year</option>
 								</select>
 							</div>
 
 							<div>
-								<label className="block text-sm font-medium mb-2">
-									Количество
+								<label className="block text-sm font-medium mb-2 text-zinc-300">
+									Quantity
 								</label>
 								<input
 									type="number"
@@ -148,47 +162,47 @@ export default function GiftsPage() {
 									max="1000"
 									value={quantity}
 									onChange={(e) => setQuantity(Number.parseInt(e.target.value))}
-									className="w-full border rounded p-2"
+									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
 								/>
 							</div>
 
 							<div>
-								<label className="block text-sm font-medium mb-2">
-									Название кампании
+								<label className="block text-sm font-medium mb-2 text-zinc-300">
+									Campaign Name
 								</label>
 								<input
 									type="text"
 									value={campaignName}
 									onChange={(e) => setCampaignName(e.target.value)}
 									placeholder="Black Friday"
-									className="w-full border rounded p-2"
+									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-zinc-600"
 								/>
 							</div>
 						</div>
 
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium mb-2">
-									Срок действия (опционально)
+								<label className="block text-sm font-medium mb-2 text-zinc-300">
+									Expiration Date (Optional)
 								</label>
 								<input
 									type="datetime-local"
 									value={expiresAt}
 									onChange={(e) => setExpiresAt(e.target.value)}
-									className="w-full border rounded p-2"
+									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
 								/>
 							</div>
 
 							<div>
-								<label className="block text-sm font-medium mb-2">
-									Цена продажи (₽, опционально)
+								<label className="block text-sm font-medium mb-2 text-zinc-300">
+									Sale Price (₽, Optional)
 								</label>
 								<input
 									type="number"
 									value={priceRub}
 									onChange={(e) => setPriceRub(e.target.value)}
 									placeholder="990"
-									className="w-full border rounded p-2"
+									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-zinc-600"
 								/>
 							</div>
 						</div>
@@ -196,93 +210,109 @@ export default function GiftsPage() {
 						<button
 							type="submit"
 							disabled={generating}
-							className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+							className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg shadow-lg shadow-blue-900/20 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							{generating ? "Создание..." : "Создать коды"}
+							{generating ? "Creating..." : "Create Codes"}
 						</button>
 					</form>
 				</div>
 
 				{/* Codes List */}
-				<div className="bg-white rounded-lg shadow">
-					<div className="p-6 border-b flex justify-between items-center">
-						<h2 className="text-xl font-semibold">Список кодов</h2>
+				<div className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl backdrop-blur-sm">
+					<div className="p-6 border-b border-zinc-800 flex justify-between items-center">
+						<h2 className="text-xl font-semibold text-white">
+							Gift Codes List
+						</h2>
 						<button
 							onClick={fetchCodes}
 							disabled={loading}
-							className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+							className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
 						>
-							{loading ? "Загрузка..." : "Обновить"}
+							<RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+							{loading ? "Loading..." : "Refresh"}
 						</button>
 					</div>
 
 					<div className="overflow-x-auto">
-						<table className="w-full">
-							<thead className="bg-gray-50">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-										Код
+						<table className="w-full text-left border-collapse">
+							<thead>
+								<tr className="border-b border-zinc-800 bg-zinc-900/80">
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+										Code
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-										Тип
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+										Type
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-										Использований
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+										Uses
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-										Кампания
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+										Campaign
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-										Статус
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-										Действия
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">
+										Actions
 									</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="divide-y divide-zinc-800/50">
 								{codes.map((code) => (
-									<tr key={code.id} className="hover:bg-gray-50">
-										<td className="px-6 py-4 whitespace-nowrap font-mono text-sm">
+									<tr
+										key={code.id}
+										className="group hover:bg-zinc-800/40 transition-colors"
+									>
+										<td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-zinc-300">
 											{code.code}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm">
-											{code.codeType}
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
+											<span className="inline-flex items-center px-2 py-1 rounded-md bg-zinc-800/50 border border-zinc-700/50 text-xs text-zinc-300">
+												{code.codeType}
+											</span>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
 											{code.currentUses}/{code.maxUses}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
 											{code.campaignName || "-"}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<span
-												className={`px-2 py-1 text-xs rounded ${
+												className={`px-2 py-1 text-xs rounded-md font-medium ${
 													code.isActive
-														? "bg-green-100 text-green-800"
-														: "bg-red-100 text-red-800"
+														? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+														: "bg-red-500/10 text-red-400 border border-red-500/20"
 												}`}
 											>
-												{code.isActive ? "Активен" : "Деактивирован"}
+												{code.isActive ? "Active" : "Deactivated"}
 											</span>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-											<button
-												type="button"
-												onClick={() => copyLink(code.code)}
-												className="text-blue-600 hover:underline"
-											>
-												Копировать ссылку
-											</button>
-											{code.isActive && (
+										<td className="px-6 py-4 whitespace-nowrap text-right">
+											<div className="flex justify-end gap-2">
 												<button
 													type="button"
-													onClick={() => handleDeactivate(code.id)}
-													className="text-red-600 hover:underline"
+													onClick={() => copyLink(code.code)}
+													className="p-1.5 text-zinc-500 hover:text-blue-400 transition-colors"
+													title="Copy link"
 												>
-													Деактивировать
+													{copiedCode === code.code ? (
+														<Check size={16} className="text-green-400" />
+													) : (
+														<Copy size={16} />
+													)}
 												</button>
-											)}
+												{code.isActive && (
+													<button
+														type="button"
+														onClick={() => handleDeactivate(code.id)}
+														className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors"
+														title="Deactivate"
+													>
+														<Trash2 size={16} />
+													</button>
+												)}
+											</div>
 										</td>
 									</tr>
 								))}
@@ -290,8 +320,8 @@ export default function GiftsPage() {
 						</table>
 
 						{codes.length === 0 && !loading && (
-							<div className="text-center py-12 text-gray-500">
-								Нет созданных кодов
+							<div className="text-center py-12 text-zinc-500">
+								No codes created yet
 							</div>
 						)}
 					</div>
