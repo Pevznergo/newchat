@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, RefreshCw, Trash2, X } from "lucide-react";
+import { Check, Copy, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface GiftCode {
@@ -68,7 +68,7 @@ export default function GiftsPage() {
 					quantity,
 					campaignName: campaignName || undefined,
 					expiresAt: expiresAt || undefined,
-					priceRub: priceRub ? Number.parseInt(priceRub) : undefined,
+					priceRub: priceRub ? Number.parseInt(priceRub, 10) : undefined,
 				}),
 			});
 
@@ -161,7 +161,9 @@ export default function GiftsPage() {
 									min="1"
 									max="1000"
 									value={quantity}
-									onChange={(e) => setQuantity(Number.parseInt(e.target.value))}
+									onChange={(e) =>
+										setQuantity(Number.parseInt(e.target.value, 10))
+									}
 									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
 								/>
 							</div>

@@ -1,7 +1,7 @@
+import { Readable } from "node:stream";
 import Busboy from "busboy";
 import { Bot, InputFile } from "grammy";
 import { NextResponse } from "next/server";
-import { Readable } from "stream";
 import { auth } from "@/app/(auth)/auth";
 
 const STORAGE_CHANNEL_ID = process.env.TELEGRAM_STORAGE_CHANNEL_ID;
@@ -60,9 +60,9 @@ export async function POST(request: Request) {
 			let thumbnailBuffer: Buffer | null = null;
 
 			bb.on("field", (name, val) => {
-				if (name === "width") videoWidth = parseInt(val);
-				if (name === "height") videoHeight = parseInt(val);
-				if (name === "duration") videoDuration = parseInt(val);
+				if (name === "width") videoWidth = parseInt(val, 10);
+				if (name === "height") videoHeight = parseInt(val, 10);
+				if (name === "duration") videoDuration = parseInt(val, 10);
 			});
 
 			bb.on("file", async (name, fileStream, info) => {
