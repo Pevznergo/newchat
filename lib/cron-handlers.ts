@@ -40,8 +40,11 @@ async function trackMessageInMixpanel(send: any, template: any, user: any) {
 				? "Message: Follow-up Sent"
 				: "Message: Broadcast Sent";
 
+		// Use telegramId for consistent Mixpanel tracking
+		const userIdStr = user.telegramId?.toString() || user.id.toString();
+
 		// Track event
-		trackBackendEvent(eventName, user.id, {
+		trackBackendEvent(eventName, userIdStr, {
 			template_id: template.id,
 			template_name: template.name,
 			message_type: send.sendType,
@@ -56,7 +59,7 @@ async function trackMessageInMixpanel(send: any, template: any, user: any) {
 				? "follow_up_messages_received"
 				: "broadcast_messages_received";
 
-		identifyBackendUser(user.id, {
+		identifyBackendUser(userIdStr, {
 			last_message_sent_at: new Date().toISOString(),
 			[incrementProp]: 1, // Note: Mixpanel will handle increment if configured, or just set
 		});
@@ -270,7 +273,9 @@ export async function processPendingMessages() {
 					console.warn(
 						`[Scheduler] User ${user.id} (TG: ${telegramId}) blocked the bot. Tracking event.`,
 					);
-					trackBackendEvent("block_bot", user.id, {
+					// Use telegramId for consistent Mixpanel tracking
+					const userIdStr = user.telegramId?.toString() || user.id.toString();
+					trackBackendEvent("block_bot", userIdStr, {
 						source: "scheduler_error",
 						message_id: send.id,
 					});
