@@ -112,9 +112,9 @@ export type ImageModel = {
 
 export const IMAGE_MODELS: Record<string, ImageModel> = {
 	model_image_nano_banana: {
-		id: "google/gemini-2.5-flash-image",
+		id: "openai/chatgpt-image-latest",
 		name: "Nano Banana",
-		provider: "openrouter",
+		provider: "openai",
 		enabled: true,
 	},
 	model_image_banana_pro: {

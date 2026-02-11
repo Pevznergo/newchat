@@ -4094,12 +4094,13 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 				switch (imageModelConfig.provider) {
 					case "openai": {
 						const { experimental_generateImage } = await import("ai");
-						const { openai } = await import("@ai-sdk/openai"); // Using existing import if available, or dynamic
+						const { openai } = await import("@ai-sdk/openai");
 
-						// ... existing openai logic should remain but be careful not to double import if not needed
-						// Actually, let's keep the existing logic structure but insert the new case
+						// Strip "openai/" prefix if present
+						const modelId = imageModelConfig.id.replace(/^openai\//, "");
+
 						const { image } = await experimental_generateImage({
-							model: openai.image(imageModelConfig.id),
+							model: openai.image(modelId),
 							prompt: text,
 							n: 1,
 							size: "1024x1024",
@@ -4231,6 +4232,39 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 									`Could not extract image. Response:\n\n${content.substring(0, 200)}...`,
 								);
 							}
+						}
+						break;
+					}
+
+					case "google": {
+						const { experimental_generateImage } = await import("ai");
+						const { google } = await import("@ai-sdk/google");
+
+						// Strip "google/" prefix if present
+						const modelId = imageModelConfig.id.replace(/^google\//, "");
+
+						const { image } = await experimental_generateImage({
+							model: google.image(modelId),
+							prompt: text,
+							n: 1,
+							providerOptions: {
+								google: {
+									aspectRatio: "1:1",
+									safetySettings: [],
+								},
+							},
+						});
+
+						if (image?.base64) {
+							const buffer = Buffer.from(image.base64, "base64");
+							await ctx.replyWithPhoto(
+								new InputFile(buffer, `image_${Date.now()}.png`),
+								{
+									caption: "Сделано в @aporto_bot",
+								},
+							);
+						} else {
+							throw new Error("No image data returned from Google");
 						}
 						break;
 					}
