@@ -52,6 +52,8 @@ export default function GiftsPage() {
 			const durationMap: Record<string, number> = {
 				premium_week: 7,
 				premium_month: 30,
+				premium_3months: 90,
+				premium_6months: 180,
 				premium_year: 365,
 			};
 
@@ -130,6 +132,8 @@ export default function GiftsPage() {
 								>
 									<option value="premium_week">Неделя</option>
 									<option value="premium_month">Месяц</option>
+									<option value="premium_3months">3 месяца</option>
+									<option value="premium_6months">6 месяцев</option>
 									<option value="premium_year">Год</option>
 								</select>
 							</div>

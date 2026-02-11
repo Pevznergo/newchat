@@ -896,10 +896,38 @@ async function checkAndEnforceLimits(
 	cost: number,
 	modelId?: string,
 ): Promise<boolean> {
+	// For premium users: Check and reset monthly limits (1500/month)
+	if (user.hasPaid) {
+		const { checkAndResetMonthlyPremiumLimits } = await import(
+			"@/lib/db/premium-limits"
+		);
+		await checkAndResetMonthlyPremiumLimits(user.id, user.lastResetDate);
+		// Refresh user data after potential reset
+		const [updatedUser] = await getUserByTelegramId(user.telegramId);
+		if (updatedUser) {
+			user = updatedUser;
+		}
+	}
+
 	let limit = 0;
 	let currentUsage = 0;
 	let isUnlimited = false;
 	let effectiveCost = cost;
+
+	// Determine Clan Level
+	let clanLevel = 1;
+	if (!user.hasPaid && user.clanId) {
+		const clanData = await getUserClan(user.id);
+		if (clanData) {
+			const counts = await getClanMemberCounts(clanData.id);
+			clanLevel = calculateClanLevel(
+				counts.totalMembers,
+				counts.proMembers,
+				CACHED_CLAN_LEVELS || [],
+			);
+		}
+	}
+	const config = getLevelConfig(clanLevel, CACHED_CLAN_LEVELS || []);
 
 	// Determine if image request based on modelId or cost logic?
 	// Ideally passed modelId helps.
@@ -908,28 +936,11 @@ async function checkAndEnforceLimits(
 	// Quick hack: NANO_BANANA_ID or other image models.
 	// For now, let's track separately.
 	// We need to know if it's image to check image usage.
-	const isImage =
-		modelId === NANO_BANANA_ID ||
-		modelId?.includes("image") ||
-		modelId?.includes("midjourney") ||
-		modelId?.includes("ideogram");
-
-	// Fetch Clan Data & Config for everyone (Needed for Image Limits priority)
-	const clanData = await getUserClan(user.id);
-	let clanLevel = 1;
-	if (clanData) {
-		const counts = await getClanMemberCounts(clanData.id);
-		clanLevel = calculateClanLevel(
-			counts.totalMembers,
-			counts.proMembers,
-			CACHED_CLAN_LEVELS || [],
-		);
-	}
-	const config = getLevelConfig(clanLevel, CACHED_CLAN_LEVELS || []);
+	const isImage = requestType === "image";
 
 	if (user.hasPaid) {
 		// 1. Paid User Logic
-		limit = 3000; // Default Premium
+		limit = 1500; // Default Premium (monthly)
 		// Try to find tariff limit.
 		// Ideally we fetch subscription -> tariff -> requestLimit.
 		// For MVP, we use hardcoded 3000/6000 logic or simply fetch User.requestCount < User.limit ?
@@ -1433,7 +1444,7 @@ async function showAccountInfo(ctx: any, user: any) {
 	if (isPremium) {
 		// Paid: Track credits (requestCount) vs Subscription Limit (Default 3000)
 		const sub = await getLastActiveSubscription(user.id);
-		const limit = sub?.tariffSlug.includes("x2") ? 6000 : 3000;
+		const limit = sub?.tariffSlug.includes("x2") ? 6000 : 1500;
 		const used = user.requestCount || 0;
 		usageText = `💎 Премиум: ${used}/${limit} кредитов`;
 
