@@ -5105,4 +5105,354 @@ bot.on("message:photo", async (ctx) => {
 	}
 });
 
+// --- Photo as Document Handler ---
+bot.on("message:document", async (ctx) => {
+	const doc = ctx.message.document;
+	const telegramId = ctx.from.id.toString();
+	const caption = ctx.message.caption || "";
+
+	// Only process images sent as files
+	if (!doc.mime_type?.startsWith("image/")) {
+		return;
+	}
+
+	try {
+		// 0. Drop Stale Updates
+		const messageDate = ctx.message.date;
+		const now = Math.floor(Date.now() / 1000);
+
+		if (now - messageDate > 60) {
+			console.warn(
+				`Dropping stale document update from user ${telegramId} (delay: ${now - messageDate}s)`,
+			);
+			return;
+		}
+
+		// 1. Get or Create User
+		let [user] = await getUserByTelegramId(telegramId);
+		if (user) {
+			await checkAndResetWeeklyLimits(user.id, user.lastResetDate);
+		} else {
+			[user] = await createTelegramUser(telegramId);
+		}
+
+		// 1.1 Idempotency Check
+		const isNew = await setLastMessageId(
+			user.id,
+			ctx.message.message_id.toString(),
+		);
+		if (!isNew) {
+			return;
+		}
+
+		// Check if user is using an image model
+		const selectedModelId = user.selectedModel || "model_gpt4omini";
+
+		// --- COST CALCULATION & ENFORCEMENT ---
+		let cost = 10; // Default Vision Cost
+		if (selectedModelId.startsWith("model_image_")) {
+			// Heuristic for Image Edit cost
+			cost = 20;
+		} else {
+			cost = FEATURE_COSTS.image_recognition || 10;
+		}
+
+		const allowed = await checkAndEnforceLimits(
+			ctx,
+			user,
+			cost,
+			selectedModelId,
+		);
+		if (!allowed) {
+			return;
+		}
+
+		// If it is an image model, proceed with Image Editing flow
+		if (selectedModelId.startsWith("model_image_")) {
+			const IMAGE_MODELS = await getImageModels();
+			const imageModelConfig = IMAGE_MODELS[selectedModelId];
+
+			if (!imageModelConfig || !imageModelConfig.enabled) {
+				await ctx.reply("⚠️ Эта модель пока недоступна.");
+				return;
+			}
+
+			// Download the photo from Telegram
+			const file = await ctx.api.getFile(doc.file_id);
+			const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+			// Download and convert to base64
+			const imageResponse = await fetch(fileUrl);
+			const imageBuffer = await imageResponse.arrayBuffer();
+			const base64Image = Buffer.from(imageBuffer).toString("base64");
+			const mimeType = doc.mime_type || "image/jpeg";
+
+			await ctx.replyWithChatAction("upload_photo");
+
+			// --- STUB LOGIC FOR NON-NANO BANANA ---
+			// If provider is OpenAI (except Nano Banana) or Other/Flux -> Stub
+			const isNanoBanana = imageModelConfig.id === "model_image_nano_banana";
+
+			// If it's pure Google provider, likely Nano Banana
+			const isGoogle = imageModelConfig.provider === "google";
+
+			// OpenRouter logic is separate and likely allows editing if supported?
+			// But for now, align with photo handler logic:
+			// If OpenAI and NOT Nano Banana -> Stub.
+			// If Other -> Stub.
+
+			if (imageModelConfig.provider === "openai" && !isNanoBanana) {
+				await ctx.reply(
+					"⚠️ Для редактирования изображения используйте модель <b>Nano Banana</b>.",
+					{ parse_mode: "HTML" },
+				);
+				return;
+			}
+
+			if (
+				imageModelConfig.provider === "other" ||
+				imageModelConfig.id === "model_image_flux"
+			) {
+				await ctx.reply(
+					"⚠️ Для редактирования изображения используйте модель <b>Nano Banana</b>.",
+					{ parse_mode: "HTML" },
+				);
+				return;
+			}
+
+			await ctx.reply(
+				`🎨 Обрабатываю файл как изображение (${imageModelConfig.name})...`,
+			);
+
+			// Handle OpenRouter image models
+			if (imageModelConfig.provider === "openrouter") {
+				const apiKey = process.env.OPENROUTER_API_KEY;
+				if (!apiKey) throw new Error("Missing OPENROUTER_API_KEY");
+
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+				const response = await fetch(
+					"https://openrouter.ai/api/v1/chat/completions",
+					{
+						method: "POST",
+						headers: {
+							Authorization: `Bearer ${apiKey}`,
+							"Content-Type": "application/json",
+							"HTTP-Referer": "https://aporto.tech",
+							"X-Title": "Aporto Bot",
+						},
+						body: JSON.stringify({
+							model: imageModelConfig.id.replace(/^openrouter\//, ""),
+							messages: [
+								{
+									role: "user",
+									content: [
+										{
+											type: "image_url",
+											image_url: {
+												url: `data:${mimeType};base64,${base64Image}`,
+											},
+										},
+										{
+											type: "text",
+											text: caption || "Опиши это изображение",
+										},
+									],
+								},
+							],
+							modalities: ["image", "text"],
+						}),
+						signal: controller.signal,
+					},
+				);
+				clearTimeout(timeoutId);
+
+				if (!response.ok) {
+					const err = await response.text();
+					throw new Error(`OpenRouter API Error: ${response.status} - ${err}`);
+				}
+
+				const data = await response.json();
+				const message = data.choices?.[0]?.message;
+
+				if (message?.images && message.images.length > 0) {
+					const imageUrl = message.images[0].image_url?.url;
+					if (imageUrl?.startsWith("data:image")) {
+						const base64Data = imageUrl.split(",")[1];
+						const buffer = Buffer.from(base64Data, "base64");
+						await ctx.replyWithPhoto(
+							new InputFile(buffer, `edited_${Date.now()}.png`),
+							{ caption: "Сделано в @aporto_bot" },
+						);
+					} else if (imageUrl?.startsWith("http")) {
+						await ctx.replyWithPhoto(imageUrl, {
+							caption: "Сделано в @aporto_bot",
+						});
+					}
+				} else if (message?.content) {
+					await ctx.reply(message.content);
+				}
+			} else if (imageModelConfig.provider === "openai") {
+				// NANO BANANA (OpenAI Implementation - Remix)
+				const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+				const { experimental_generateImage } = await import("ai");
+				const { openai } = await import("@ai-sdk/openai");
+
+				// 1. Use GPT-4o to describe
+				const visionResponse = await openaiClient.chat.completions.create({
+					model: "gpt-4o",
+					messages: [
+						{
+							role: "user",
+							content: [
+								{
+									type: "image_url",
+									image_url: { url: `data:${mimeType};base64,${base64Image}` },
+								},
+								{
+									type: "text",
+									text: "Describe this image in detail focusing on visual style, composition, and subjects. Keep it concise.",
+								},
+							],
+						},
+					],
+				});
+
+				const description = visionResponse.choices?.[0]?.message?.content;
+				if (!description)
+					throw new Error("Failed to analyze image with GPT-4o");
+
+				// 2. Remix
+				const prompt = caption
+					? `${caption}. Based on image description: ${description}`
+					: `Remix of image: ${description}`;
+				const modelId = imageModelConfig.id.replace(/^openai\//, "");
+
+				const { image } = await experimental_generateImage({
+					model: openai.image(modelId),
+					prompt: prompt,
+					n: 1,
+					size: "1024x1024",
+					providerOptions: { openai: { quality: "hd", style: "vivid" } },
+				});
+
+				if (image?.base64) {
+					const buffer = Buffer.from(image.base64, "base64");
+					await ctx.replyWithPhoto(
+						new InputFile(buffer, `remix_${Date.now()}.png`),
+						{ caption: "Сделано в @aporto_bot (Nano Banana)" },
+					);
+				}
+			} else if (imageModelConfig.provider === "google") {
+				// NANO BANANA (Google Implementation)
+				const { GoogleGenerativeAI } = await import("@google/generative-ai");
+				const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+				const modelId =
+					imageModelConfig.id.replace(/^google\//, "") ||
+					"gemini-2.5-flash-image";
+				const model = genAI.getGenerativeModel({ model: modelId });
+
+				const result = await model.generateContent([
+					{ inlineData: { data: base64Image, mimeType: mimeType } },
+					caption || "Edit this image",
+				]);
+				const response = await result.response;
+
+				let imageData: string | null = null;
+				for (const part of response.candidates?.[0]?.content?.parts || []) {
+					if (part.inlineData) {
+						imageData = part.inlineData.data;
+						break;
+					}
+				}
+
+				if (imageData) {
+					const buffer = Buffer.from(imageData, "base64");
+					await ctx.replyWithPhoto(
+						new InputFile(buffer, `edited_${Date.now()}.png`),
+						{ caption: "Сделано в @aporto_bot" },
+					);
+				} else if (response.text()) {
+					await ctx.reply(response.text());
+				}
+			} else {
+				await ctx.reply(
+					"⚠️ Для редактирования изображения используйте модель <b>Nano Banana</b>.",
+					{ parse_mode: "HTML" },
+				);
+			}
+		} else {
+			// It is a Text Model -> Treat as Vision Request
+			// (Using fileId instead of photo array)
+			await ctx.replyWithChatAction("typing");
+
+			const file = await ctx.api.getFile(doc.file_id);
+			const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+			const realModelId = PROVIDER_MAP[selectedModelId] || "openai/gpt-4o-mini";
+
+			trackBackendEvent("Model: Request", telegramId, {
+				model: realModelId,
+				type: "vision",
+				status: "attempt",
+				caption_length: caption.length,
+			});
+
+			try {
+				const { chats } = await getChatsByUserId({
+					id: user.id,
+					limit: 1,
+					startingAfter: null,
+					endingBefore: null,
+				});
+				const chatId = chats.length > 0 ? chats[0].id : generateUUID();
+				if (chats.length === 0)
+					await saveChat({
+						id: chatId,
+						userId: user.id,
+						title: "Telegram Chat",
+						visibility: "private",
+					});
+
+				const history = await getMessagesByChatId({ id: chatId });
+				const aiMessages: any[] = history.map((m) => ({
+					role: m.role,
+					content:
+						m.role === "user"
+							? (m.parts as any[]).map((p) => p.text).join("\n")
+							: (m.parts as any[]).map((p) => p.text).join("\n"),
+				}));
+
+				const imageResponse = await fetch(fileUrl);
+				const imageBuffer = await imageResponse.arrayBuffer();
+
+				const response = await generateText({
+					model: getLanguageModel(realModelId),
+					messages: [
+						...aiMessages,
+						{
+							role: "user",
+							content: [
+								{ type: "text", text: caption || "Что на этом изображении?" },
+								{ type: "image", image: imageBuffer },
+							],
+						},
+					],
+				});
+				await ctx.reply(response.text);
+				await incrementUserRequestCount(user.id, cost); // Charge for Vision
+			} catch (e) {
+				console.error("Vision Error:", e);
+				await ctx.reply("Произошла ошибка при анализе изображения.");
+			}
+		}
+
+		await incrementUserRequestCount(user.id, cost); // Charge for Image Edit (if fell through)
+	} catch (error) {
+		console.error("Document Photo Processing Error:", error);
+		await ctx.reply("Произошла ошибка при обработке файла. Попробуйте позже.");
+	}
+});
+
 export const POST = webhookCallback(bot, "std/http");
