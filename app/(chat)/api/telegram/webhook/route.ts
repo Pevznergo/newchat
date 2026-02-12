@@ -4934,6 +4934,7 @@ bot.on("message:photo", async (ctx) => {
 
 			// Check for image in response
 			let imageData: string | null = null;
+			// @ts-expect-error
 			for (const part of response.candidates?.[0]?.content?.parts || []) {
 				if (part.inlineData) {
 					imageData = part.inlineData.data;
