@@ -4972,7 +4972,7 @@ bot.on("message:photo", async (ctx) => {
 						"X-Title": "Aporto Bot",
 					},
 					body: JSON.stringify({
-						model: imageModelConfig.id.replace(/^openrouter\//, ""),
+						model: imageModelConfig.id,
 						messages: [
 							{
 								role: "user",
