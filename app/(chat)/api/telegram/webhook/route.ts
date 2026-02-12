@@ -1003,7 +1003,32 @@ async function checkAndEnforceLimits(
 			// Let's use `weeklyImageUsage` as count.
 			limit = config.benefits.weeklyImageGenerations;
 			currentUsage = user.weeklyImageUsage || 0;
-			effectiveCost = 1; // 1 generation
+		}
+		// 		effectiveCost = 1; // 1 generation
+		// 	} else {
+		// 		// Text
+		// 		limit = config.benefits.weeklyTextCredits;
+		// 		currentUsage = user.weeklyTextUsage || 0;
+
+		// 		// Check L5 Unlimited
+		// 		if (
+		// 			clanLevel === 5 &&
+		// 			config.benefits.unlimitedModels?.includes(modelId || "")
+		// 		) {
+		// 			isUnlimited = true;
+		// 			effectiveCost = 0;
+		// 		}
+		// 	}
+		// }
+
+		// REFACTOR: Use cost from DB for images too
+		if (isImage) {
+			limit = config.benefits.weeklyImageGenerations;
+			currentUsage = user.weeklyImageUsage || 0;
+
+			// Fetch cost from cached models
+			const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === modelId);
+			effectiveCost = dbModel ? dbModel.cost : 1;
 		} else {
 			// Text
 			limit = config.benefits.weeklyTextCredits;
@@ -1038,11 +1063,17 @@ async function checkAndEnforceLimits(
 
 		if (clanUsage < clanLimit) {
 			isAllowed = true;
-		} else if ((user.freeImagesCount || 0) > 0) {
+		} else if ((user.freeImagesCount || 0) >= effectiveCost) {
 			isAllowed = true;
 		} else if (user.hasPaid) {
 			// Fallback to Paid Request Limit
-			if (currentUsage + effectiveCost <= limit) {
+			// Check Subscription Limit (Monthly)
+			const sub = await getLastActiveSubscription(user.id);
+			const subLimit = sub?.tariffSlug.includes("x2") ? 6000 : 1500;
+			// Note: Video models often have 0 limit in standard sub?
+			// But here we rely on "Credit" system.
+
+			if ((user.requestCount || 0) + effectiveCost <= subLimit) {
 				isAllowed = true;
 			}
 		} else {
@@ -1141,11 +1172,11 @@ async function checkAndEnforceLimits(
 
 		// 1. Clan Limits (Available for Free & Paid)
 		if (clanUsage < clanLimit) {
-			await incrementWeeklyImageUsage(user.id, 1);
+			await incrementWeeklyImageUsage(user.id, effectiveCost);
 		}
 		// 2. Free Image Pack (Bonus)
-		else if ((user.freeImagesCount || 0) > 0) {
-			await decrementUserFreeImages(user.id, 1);
+		else if ((user.freeImagesCount || 0) >= effectiveCost) {
+			await decrementUserFreeImages(user.id, effectiveCost);
 		}
 		// 3. Paid / Credits
 		else if (user.hasPaid) {
@@ -1156,7 +1187,7 @@ async function checkAndEnforceLimits(
 			// Logic for Free User over limit is usually blocked in CHECK phase.
 			// But if we are here, means we allowed it (e.g. via extra requests or logic gap).
 			// If we are here, increment standard usage to keep track?
-			await incrementWeeklyImageUsage(user.id, 1);
+			await incrementWeeklyImageUsage(user.id, effectiveCost);
 		}
 	} else {
 		// TEXT REQUEST PRIORITY:
@@ -1471,7 +1502,15 @@ async function showAccountInfo(ctx: any, user: any) {
 		const used = user.weeklyTextUsage || 0;
 		usageText = `${used}/${clanTextLimit} кредитов (нед.)`;
 		planName = `Free (Клан Ур. ${clanLevel})`;
+
+		// Show image usage for free users
+		if (clanImageLimit > 0) {
+			const fnImageUsed = user.weeklyImageUsage || 0;
+			usageText += `\n🎁 Клан (бесплатно): ${fnImageUsed}/${clanImageLimit} генераций изображений/нед`;
+		}
 	}
+
+	// Free Images Display (bonus packs)
 
 	// Free Images Display (bonus packs)
 	if ((user.freeImagesCount || 0) > 0) {
@@ -1498,7 +1537,7 @@ async function showAccountInfo(ctx: any, user: any) {
 Нужно больше? Подключите /premium или развивайте Клан!
 
 🚀 <b>Подписка Премиум</b>:
- └ 3000 кредитов
+ └ 1500 кредитов
  └ Доступ ко всем моделям
  └ Приоритетная скорость
  `;
