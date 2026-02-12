@@ -14,7 +14,6 @@ import {
 	entitlementsByUserType,
 	SUBSCRIPTION_LIMITS,
 } from "@/lib/ai/entitlements";
-import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createClan, joinClan, leaveClan } from "@/lib/clan/actions";
@@ -4877,12 +4876,6 @@ bot.on("message:photo", async (ctx) => {
 		const file = await ctx.api.getFile(photo.file_id);
 		const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
-		// Download and convert to base64
-		const imageResponse = await fetch(fileUrl);
-		const imageBuffer = await imageResponse.arrayBuffer();
-		const base64Image = Buffer.from(imageBuffer).toString("base64");
-		const mimeType = "image/jpeg"; // Telegram usually sends JPEG
-
 		await ctx.replyWithChatAction("upload_photo");
 		await ctx.reply(`🎨 Обрабатываю изображение (${imageModelConfig.name})...`);
 
@@ -4915,7 +4908,7 @@ bot.on("message:photo", async (ctx) => {
 									{
 										type: "image_url",
 										image_url: {
-											url: `data:${mimeType};base64,${base64Image}`,
+											url: fileUrl,
 										},
 									},
 									{
