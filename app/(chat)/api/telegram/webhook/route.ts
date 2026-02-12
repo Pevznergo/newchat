@@ -4166,11 +4166,8 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						}
 
 						// Check if images array exists and has content
-						// @ts-expect-error - OpenRouter returns images in message.images, not in OpenAI types
-						const images = (message as any).images;
-
-						if (images && images.length > 0) {
-							const imageUrl = images[0].image_url?.url;
+						if (message.images && message.images.length > 0) {
+							const imageUrl = message.images[0].image_url?.url;
 
 							if (!imageUrl) {
 								throw new Error("No image URL in OpenRouter response");
