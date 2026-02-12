@@ -4958,41 +4958,84 @@ bot.on("message:photo", async (ctx) => {
 				throw new Error("Missing OPENROUTER_API_KEY");
 			}
 
-			const openrouter = new OpenAI({
-				apiKey: apiKey,
-				baseURL: "https://openrouter.ai/api/v1",
-				defaultHeaders: {
-					"HTTP-Referer": "https://aporto.tech",
-					"X-Title": "Aporto Bot",
-				},
-			});
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
-			const response = await openrouter.chat.completions.create({
-				model: imageModelConfig.id.replace(/^openrouter\//, ""),
-				messages: [
-					{
-						role: "user",
-						content: [
+			const response = await fetch(
+				"https://openrouter.ai/api/v1/chat/completions",
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${apiKey}`,
+						"Content-Type": "application/json",
+						"HTTP-Referer": "https://aporto.tech",
+						"X-Title": "Aporto Bot",
+					},
+					body: JSON.stringify({
+						model: imageModelConfig.id.replace(/^openrouter\//, ""),
+						messages: [
 							{
-								type: "text",
-								text: caption || "Опиши это изображение",
-							},
-							{
-								type: "image_url",
-								image_url: {
-									url: fileUrl,
-								},
+								role: "user",
+								content: [
+									{
+										type: "image_url",
+										image_url: {
+											url: fileUrl,
+										},
+									},
+									{
+										type: "text",
+										text: caption || "Опиши это изображение",
+									},
+								],
 							},
 						],
-					},
-				],
-			});
+						modalities: ["image", "text"],
+					}),
+					signal: controller.signal,
+				},
+			);
 
-			const message = response.choices?.[0]?.message;
-			if (message?.content) {
+			clearTimeout(timeoutId);
+
+			if (!response.ok) {
+				const err = await response.text();
+				console.error("OpenRouter API Error:", response.status, err);
+				throw new Error(`OpenRouter API Error: ${response.status} - ${err}`);
+			}
+
+			const data = await response.json();
+			console.log("OpenRouter Photo Response:", JSON.stringify(data, null, 2));
+
+			const message = data.choices?.[0]?.message;
+
+			if (!message) {
+				throw new Error("No message from OpenRouter");
+			}
+
+			// Check if response contains images
+			if (message.images && message.images.length > 0) {
+				const imageUrl = message.images[0].image_url?.url;
+
+				if (imageUrl?.startsWith("data:image")) {
+					const base64Data = imageUrl.split(",")[1];
+					const buffer = Buffer.from(base64Data, "base64");
+					await ctx.replyWithPhoto(
+						new InputFile(buffer, `edited_${Date.now()}.png`),
+						{
+							caption: "Сделано в @aporto_bot",
+						},
+					);
+				} else if (imageUrl?.startsWith("http")) {
+					await ctx.replyWithPhoto(imageUrl, {
+						caption: "Сделано в @aporto_bot",
+					});
+				}
+			} else if (message.content) {
+				// If no image, send text response
 				await ctx.reply(message.content);
 			} else {
-				throw new Error("No response from OpenRouter");
+				throw new Error("No content or images in response");
 			}
 		} else {
 			await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
