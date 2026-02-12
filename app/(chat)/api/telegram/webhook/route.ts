@@ -4972,8 +4972,128 @@ bot.on("message:photo", async (ctx) => {
 			} else {
 				throw new Error("No content or images in response");
 			}
+		} else if (imageModelConfig.provider === "openai") {
+			// Stub for GPT Images/Flux/etc - Only allow Nano Banana (if it's OpenAI)
+			if (imageModelConfig.id !== "model_image_nano_banana") {
+				await ctx.reply(
+					"⚠️ Для редактирования изображения используйте модель <b>Nano Banana</b>.",
+					{ parse_mode: "HTML" },
+				);
+				return;
+			}
+
+			// NANO BANANA (OpenAI Implementation - Remix)
+			const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+			const { experimental_generateImage } = await import("ai");
+			const { openai } = await import("@ai-sdk/openai");
+
+			await ctx.reply(`🎨 Обрабатываю изображение (Nano Banana)...`);
+
+			// 1. Use GPT-4o to describe the image
+			const visionResponse = await openaiClient.chat.completions.create({
+				model: "gpt-4o",
+				messages: [
+					{
+						role: "user",
+						content: [
+							{
+								type: "image_url",
+								image_url: { url: `data:${mimeType};base64,${base64Image}` },
+							},
+							{
+								type: "text",
+								text: "Describe this image in detail focusing on visual style, composition, and subjects. Keep it concise.",
+							},
+						],
+					},
+				],
+			});
+
+			const description = visionResponse.choices?.[0]?.message?.content;
+			if (!description) {
+				throw new Error("Failed to analyze image with GPT-4o");
+			}
+
+			// 2. Generate new image using description + prompt
+			const prompt = caption
+				? `${caption}. Based on image description: ${description}`
+				: `Remix of image: ${description}`;
+
+			// Strip "openai/" prefix if present
+			const modelId = imageModelConfig.id.replace(/^openai\//, "");
+
+			const { image } = await experimental_generateImage({
+				model: openai.image(modelId),
+				prompt: prompt,
+				n: 1,
+				size: "1024x1024",
+				providerOptions: {
+					openai: { quality: "hd", style: "vivid" }, // Nano Banana settings
+				},
+			});
+
+			if (image?.base64) {
+				const buffer = Buffer.from(image.base64, "base64");
+				await ctx.replyWithPhoto(
+					new InputFile(buffer, `remix_${Date.now()}.png`),
+					{
+						caption: "Сделано в @aporto_bot (Nano Banana)",
+					},
+				);
+			} else {
+				throw new Error("No image data returned from OpenAI generation");
+			}
+		} else if (imageModelConfig.provider === "google") {
+			// NANO BANANA (Google Implementation - Native Edit)
+			const { GoogleGenerativeAI } = await import("@google/generative-ai");
+			const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+
+			// Use the correct model ID (usually gemini-2.5-flash-image)
+			// Strip prefix just in case
+			const modelId =
+				imageModelConfig.id.replace(/^google\//, "") ||
+				"gemini-2.5-flash-image";
+
+			const model = genAI.getGenerativeModel({ model: modelId });
+
+			const result = await model.generateContent([
+				{
+					inlineData: {
+						data: base64Image,
+						mimeType: "image/jpeg",
+					},
+				},
+				caption || "Edit this image",
+			]);
+
+			const response = await result.response;
+
+			// Check for image in response
+			let imageData: string | null = null;
+			for (const part of response.candidates?.[0]?.content?.parts || []) {
+				if (part.inlineData) {
+					imageData = part.inlineData.data;
+					break;
+				}
+			}
+
+			if (imageData) {
+				const buffer = Buffer.from(imageData, "base64");
+				await ctx.replyWithPhoto(
+					new InputFile(buffer, `edited_${Date.now()}.png`),
+					{ caption: "Сделано в @aporto_bot" },
+				);
+			} else if (response.text()) {
+				await ctx.reply(response.text());
+			} else {
+				throw new Error("No response from Google");
+			}
 		} else {
-			await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
+			// Other providers (including Flux)
+			await ctx.reply(
+				"⚠️ Для редактирования изображения используйте модель <b>Nano Banana</b>.",
+				{ parse_mode: "HTML" },
+			);
 			return;
 		}
 		await incrementUserRequestCount(user.id, cost); // Charge for Image Edit
