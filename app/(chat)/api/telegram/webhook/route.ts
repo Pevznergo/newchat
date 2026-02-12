@@ -4967,16 +4967,8 @@ bot.on("message:photo", async (ctx) => {
 				},
 			});
 
-			const modelId = imageModelConfig.id.replace(/^openrouter\//, "");
-			console.log("OpenRouter Request Debug:", {
-				model: modelId,
-				apiKeyLength: apiKey.length,
-				apiKeyPrefix: apiKey.substring(0, 5) + "...",
-				fileUrl: fileUrl,
-			});
-
 			const response = await openrouter.chat.completions.create({
-				model: modelId,
+				model: imageModelConfig.id.replace(/^openrouter\//, ""),
 				messages: [
 					{
 						role: "user",
