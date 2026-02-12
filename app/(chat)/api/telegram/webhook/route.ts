@@ -4134,26 +4134,29 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 							throw new Error("Missing OPENROUTER_API_KEY");
 						}
 
-						const openrouter = new OpenAI({
-							apiKey: apiKey,
-							baseURL: "https://openrouter.ai/api/v1",
-							defaultHeaders: {
-								"HTTP-Referer": "https://aporto.tech",
-								"X-Title": "Aporto Bot",
+						// Direct fetch to OpenRouter Chat Completions for Image Generation
+						const controller = new AbortController();
+						const timeoutId = setTimeout(() => controller.abort(), 60_000); // 60 seconds timeout
+
+						const response = await fetch(
+							"https://openrouter.ai/api/v1/chat/completions",
+							{
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${apiKey}`,
+									"Content-Type": "application/json",
+									"HTTP-Referer": "https://aporto.tech", // Optional, encouraged by OpenRouter
+									"X-Title": "Aporto Bot", // Optional
+								},
+								body: JSON.stringify({
+									model: imageModelConfig.id,
+									messages: [{ role: "user", content: text }],
+									// Explicitly request image and text capabilities
+									modalities: ["image", "text"],
+								}),
+								signal: controller.signal,
 							},
-						});
-
-						const modelId = imageModelConfig.id.replace(/^openrouter\//, "");
-
-						console.log("OpenRouter Gen Request Debug:", {
-							model: modelId,
-							prompt: text,
-						});
-
-						const response = await openrouter.chat.completions.create({
-							model: modelId,
-							messages: [{ role: "user", content: text }],
-						});
+						);
 
 						clearTimeout(timeoutId);
 
