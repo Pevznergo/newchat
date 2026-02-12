@@ -4166,7 +4166,7 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						}
 
 						// Check if images array exists and has content
-						// @ts-expect-error - OpenRouter returns images in message.images, not in OpenAI types
+						// OpenRouter returns images in message.images, not in OpenAI types
 						const images = (message as any).images;
 
 						if (images && images.length > 0) {
