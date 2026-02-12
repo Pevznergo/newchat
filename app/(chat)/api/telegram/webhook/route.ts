@@ -5252,6 +5252,7 @@ bot.on("message:document", async (ctx) => {
 											type: "image_url",
 											image_url: {
 												url: `data:${mimeType};base64,${base64Image}`,
+												detail: "auto",
 											},
 										},
 										{
@@ -5261,7 +5262,6 @@ bot.on("message:document", async (ctx) => {
 									],
 								},
 							],
-							modalities: ["image", "text"],
 						}),
 						signal: controller.signal,
 					},
