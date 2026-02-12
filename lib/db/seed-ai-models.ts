@@ -278,16 +278,15 @@ async function seedAiModels() {
 		{
 			modelId: "model_image_nano_banana",
 			name: "Nano Banana",
-			provider: "openai",
+			provider: "google",
 			type: "image",
 			cost: 1,
-			apiModelId: "openai/chatgpt-image-latest",
+			apiModelId: "google/gemini-2.5-flash-image",
 			requiredClanLevel: 1,
 			isEnabled: true,
 			isPremium: false,
 			isPro: false,
-			description:
-				"Передовая модель от Google для продвинутого редактирования изображений",
+			description: "Быстрая генерация и редактирование (Gemini 2.5)",
 		},
 		{
 			modelId: "model_image_banana_pro",
