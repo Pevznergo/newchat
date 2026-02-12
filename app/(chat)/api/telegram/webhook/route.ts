@@ -4103,15 +4103,15 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						const { openai } = await import("@ai-sdk/openai");
 
 						// Strip "openai/" prefix if present
-						const modelId = imageModelConfig.id.replace(/^openai\//, "");
+						// const modelId = imageModelConfig.id.replace(/^openai\//, "");
 
 						const { image } = await experimental_generateImage({
-							model: openai.image(modelId),
+							model: openai.image("dall-e-3"),
 							prompt: text,
 							n: 1,
 							size: "1024x1024",
 							providerOptions: {
-								openai: { quality: "low" },
+								openai: { quality: "standard" },
 							},
 						});
 
@@ -5028,7 +5028,7 @@ bot.on("message:photo", async (ctx) => {
 				n: 1,
 				size: "1024x1024",
 				providerOptions: {
-					openai: { quality: "hd", style: "vivid" }, // Nano Banana settings
+					openai: { quality: "standard", style: "vivid" }, // Nano Banana settings
 				},
 			});
 
@@ -5194,7 +5194,7 @@ bot.on("message:document", async (ctx) => {
 			const isNanoBanana = imageModelConfig.id === "model_image_nano_banana";
 
 			// If it's pure Google provider, likely Nano Banana
-			const isGoogle = imageModelConfig.provider === "google";
+			// const isGoogle = imageModelConfig.provider === "google";
 
 			// OpenRouter logic is separate and likely allows editing if supported?
 			// But for now, align with photo handler logic:
@@ -5232,6 +5232,30 @@ bot.on("message:document", async (ctx) => {
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
+				const body = {
+					model: imageModelConfig.id.replace(/^openrouter\//, ""),
+					messages: [
+						{
+							role: "user",
+							content: [
+								{
+									type: "image_url",
+									image_url: {
+										url: `data:${mimeType};base64,${base64Image}`,
+										detail: "low",
+									},
+								},
+								{
+									type: "text",
+									text: caption || "Опиши это изображение",
+								},
+							],
+						},
+					],
+					modalities: ["image", "text"], // Restore modalities for Gemini
+				};
+				console.log("OpenRouter Request Body:", JSON.stringify(body, null, 2));
+
 				const response = await fetch(
 					"https://openrouter.ai/api/v1/chat/completions",
 					{
@@ -5242,27 +5266,7 @@ bot.on("message:document", async (ctx) => {
 							"HTTP-Referer": "https://aporto.tech",
 							"X-Title": "Aporto Bot",
 						},
-						body: JSON.stringify({
-							model: imageModelConfig.id.replace(/^openrouter\//, ""),
-							messages: [
-								{
-									role: "user",
-									content: [
-										{
-											type: "image_url",
-											image_url: {
-												url: `data:${mimeType};base64,${base64Image}`,
-												detail: "auto",
-											},
-										},
-										{
-											type: "text",
-											text: caption || "Опиши это изображение",
-										},
-									],
-								},
-							],
-						}),
+						body: JSON.stringify(body),
 						signal: controller.signal,
 					},
 				);
@@ -5334,7 +5338,7 @@ bot.on("message:document", async (ctx) => {
 					prompt: prompt,
 					n: 1,
 					size: "1024x1024",
-					providerOptions: { openai: { quality: "hd", style: "vivid" } },
+					providerOptions: { openai: { quality: "standard", style: "vivid" } },
 				});
 
 				if (image?.base64) {
