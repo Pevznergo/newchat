@@ -4972,6 +4972,73 @@ bot.on("message:photo", async (ctx) => {
 			} else {
 				throw new Error("No content or images in response");
 			}
+		} else if (imageModelConfig.provider === "openai") {
+			const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+			const response = await openai.chat.completions.create({
+				model: imageModelConfig.id.replace(/^openai\//, ""),
+				messages: [
+					{
+						role: "user",
+						content: [
+							{
+								type: "image_url",
+								image_url: { url: `data:${mimeType};base64,${base64Image}` },
+							},
+							{
+								type: "text",
+								text: caption || "Опиши это изображение",
+							},
+						],
+					},
+				],
+			});
+
+			const message = response.choices?.[0]?.message;
+			if (message?.content) {
+				await ctx.reply(message.content);
+			} else {
+				throw new Error("No response from OpenAI");
+			}
+		} else if (imageModelConfig.provider === "google") {
+			const { GoogleGenerativeAI } = await import("@google/generative-ai");
+			const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+			const model = genAI.getGenerativeModel({
+				model: "gemini-2.5-flash-image",
+			});
+
+			const result = await model.generateContent([
+				{
+					inlineData: {
+						data: base64Image,
+						mimeType: "image/jpeg",
+					},
+				},
+				caption || "Edit this image",
+			]);
+
+			const response = await result.response;
+
+			// Check for image in response
+			let imageData: string | null = null;
+			for (const part of response.candidates?.[0]?.content?.parts || []) {
+				if (part.inlineData) {
+					imageData = part.inlineData.data;
+					break;
+				}
+			}
+
+			if (imageData) {
+				const buffer = Buffer.from(imageData, "base64");
+				await ctx.replyWithPhoto(
+					new InputFile(buffer, `edited_${Date.now()}.png`),
+					{ caption: "Сделано в @aporto_bot" },
+				);
+			} else if (response.text()) {
+				await ctx.reply(response.text());
+			} else {
+				throw new Error("No response from Google");
+			}
 		} else {
 			await ctx.reply("Этот провайдер пока не поддерживает обработку фото.");
 			return;
