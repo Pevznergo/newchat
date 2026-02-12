@@ -4155,11 +4155,21 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 							messages: [{ role: "user", content: text }],
 						});
 
-						const message = response.choices?.[0]?.message;
-						console.log(
-							"OpenRouter Gen Response:",
-							JSON.stringify(message, null, 2),
-						);
+						clearTimeout(timeoutId);
+
+						if (!response.ok) {
+							const err = await response.text();
+							console.error("OpenRouter API Error:", response.status, err);
+							throw new Error(
+								`OpenRouter API Error: ${response.status} - ${err}`,
+							);
+						}
+
+						const data = await response.json();
+						console.log("OpenRouter Response:", JSON.stringify(data, null, 2));
+
+						// OpenRouter returns images in message.images array, not in content
+						const message = data.choices?.[0]?.message;
 
 						if (!message) {
 							throw new Error("No message from OpenRouter");
