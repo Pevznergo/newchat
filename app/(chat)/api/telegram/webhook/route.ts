@@ -4211,6 +4211,19 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						const data = await response.json();
 						console.log("OpenRouter Response:", JSON.stringify(data, null, 2));
 
+						// Check for Safety Failures (Google/Gemini)
+						if (
+							data.choices?.[0]?.native_finish_reason === "IMAGE_SAFETY" ||
+							data.choices?.[0]?.finish_reason === "content_filter"
+						) {
+							console.warn("OpenRouter Image Safety Triggered");
+							await ctx.reply(
+								"⚠️ <b>Генерация остановлена фильтром безопасности.</b>\n\nМодель посчитала ваш запрос небезопасным или нарушающим правила. Пожалуйста, измените промпт или выберите другую модель.",
+								{ parse_mode: "HTML" },
+							);
+							return;
+						}
+
 						// OpenRouter returns images in message.images array, not in content
 						const message = data.choices?.[0]?.message;
 
