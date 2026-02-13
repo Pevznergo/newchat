@@ -1096,6 +1096,15 @@ async function checkAndEnforceLimits(
 		let message = "";
 		let buttons: any[] = [];
 
+		// Track Limit Exceeded
+		trackBackendEvent("Limit Exceeded", user.id, {
+			timestamp: Date.now(),
+			is_premium: user.hasPaid,
+			limit_type: user.hasPaid ? "monthly_premium" : "weekly_free",
+			limit_amount: limit,
+			attempted_cost: effectiveCost,
+		});
+
 		if (user.hasPaid) {
 			// Paid User Reached Limit
 			message = `⚡️ <b>Лимит тарифа исчерпан! (${limit})</b>\n\nДокупите пакет запросов, чтобы продолжить.`;
