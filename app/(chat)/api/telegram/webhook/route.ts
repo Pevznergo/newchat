@@ -1114,8 +1114,8 @@ async function checkAndEnforceLimits(
 		} else {
 			// Free User Logic & Upsell
 			const clanData = await getUserClan(user.id);
-			message =
-				"🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Pro или докупите запросы.";
+			let dynamicMessage =
+				"🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Pro или вступите в клан.";
 
 			if (clanData) {
 				buttons = [
@@ -1128,6 +1128,51 @@ async function checkAndEnforceLimits(
 						},
 					],
 				];
+
+				// Calculate dynamic requirements
+				try {
+					const counts = await getClanMemberCounts(clanData.id);
+					const dynamicLevels = await getClanLevels();
+					const currentLevel = calculateClanLevel(
+						counts.total,
+						counts.pro,
+						dynamicLevels,
+					);
+					const nextLevelReqs = getNextLevelRequirements(
+						currentLevel,
+						counts.total,
+						counts.pro,
+						dynamicLevels,
+					);
+
+					if (nextLevelReqs) {
+						const n = nextLevelReqs.neededUsers;
+						const currentConfig = getLevelConfig(currentLevel, dynamicLevels);
+						const nextConfig = getLevelConfig(
+							nextLevelReqs.nextLevel,
+							dynamicLevels,
+						);
+
+						const x =
+							nextConfig.benefits.weeklyTextCredits -
+							currentConfig.benefits.weeklyTextCredits;
+						const y =
+							nextConfig.benefits.weeklyImageGenerations -
+							currentConfig.benefits.weeklyImageGenerations;
+
+						dynamicMessage = `🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nДля увеличения перейдите на Pro или добавьте <b>${n}</b> друзей в клан, чтобы получить дополнительно <b>${x}</b> запросов и <b>${y}</b> генераций изображений в неделю.`;
+					} else {
+						// Max level
+						dynamicMessage =
+							"🛑 <b>Лимиты на эту неделю исчерпаны.</b>\n\nВаш клан достиг максимума! Перейдите на Pro для безлимита.";
+					}
+				} catch (e) {
+					console.error(
+						"Failed to calculate dynamic clan stats for message",
+						e,
+					);
+				}
+				message = dynamicMessage;
 			} else {
 				buttons = [
 					[{ text: "💎 Pro (400₽)", callback_data: "open_premium" }],
@@ -1139,6 +1184,7 @@ async function checkAndEnforceLimits(
 						},
 					],
 				];
+				message = dynamicMessage;
 			}
 		}
 
@@ -1622,8 +1668,8 @@ bot.command("start", async (ctx) => {
 			{ command: "premium", description: "🚀 Премиум" },
 			{ command: "deletecontext", description: "💬 Очистить контекст" },
 			{ command: "photo", description: "🌅 Создать изображение" },
-			{ command: "video", description: "🎬 Создать видео" },
-			{ command: "video", description: "🎬 Создать видео" },
+			// { command: "video", description: "🎬 Создать видео" },
+			// { command: "video", description: "🎬 Создать видео" },
 			{ command: "s", description: "🔎 Поиск в интернете" },
 			{ command: "model", description: "📝 Выбрать модель" },
 			{ command: "settings", description: "⚙️ Настройки" },
@@ -1805,7 +1851,7 @@ bot.command("start", async (ctx) => {
 
 ИИ-фотошоп и генератор графики тоже включены!
 
-💎 В /PREMIUM (для профи): Самые мощные модели планеты: GPT-5.2, Claude, GPT Images 1.5, а также создание видео в Sora 2, Kling и Veo 3.1.
+💎 В /PREMIUM (для профи): Самые мощные модели планеты: GPT-5.2, Claude, GPT Images 1.5.
 
 С чего начать?
 
@@ -1813,9 +1859,9 @@ bot.command("start", async (ctx) => {
 
 🔎 ПОИСК В СЕТИ (/s): Актуальные новости и факты из интернета в режиме реального времени.
 
-� КАРТИНКИ (/photo): Создавай шедевры или редактируй свои фото через «Nano Banana».
+ КАРТИНКИ (/photo): Создавай шедевры или редактируй свои фото через «Nano Banana».
 
-🎬 ВИДЕО (/video): Оживляй свои идеи и создавай ролики в один клик.
+// 🎬 ВИДЕО (/video): Оживляй свои идеи и создавай ролики в один клик.
 
 ⚙️ ВЫБОР МОЗГОВ: Нажми /model, чтобы сменить нейросеть.
 
@@ -1871,7 +1917,7 @@ bot.command("start", async (ctx) => {
 				keyboard: [
 					["📝 Выбрать модель", "🎨 Создать картинку"],
 					["🛠 Готовые сценарии"],
-					["🔎 Интернет-поиск", "🎬 Создать видео"],
+					["🔎 Интернет-поиск" /*, "🎬 Создать видео" */],
 					["🚀 Премиум", "👤 Мой профиль"],
 				],
 				resize_keyboard: true,
@@ -2019,7 +2065,7 @@ bot.hears("⚔️ Мой клан", async (ctx) => {
 			reply_markup: {
 				keyboard: [
 					["📝 Выбрать модель", "🎨 Создать картинку"],
-					["🔎 Интернет-поиск", "🎬 Создать видео"],
+					["🔎 Интернет-поиск" /*, "🎬 Создать видео" */],
 					[
 						{
 							text: "⚔️ Мой клан",
