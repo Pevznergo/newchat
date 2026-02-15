@@ -1129,7 +1129,7 @@ async function checkAndEnforceLimits(
 		let buttons: any[] = [];
 
 		// Track Limit Exceeded
-		trackBackendEvent("Limit Exceeded", user.id, {
+		trackBackendEvent("Limit Exceeded", user.telegramId, {
 			timestamp: Date.now(),
 			is_premium: user.hasPaid,
 			limit_type: user.hasPaid ? "monthly_premium" : "weekly_free",
