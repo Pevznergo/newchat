@@ -373,42 +373,56 @@ async function getImageModelKeyboard(
 	clanLevel = 1,
 ) {
 	const IMAGE_MODELS = await getImageModels();
-	const buttons = Object.entries(IMAGE_MODELS).map(([key, model]) => {
-		// Fetch DB config for this model
-		// Note: Cache should be loaded by ensureDataLoaded() in handler
+	const buttons: any[][] = [];
+
+	// Helper to generate button for a model
+	const getModelBtn = (key: string, labelOverride?: string) => {
+		const model = IMAGE_MODELS[key];
+		if (!model) return null;
+
 		const dbModel = CACHED_MODELS?.find((m: any) => m.modelId === key);
 		const requiredLevel = dbModel?.requiredClanLevel || 1;
-		const name = dbModel?.name || model.name;
+		const name = labelOverride || dbModel?.name || model.name;
 
 		const isSelected = selectedModel === key;
-		// Check if free via specific exemption list or prefix
 		const isFree = FREE_MODELS.includes(key);
 
-		// Is Locked?
-		// 1. If not Premium AND not Free -> Check Clan Level
 		let isLocked = false;
 		if (!isPremium && !isFree) {
 			if (clanLevel < requiredLevel) {
-				isLocked = true; // Locked by Level
-			} else {
-				isLocked = false; // Unlocked by Level!
+				isLocked = true;
 			}
 		}
 
 		const status = isLocked ? "🔒" : isSelected ? "✅" : "";
+		return {
+			text: `${status} ${name}`,
+			callback_data: key,
+		};
+	};
 
-		return [
-			{
-				text: `${status} ${name}`,
-				callback_data: key,
-			},
-		];
-	});
+	// Row 1: Top 10 Pranks + GPT Images 1.5
+	const row1 = [];
+	row1.push({ text: "🎭 ТОП 10 Пранков", callback_data: "menu_top_pranks" });
 
-	buttons.push([
-		{ text: "🎭 ТОП 10 Пранков", callback_data: "menu_top_pranks" },
-	]);
+	const gptBtn = getModelBtn("model_image_gpt_images_1_5", "GPT Images 1.5");
+	if (gptBtn) row1.push(gptBtn);
 
+	buttons.push(row1);
+
+	// Row 2: Nano Banana
+	const nanoBtn = getModelBtn("model_image_nano_banana", "Nano Banana");
+	if (nanoBtn) buttons.push([nanoBtn]);
+
+	// Row 3: Nano Banana Pro
+	const nanoProBtn = getModelBtn("model_image_banana_pro", "Nano Banana Pro");
+	if (nanoProBtn) buttons.push([nanoProBtn]);
+
+	// Row 4: FLUX 2 Pro
+	const fluxBtn = getModelBtn("model_image_flux", "FLUX 2 Pro");
+	if (fluxBtn) buttons.push([fluxBtn]);
+
+	// Row 5: Back
 	buttons.push([{ text: "🔙 Назад", callback_data: "menu_start" }]);
 
 	return { inline_keyboard: buttons };
