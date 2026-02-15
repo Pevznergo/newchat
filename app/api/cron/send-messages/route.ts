@@ -5,8 +5,6 @@ import { identifyBackendUser, trackBackendEvent } from "@/lib/mixpanel";
 // Cron job to send pending messages
 // Schedule: Every 1 minute via Vercel Cron or external scheduler
 
-const _bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
-
 export async function GET(request: NextRequest) {
 	try {
 		// Verify cron authorization (bypass in development or if no secret set)
