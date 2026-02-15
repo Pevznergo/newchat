@@ -405,8 +405,26 @@ async function getImageModelKeyboard(
 		];
 	});
 
+	buttons.push([
+		{ text: "🎭 ТОП 10 Пранков", callback_data: "menu_top_pranks" },
+	]);
+
 	buttons.push([{ text: "🔙 Назад", callback_data: "menu_start" }]);
 
+	return { inline_keyboard: buttons };
+}
+
+export function getTopPranksKeyboard() {
+	const buttons: any[][] = [];
+	for (let i = 1; i <= 10; i++) {
+		if (i % 2 !== 0) {
+			buttons.push([
+				{ text: `Пранк ${i}`, callback_data: `prank_${i}` },
+				{ text: `Пранк ${i + 1}`, callback_data: `prank_${i + 1}` },
+			]);
+		}
+	}
+	buttons.push([{ text: "🔙 Назад", callback_data: "menu_image" }]);
 	return { inline_keyboard: buttons };
 }
 
@@ -1134,14 +1152,14 @@ async function checkAndEnforceLimits(
 					const counts = await getClanMemberCounts(clanData.id);
 					const dynamicLevels = await getClanLevels();
 					const currentLevel = calculateClanLevel(
-						counts.total,
-						counts.pro,
+						counts.totalMembers,
+						counts.proMembers,
 						dynamicLevels,
 					);
 					const nextLevelReqs = getNextLevelRequirements(
 						currentLevel,
-						counts.total,
-						counts.pro,
+						counts.totalMembers,
+						counts.proMembers,
 						dynamicLevels,
 					);
 
