@@ -17,12 +17,18 @@ export async function GET(request: NextRequest) {
 		const campaign = searchParams.get("campaign") || undefined;
 		const status = searchParams.get("status");
 		const codeType = searchParams.get("codeType") || undefined;
+		const showUsed = searchParams.get("showUsed") === "true";
 
 		const filters: any = {};
 		if (campaign) filters.campaignName = campaign;
 		if (status === "active") filters.isActive = true;
 		if (status === "inactive") filters.isActive = false;
 		if (codeType) filters.codeType = codeType;
+
+		// Default: Hide fully used codes unless showUsed=true
+		if (!showUsed) {
+			filters.excludeFullyUsed = true;
+		}
 
 		const codes = await getAllGiftCodes(filters);
 
@@ -52,6 +58,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
+		console.log("POST /api/admin/gifts body:", body);
 		const {
 			codeType,
 			durationDays,

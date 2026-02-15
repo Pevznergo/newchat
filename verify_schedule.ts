@@ -5,7 +5,6 @@ import {
 	createFollowUpRule,
 	deleteFollowUpRule,
 } from "./lib/db/messaging-queries";
-import { followUpRule, messageTemplate } from "./lib/db/schema";
 
 async function verifyScheduledFollowUps() {
 	console.log("Starting verification of Scheduled Follow-up Rules...");

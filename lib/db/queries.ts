@@ -1375,9 +1375,8 @@ export async function processSuccessfulPayment({
 			.update(user)
 			.set({
 				hasPaid: true,
-				// Optional: Reset request count on new subscription start?
-				// requestCount: 0,
-				// lastResetDate: new Date()
+				requestCount: 0, // Reset monthly subscription usage
+				lastResetDate: new Date(),
 			})
 			.where(eq(user.id, userRecord.id));
 

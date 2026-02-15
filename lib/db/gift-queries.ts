@@ -1,5 +1,15 @@
 import crypto from "node:crypto";
-import { and, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import {
+	and,
+	desc,
+	eq,
+	getTableColumns,
+	gte,
+	isNull,
+	lte,
+	or,
+	sql,
+} from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
 	type GiftCode,
@@ -68,6 +78,8 @@ export async function createGiftCodeBatch(params: {
 	const codes: (typeof giftCode.$inferInsert)[] = [];
 
 	for (let i = 0; i < params.quantity; i++) {
+		// Debug duplicate creation
+		console.log(`Creating gift code ${i + 1}/${params.quantity}`);
 		const code = generateGiftCode(params.campaignName);
 		codes.push({
 			code,
@@ -171,8 +183,15 @@ export async function activateGiftCode(
 		})
 		.returning();
 
-	// Update user's hasPaid status
-	await db.update(user).set({ hasPaid: true }).where(eq(user.id, userId));
+	// Update user's hasPaid status and reset limits
+	await db
+		.update(user)
+		.set({
+			hasPaid: true,
+			requestCount: 0,
+			lastResetDate: new Date(),
+		})
+		.where(eq(user.id, userId));
 
 	// Record activation
 	await db.insert(giftCodeActivation).values({
@@ -225,7 +244,8 @@ export async function getAllGiftCodes(filters?: {
 	campaignName?: string;
 	isActive?: boolean;
 	codeType?: string;
-}): Promise<GiftCode[]> {
+	excludeFullyUsed?: boolean;
+}): Promise<(GiftCode & { activatedTelegramId?: string | null })[]> {
 	const conditions = [];
 
 	if (filters?.campaignName) {
@@ -240,11 +260,26 @@ export async function getAllGiftCodes(filters?: {
 		conditions.push(eq(giftCode.codeType, filters.codeType));
 	}
 
-	return await db
-		.select()
+	if (filters?.excludeFullyUsed) {
+		conditions.push(
+			or(
+				isNull(giftCode.maxUses),
+				sql`${giftCode.currentUses} < ${giftCode.maxUses}`,
+			),
+		);
+	}
+
+	const result = await db
+		.select({
+			...getTableColumns(giftCode),
+			activatedTelegramId: user.telegramId,
+		})
 		.from(giftCode)
+		.leftJoin(user, eq(giftCode.activatedBy, user.id))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(desc(giftCode.createdAt));
+
+	return result as (GiftCode & { activatedTelegramId?: string | null })[];
 }
 
 /**

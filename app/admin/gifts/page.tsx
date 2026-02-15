@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, RefreshCw, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface GiftCode {
 	id: string;
@@ -15,6 +15,7 @@ interface GiftCode {
 	expiresAt?: string;
 	createdAt: string;
 	activationCount?: number;
+	activatedTelegramId?: string;
 }
 
 export default function GiftsPage() {
@@ -29,12 +30,16 @@ export default function GiftsPage() {
 	const [campaignName, setCampaignName] = useState("");
 	const [expiresAt, setExpiresAt] = useState("");
 	const [priceRub, setPriceRub] = useState("");
+	const [showUsed, setShowUsed] = useState(false);
 
 	// Fetch codes
 	const fetchCodes = async () => {
 		setLoading(true);
 		try {
-			const res = await fetch("/api/admin/gifts");
+			const query = new URLSearchParams();
+			if (showUsed) query.set("showUsed", "true");
+
+			const res = await fetch(`/api/admin/gifts?${query.toString()}`);
 			const data = await res.json();
 			setCodes(data.codes || []);
 		} catch (error) {
@@ -44,6 +49,11 @@ export default function GiftsPage() {
 			setLoading(false);
 		}
 	};
+
+	// Reload when showUsed changes
+	useEffect(() => {
+		fetchCodes();
+	}, [showUsed]);
 
 	// Generate codes
 	const handleGenerate = async (e: React.FormEvent) => {
@@ -223,14 +233,37 @@ export default function GiftsPage() {
 						<h2 className="text-xl font-semibold text-white">
 							Gift Codes List
 						</h2>
-						<button
-							onClick={fetchCodes}
-							disabled={loading}
-							className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-						>
-							<RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-							{loading ? "Loading..." : "Refresh"}
-						</button>
+						<div className="flex items-center gap-4">
+							<label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer hover:text-zinc-300">
+								<input
+									type="checkbox"
+									checked={showUsed}
+									onChange={(e) => {
+										setShowUsed(e.target.checked);
+										// Trigger fetch on next effect or let user click refresh?
+										// Better to just let them click refresh or add effect.
+										// Let's rely on Refresh button for now or auto-refresh:
+										// For simplicity, user clicks refresh or I recall fetchCodes.
+										// Actually, better to just set state and let user click refresh
+										// OR wrap fetchCodes in useEffect dependent on showUsed?
+										// The current code calls fetchCodes manually.
+									}}
+									className="rounded bg-zinc-800 border-zinc-700 text-blue-600 focus:ring-blue-500/20"
+								/>
+								Show used
+							</label>
+							<button
+								onClick={fetchCodes}
+								disabled={loading}
+								className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+							>
+								<RefreshCw
+									size={16}
+									className={loading ? "animate-spin" : ""}
+								/>
+								{loading ? "Loading..." : "Refresh"}
+							</button>
+						</div>
 					</div>
 
 					<div className="overflow-x-auto">
@@ -251,6 +284,9 @@ export default function GiftsPage() {
 									</th>
 									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
 										Status
+									</th>
+									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+										Activated By
 									</th>
 									<th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">
 										Actions
@@ -287,6 +323,17 @@ export default function GiftsPage() {
 											>
 												{code.isActive ? "Active" : "Deactivated"}
 											</span>
+										</td>
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
+											{code.activatedTelegramId ? (
+												<span className="font-mono text-zinc-300 bg-zinc-800/50 px-1.5 py-0.5 rounded">
+													{code.activatedTelegramId}
+												</span>
+											) : code.currentUses > 0 ? (
+												<span className="text-zinc-600 italic">Unknown</span>
+											) : (
+												"-"
+											)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-right">
 											<div className="flex justify-end gap-2">
