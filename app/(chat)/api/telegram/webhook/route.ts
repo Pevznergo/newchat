@@ -5068,7 +5068,9 @@ bot.on("message:photo", async (ctx) => {
 						m.role === "user"
 							? // Simple text mapping for history, preserving images might be complex in this DB schema
 								// if parts are not stored fully. Assuming parts has text.
-								(m.parts as any[]).map((p) => p.text).join("\n")
+								(m.parts as any[])
+									.map((p) => p.text)
+									.join("\n")
 							: (m.parts as any[]).map((p) => p.text).join("\n"),
 				}));
 
@@ -5849,4 +5851,6 @@ bot.on("message:document", async (ctx) => {
 	}
 });
 
-export const POST = webhookCallback(bot, "std/http");
+export const POST = webhookCallback(bot, "std/http", {
+	timeoutMilliseconds: 90_000,
+});
