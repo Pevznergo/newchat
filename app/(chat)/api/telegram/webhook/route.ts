@@ -2492,13 +2492,12 @@ bot.callbackQuery(/^prank_select_(.+)$/, async (ctx) => {
 		// Ignore if not modified
 	}
 
-	// Send description message
-	await ctx.reply(
-		`🎭 <b>${prank.name}</b>\n\n${prank.description}\n\n📸 <b>Отправьте фото для розыгрыша!</b>\n⚠️ <i>Будет списано 15 запросов (как для Nano Banana).</i>`,
-		{ parse_mode: "HTML" },
+	// Send system notification instead of text message
+	await safeAnswerCallbackQuery(
+		ctx,
+		`🎭 Пранк "${prank.name}" выбран!\n\n⚠️ Расход: 15 генераций`,
+		{ show_alert: true },
 	);
-
-	await safeAnswerCallbackQuery(ctx, "Пранк выбран!");
 });
 
 bot.command("clear", async (ctx) => {
@@ -5286,9 +5285,24 @@ bot.on("message:photo", async (ctx) => {
 			}
 
 			// 2. Generate new image using description + prompt
-			const prompt = caption
+
+			// --- PRANK LOGIC START ---
+			let prompt = caption
 				? `${caption}. Based on image description: ${description}`
 				: `Remix of image: ${description}`;
+
+			const prankId = (user.preferences as any)?.prank_id;
+			if (prankId) {
+				const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+				if (prank) {
+					prompt = prank.prompt;
+					cost = 15; // Prank specific cost
+					await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+						parse_mode: "HTML",
+					});
+				}
+			}
+			// --- PRANK LOGIC END ---
 
 			// Strip "openai/" prefix if present
 			const modelId = imageModelConfig.id.replace(/^openai\//, "");
@@ -5634,9 +5648,25 @@ bot.on("message:document", async (ctx) => {
 					throw new Error("Failed to analyze image with GPT-4o");
 
 				// 2. Remix
-				const prompt = caption
+
+				// --- PRANK LOGIC START ---
+				let prompt = caption
 					? `${caption}. Based on image description: ${description}`
 					: `Remix of image: ${description}`;
+
+				const prankId = (user.preferences as any)?.prank_id;
+				if (prankId) {
+					const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+					if (prank) {
+						prompt = prank.prompt;
+						cost = 15; // Prank specific cost
+						await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+							parse_mode: "HTML",
+						});
+					}
+				}
+				// --- PRANK LOGIC END ---
+
 				const modelId = imageModelConfig.id.replace(/^openai\//, "");
 
 				const { image } = await experimental_generateImage({
