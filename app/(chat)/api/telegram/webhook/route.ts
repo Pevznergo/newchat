@@ -5068,9 +5068,7 @@ bot.on("message:photo", async (ctx) => {
 						m.role === "user"
 							? // Simple text mapping for history, preserving images might be complex in this DB schema
 								// if parts are not stored fully. Assuming parts has text.
-								(m.parts as any[])
-									.map((p) => p.text)
-									.join("\n")
+								(m.parts as any[]).map((p) => p.text).join("\n")
 							: (m.parts as any[]).map((p) => p.text).join("\n"),
 				}));
 
@@ -5172,6 +5170,21 @@ bot.on("message:photo", async (ctx) => {
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
+			// --- PRANK PROMPT OVERRIDE ---
+			let textPrompt = caption || "Опиши это изображение";
+			const prankId = (user.preferences as any)?.prank_id;
+			if (prankId) {
+				const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+				if (prank) {
+					textPrompt = prank.prompt;
+					cost = 15;
+					await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+						parse_mode: "HTML",
+					});
+				}
+			}
+			// -----------------------------
+
 			const response = await fetch(
 				"https://openrouter.ai/api/v1/chat/completions",
 				{
@@ -5196,7 +5209,7 @@ bot.on("message:photo", async (ctx) => {
 									},
 									{
 										type: "text",
-										text: caption || "Опиши это изображение",
+										text: textPrompt,
 									},
 								],
 							},
@@ -5563,6 +5576,21 @@ bot.on("message:document", async (ctx) => {
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
+				// --- PRANK PROMPT OVERRIDE ---
+				let textPrompt = caption || "Опиши это изображение";
+				const prankId = (user.preferences as any)?.prank_id;
+				if (prankId) {
+					const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+					if (prank) {
+						textPrompt = prank.prompt;
+						cost = 15;
+						await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+							parse_mode: "HTML",
+						});
+					}
+				}
+				// -----------------------------
+
 				const body = {
 					model: imageModelConfig.id.replace(/^openrouter\//, ""),
 					messages: [
@@ -5578,7 +5606,7 @@ bot.on("message:document", async (ctx) => {
 								},
 								{
 									type: "text",
-									text: caption || "Опиши это изображение",
+									text: textPrompt,
 								},
 							],
 						},
