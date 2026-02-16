@@ -2492,12 +2492,16 @@ bot.callbackQuery(/^prank_select_(.+)$/, async (ctx) => {
 		// Ignore if not modified
 	}
 
-	// Send system notification instead of text message
-	await safeAnswerCallbackQuery(
-		ctx,
-		`🎭 Пранк "${prank.name}" выбран!\n\n⚠️ Расход: 15 генераций`,
-		{ show_alert: true },
+	// Send description message (without cost warning)
+	await ctx.reply(
+		`🎭 <b>${prank.name}</b>\n\n${prank.description}\n\n📸 <b>Отправьте фото для розыгрыша!</b>`,
+		{ parse_mode: "HTML" },
 	);
+
+	// Send system notification about cost
+	await safeAnswerCallbackQuery(ctx, `⚠️ Расход: 15 генераций`, {
+		show_alert: true,
+	});
 });
 
 bot.command("clear", async (ctx) => {
@@ -5064,7 +5068,9 @@ bot.on("message:photo", async (ctx) => {
 						m.role === "user"
 							? // Simple text mapping for history, preserving images might be complex in this DB schema
 								// if parts are not stored fully. Assuming parts has text.
-								(m.parts as any[]).map((p) => p.text).join("\n")
+								(m.parts as any[])
+									.map((p) => p.text)
+									.join("\n")
 							: (m.parts as any[]).map((p) => p.text).join("\n"),
 				}));
 
@@ -5292,11 +5298,16 @@ bot.on("message:photo", async (ctx) => {
 				: `Remix of image: ${description}`;
 
 			const prankId = (user.preferences as any)?.prank_id;
+			console.log("[DEBUG] User Preferences:", user.preferences);
+			console.log("[DEBUG] Active Prank ID:", prankId);
+
 			if (prankId) {
 				const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+				console.log("[DEBUG] Found Prank:", prank?.name);
 				if (prank) {
 					prompt = prank.prompt;
 					cost = 15; // Prank specific cost
+					console.log("[DEBUG] Applying Prank Prompt:", prompt);
 					await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
 						parse_mode: "HTML",
 					});
