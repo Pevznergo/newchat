@@ -1,0 +1,628 @@
+
+> ai-chatbot@3.1.0 lint /Users/igortkachenko/Downloads/newchat
+> ultracite check
+
+app/admin/gifts/page.tsx:81:27 lint/correctness/useParseIntRadix  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Missing radix parameter
+  
+    79 │ 					campaignName: campaignName || undefined,
+    80 │ 					expiresAt: expiresAt || undefined,
+  > 81 │ 					priceRub: priceRub ? Number.parseInt(priceRub) : undefined,
+       │ 					                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    82 │ 				}),
+    83 │ 			});
+  
+  i Add a non-fractional number between 2 and 36
+  
+  i Unsafe fix: Add a radix of 10
+  
+    81 │ → → → → → priceRub:·priceRub·?·Number.parseInt(priceRub,·10)·:·undefined,
+       │                                                        ++++              
+
+app/admin/gifts/page.tsx:174:39 lint/correctness/useParseIntRadix  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Missing radix parameter
+  
+    172 │ 									max="1000"
+    173 │ 									value={quantity}
+  > 174 │ 									onChange={(e) => setQuantity(Number.parseInt(e.target.value))}
+        │ 									                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    175 │ 									className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+    176 │ 								/>
+  
+  i Add a non-fractional number between 2 and 36
+  
+  i Unsafe fix: Add a radix of 10
+  
+    174 │ → → → → → → → → → onChange={(e)·=>·setQuantity(Number.parseInt(e.target.value,·10))}
+        │                                                                              ++++   
+
+app/api/admin/upload/route.ts:4:26 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    2 │ import { Bot, InputFile } from "grammy";
+    3 │ import { NextResponse } from "next/server";
+  > 4 │ import { Readable } from "stream";
+      │                          ^^^^^^^^
+    5 │ import { auth } from "@/app/(auth)/auth";
+    6 │ 
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+      2   2 │   import { Bot, InputFile } from "grammy";
+      3   3 │   import { NextResponse } from "next/server";
+      4     │ - import·{·Readable·}·from·"stream";
+          4 │ + import·{·Readable·}·from·"node:stream";
+      5   5 │   import { auth } from "@/app/(auth)/auth";
+      6   6 │   
+  
+
+app/api/admin/upload/route.ts:63:40 lint/correctness/useParseIntRadix  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  i Missing radix parameter
+  
+    62 │ 			bb.on("field", (name, val) => {
+  > 63 │ 				if (name === "width") videoWidth = parseInt(val);
+       │ 				                                   ^^^^^^^^^^^^^
+    64 │ 				if (name === "height") videoHeight = parseInt(val);
+    65 │ 				if (name === "duration") videoDuration = parseInt(val);
+  
+  i Add a non-fractional number between 2 and 36
+  
+  i Unsafe fix: Add a radix of 10
+  
+    63 │ → → → → if·(name·===·"width")·videoWidth·=·parseInt(val,·10);
+       │                                                        ++++  
+
+app/api/admin/upload/route.ts:64:42 lint/correctness/useParseIntRadix  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  i Missing radix parameter
+  
+    62 │ 			bb.on("field", (name, val) => {
+    63 │ 				if (name === "width") videoWidth = parseInt(val);
+  > 64 │ 				if (name === "height") videoHeight = parseInt(val);
+       │ 				                                     ^^^^^^^^^^^^^
+    65 │ 				if (name === "duration") videoDuration = parseInt(val);
+    66 │ 			});
+  
+  i Add a non-fractional number between 2 and 36
+  
+  i Unsafe fix: Add a radix of 10
+  
+    64 │ → → → → if·(name·===·"height")·videoHeight·=·parseInt(val,·10);
+       │                                                          ++++  
+
+app/api/admin/upload/route.ts:65:46 lint/correctness/useParseIntRadix  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  i Missing radix parameter
+  
+    63 │ 				if (name === "width") videoWidth = parseInt(val);
+    64 │ 				if (name === "height") videoHeight = parseInt(val);
+  > 65 │ 				if (name === "duration") videoDuration = parseInt(val);
+       │ 				                                         ^^^^^^^^^^^^^
+    66 │ 			});
+    67 │ 
+  
+  i Add a non-fractional number between 2 and 36
+  
+  i Unsafe fix: Add a radix of 10
+  
+    65 │ → → → → if·(name·===·"duration")·videoDuration·=·parseInt(val,·10);
+       │                                                              ++++  
+
+app/api/verify-schedule/route.ts:21:23 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    19 │ 	// 1. Setup: Create a test template
+    20 │ 	let templateId: string | null = null;
+  > 21 │ 	const templateName = "Verification Template " + Date.now();
+       │ 	                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    22 │ 	try {
+    23 │ 		const [template] = await db
+  
+  i Unsafe fix: Use a template literal.
+  
+     19  19 │   	// 1. Setup: Create a test template
+     20  20 │   	let templateId: string | null = null;
+     21     │ - → const·templateName·=·"Verification·Template·"·+·Date.now();
+         21 │ + → const·templateName·=·`Verification·Template·${Date.now()}`;
+     22  22 │   	try {
+     23  23 │   		const [template] = await db
+  
+
+components/admin/messages/MediaUploader.tsx:144:8 lint/complexity/noUselessFragments  FIXABLE  ━━━━━━━━━━
+
+  i This fragment is unnecessary.
+  
+    142 │ 					<div className="relative group">
+    143 │ 						{mediaUrl.startsWith("http") ? (
+  > 144 │ 							<>
+        │ 							^^
+  > 145 │ 								{mediaType === "photo" ? (
+         ...
+  > 163 │ 								)}
+  > 164 │ 							</>
+        │ 							^^^
+    165 │ 						) : (
+    166 │ 							<div className="h-48 w-full flex flex-col items-center justify-center bg-zinc-900 rounded-lg border border-zinc-800">
+  
+  i A fragment is redundant if it contains only one child, or if it is the child of a html element, and is not a keyed fragment.
+  
+  i Unsafe fix: Remove the Fragment
+  
+    142 142 │   					<div className="relative group">
+    143 143 │   						{mediaUrl.startsWith("http") ? (
+    144     │ - → → → → → → → <>
+    145     │ - → → → → → → → → {mediaType·===·"photo"·?·(
+        144 │ + → → → → → → → mediaType·===·"photo"·?·(
+    146 145 │   									<div className="relative h-48 w-full rounded-lg overflow-hidden bg-zinc-900">
+    147 146 │   										<Image
+    ······· │ 
+    161 160 │   										<track kind="captions" />
+    162 161 │   									</video>
+    163     │ - → → → → → → → → )}
+    164     │ - → → → → → → → </>
+        162 │ + → → → → → → → → )
+    165 163 │   						) : (
+    166 164 │   							<div className="h-48 w-full flex flex-col items-center justify-center bg-zinc-900 rounded-lg border border-zinc-800">
+  
+
+verify_schedule.ts:15:23 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    13 │ 	// 1. Setup: Create a test template
+    14 │ 	let templateId: string | null = null;
+  > 15 │ 	const templateName = "Verification Template " + Date.now();
+       │ 	                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    16 │ 	try {
+    17 │ 		const [template] = await db
+  
+  i Unsafe fix: Use a template literal.
+  
+     13  13 │   	// 1. Setup: Create a test template
+     14  14 │   	let templateId: string | null = null;
+     15     │ - → const·templateName·=·"Verification·Template·"·+·Date.now();
+         15 │ + → const·templateName·=·`Verification·Template·${Date.now()}`;
+     16  16 │   	try {
+     17  17 │   		const [template] = await db
+  
+
+app/(chat)/api/telegram/webhook/route.ts:17:8 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━━
+
+  ! This import is unused.
+  
+    15 │ 	SUBSCRIPTION_LIMITS,
+    16 │ } from "@/lib/ai/entitlements";
+  > 17 │ import { IMAGE_MODELS } from "@/lib/ai/models";
+       │        ^^^^^^^^^^^^^^^^
+    18 │ import { systemPrompt } from "@/lib/ai/prompts";
+    19 │ import { getLanguageModel } from "@/lib/ai/providers";
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: Remove the unused imports.
+  
+      15   15 │   	SUBSCRIPTION_LIMITS,
+      16   16 │   } from "@/lib/ai/entitlements";
+      17      │ - import·{·IMAGE_MODELS·}·from·"@/lib/ai/models";
+      18   17 │   import { systemPrompt } from "@/lib/ai/prompts";
+      19   18 │   import { getLanguageModel } from "@/lib/ai/providers";
+  
+
+app/admin/gifts/page.tsx:3:42 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Several of these imports are unused.
+  
+    1 │ "use client";
+    2 │ 
+  > 3 │ import { Check, Copy, RefreshCw, Trash2, X } from "lucide-react";
+      │                                          ^
+    4 │ import { useEffect, useState } from "react";
+    5 │ 
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: Remove the unused imports.
+  
+    3 │ import·{·Check,·Copy,·RefreshCw,·Trash2,·X·}·from·"lucide-react";
+      │                                          --                      
+
+app/admin/gifts/page.tsx:54:2 lint/correctness/useExhaustiveDependencies  FIXABLE  ━━━━━━━━━━━━━━━━━
+
+  ! This hook does not specify its dependency on fetchCodes.
+  
+    53 │ 	// Reload when showUsed changes
+  > 54 │ 	useEffect(() => {
+       │ 	^^^^^^^^^
+    55 │ 		fetchCodes();
+    56 │ 	}, [showUsed]);
+  
+  i This dependency is being used here, but is not specified in the hook dependency list.
+  
+    53 │ 	// Reload when showUsed changes
+    54 │ 	useEffect(() => {
+  > 55 │ 		fetchCodes();
+       │ 		^^^^^^^^^^
+    56 │ 	}, [showUsed]);
+    57 │ 
+  
+  i React relies on hook dependencies to determine when to re-compute Effects.
+    Failing to specify dependencies can result in Effects not updating correctly when state changes.
+    These "stale closures" are a common source of surprising bugs.
+  
+  i Unsafe fix: Add the missing dependency to the list.
+  
+    56 │ → },·[showUsed,·fetchCodes]);
+       │               ++++++++++++   
+
+app/admin/gifts/page.tsx:54:2 lint/correctness/useExhaustiveDependencies  FIXABLE  ━━━━━━━━━━━━━━━━━
+
+  ! This hook specifies more dependencies than necessary: showUsed.
+  
+    53 │ 	// Reload when showUsed changes
+  > 54 │ 	useEffect(() => {
+       │ 	^^^^^^^^^
+    55 │ 		fetchCodes();
+    56 │ 	}, [showUsed]);
+  
+  i This dependency can be removed from the list.
+  
+    54 │ 	useEffect(() => {
+    55 │ 		fetchCodes();
+  > 56 │ 	}, [showUsed]);
+       │ 	    ^^^^^^^^
+    57 │ 
+    58 │ 	// Generate codes
+  
+  i React relies on hook dependencies to determine when to re-compute Effects.
+    Specifying more dependencies than required can lead to unnecessary re-rendering
+    and degraded performance.
+  
+  i Unsafe fix: Remove the extra dependencies from the list.
+  
+    56 │ → },·[showUsed]);
+       │       --------   
+
+app/api/admin/gifts/route.ts:6:2 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Several of these imports are unused.
+  
+    4 │ 	deactivateGiftCode,
+    5 │ 	getAllGiftCodes,
+  > 6 │ 	getGiftCodeActivations,
+      │ 	^^^^^^^^^^^^^^^^^^^^^^
+    7 │ 	getGiftCodeStats,
+    8 │ } from "@/lib/db/gift-queries";
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: Remove the unused imports.
+  
+      4   4 │   	deactivateGiftCode,
+      5   5 │   	getAllGiftCodes,
+      6     │ - → getGiftCodeActivations,
+      7   6 │   	getGiftCodeStats,
+      8   7 │   } from "@/lib/db/gift-queries";
+  
+
+app/api/cron/send-messages/route.ts:3:8 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━━━━━━━━
+
+  ! This import is unused.
+  
+    1 │ import { type NextRequest, NextResponse } from "next/server";
+    2 │ import { processPendingMessages } from "@/lib/cron-handlers";
+  > 3 │ import { identifyBackendUser, trackBackendEvent } from "@/lib/mixpanel";
+      │        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    4 │ 
+    5 │ // Cron job to send pending messages
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: Remove the unused imports.
+  
+     1  1 │   import { type NextRequest, NextResponse } from "next/server";
+     2  2 │   import { processPendingMessages } from "@/lib/cron-handlers";
+     3    │ - import·{·identifyBackendUser,·trackBackendEvent·}·from·"@/lib/mixpanel";
+     4  3 │   
+     5  4 │   // Cron job to send pending messages
+  
+
+components/ui/sidebar.tsx:98:31 lint/correctness/useExhaustiveDependencies  FIXABLE  ━━━━━━━━━━━━━━━
+
+  ! This hook specifies more dependencies than necessary: setOpenMobile.
+  
+     97 │ 		// Helper to toggle the sidebar.
+   > 98 │ 		const toggleSidebar = React.useCallback(() => {
+        │ 		                            ^^^^^^^^^^^
+     99 │ 			return isMobile
+    100 │ 				? setOpenMobile((open) => !open)
+  
+  i This dependency can be removed from the list.
+  
+    100 │ 				? setOpenMobile((open) => !open)
+    101 │ 				: setOpen((open) => !open);
+  > 102 │ 		}, [isMobile, setOpen, setOpenMobile]);
+        │ 		                       ^^^^^^^^^^^^^
+    103 │ 
+    104 │ 		// Adds a keyboard shortcut to toggle the sidebar.
+  
+  i React relies on hook dependencies to determine when to re-compute Effects.
+    Specifying more dependencies than required can lead to unnecessary re-rendering
+    and degraded performance.
+  
+  i Unsafe fix: Remove the extra dependencies from the list.
+  
+    102 │ → → },·[isMobile,·setOpen,·setOpenMobile]);
+        │                          ---------------   
+
+components/ui/sidebar.tsx:124:30 lint/correctness/useExhaustiveDependencies  FIXABLE  ━━━━━━━━━━━━━━
+
+  ! This hook specifies more dependencies than necessary: setOpenMobile.
+  
+    122 │ 		const state = open ? "expanded" : "collapsed";
+    123 │ 
+  > 124 │ 		const contextValue = React.useMemo<SidebarContextProps>(
+        │ 		                           ^^^^^^^
+    125 │ 			() => ({
+    126 │ 				state,
+  
+  i This dependency can be removed from the list.
+  
+    138 │ 				isMobile,
+    139 │ 				openMobile,
+  > 140 │ 				setOpenMobile,
+        │ 				^^^^^^^^^^^^^
+    141 │ 				toggleSidebar,
+    142 │ 			],
+  
+  i React relies on hook dependencies to determine when to re-compute Effects.
+    Specifying more dependencies than required can lead to unnecessary re-rendering
+    and degraded performance.
+  
+  i Unsafe fix: Remove the extra dependencies from the list.
+  
+    133 133 │   			}),
+    134 134 │   			[
+    135     │ - → → → → state,
+    136     │ - → → → → open,
+    137     │ - → → → → setOpen,
+    138     │ - → → → → isMobile,
+    139     │ - → → → → openMobile,
+    140     │ - → → → → setOpenMobile,
+    141     │ - → → → → toggleSidebar,
+        135 │ + → → → → state,·
+        136 │ + → → → → open,·
+        137 │ + → → → → setOpen,·
+        138 │ + → → → → isMobile,·
+        139 │ + → → → → openMobile,·
+        140 │ + → → → → toggleSidebar
+    142 141 │   			],
+    143 142 │   		);
+  
+
+lib/db/gift-queries.ts:7:2 lint/correctness/noUnusedImports  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Several of these imports are unused.
+  
+     5 │ 	eq,
+     6 │ 	getTableColumns,
+   > 7 │ 	gte,
+       │ 	^^^^
+   > 8 │ 	isNull,
+   > 9 │ 	lte,
+       │ 	^^^
+    10 │ 	or,
+    11 │ 	sql,
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Unsafe fix: Remove the unused imports.
+  
+      5   5 │   	eq,
+      6   6 │   	getTableColumns,
+      7     │ - → gte,
+      8   7 │   	isNull,
+      9     │ - → lte,
+     10   8 │   	or,
+     11   9 │   	sql,
+  
+
+app/(chat)/api/telegram/webhook/route.ts format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+    4988 4988 │   							? // Simple text mapping for history, preserving images might be complex in this DB schema
+    4989 4989 │   								// if parts are not stored fully. Assuming parts has text.
+    4990      │ - → → → → → → → → (m.parts·as·any[])
+    4991      │ - → → → → → → → → → .map((p)·=>·p.text)
+    4992      │ - → → → → → → → → → .join("\n")
+         4990 │ + → → → → → → → → (m.parts·as·any[]).map((p)·=>·p.text).join("\n")
+    4993 4991 │   							: (m.parts as any[]).map((p) => p.text).join("\n"),
+    4994 4992 │   				}));
+  
+
+lib/db/migrations/meta/_journal.json format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+      1   1 │   {
+      2     │ - ··"version":·"7",
+      3     │ - ··"dialect":·"postgresql",
+      4     │ - ··"entries":·[
+      5     │ - ····{
+      6     │ - ······"idx":·0,
+      7     │ - ······"version":·"7",
+      8     │ - ······"when":·1728598022383,
+      9     │ - ······"tag":·"0000_keen_devos",
+     10     │ - ······"breakpoints":·true
+     11     │ - ····},
+     12     │ - ····{
+     13     │ - ······"idx":·1,
+     14     │ - ······"version":·"7",
+     15     │ - ······"when":·1730207363999,
+     16     │ - ······"tag":·"0001_sparkling_blue_marvel",
+     17     │ - ······"breakpoints":·true
+     18     │ - ····},
+     19     │ - ····{
+     20     │ - ······"idx":·2,
+     21     │ - ······"version":·"7",
+     22     │ - ······"when":·1730725226313,
+     23     │ - ······"tag":·"0002_wandering_riptide",
+     24     │ - ······"breakpoints":·true
+     25     │ - ····},
+     26     │ - ····{
+     27     │ - ······"idx":·3,
+     28     │ - ······"version":·"7",
+     29     │ - ······"when":·1733403031014,
+     30     │ - ······"tag":·"0003_cloudy_glorian",
+     31     │ - ······"breakpoints":·true
+     32     │ - ····},
+     33     │ - ····{
+     34     │ - ······"idx":·4,
+     35     │ - ······"version":·"7",
+     36     │ - ······"when":·1733945232355,
+     37     │ - ······"tag":·"0004_odd_slayback",
+     38     │ - ······"breakpoints":·true
+     39     │ - ····},
+     40     │ - ····{
+     41     │ - ······"idx":·5,
+     42     │ - ······"version":·"7",
+     43     │ - ······"when":·1741934630596,
+     44     │ - ······"tag":·"0005_wooden_whistler",
+     45     │ - ······"breakpoints":·true
+     46     │ - ····},
+     47     │ - ····{
+     48     │ - ······"idx":·6,
+     49     │ - ······"version":·"7",
+     50     │ - ······"when":·1746118166211,
+     51     │ - ······"tag":·"0006_marvelous_frog_thor",
+     52     │ - ······"breakpoints":·true
+     53     │ - ····},
+     54     │ - ····{
+     55     │ - ······"idx":·7,
+     56     │ - ······"version":·"7",
+     57     │ - ······"when":·1757362773211,
+     58     │ - ······"tag":·"0007_flowery_ben_parker",
+     59     │ - ······"breakpoints":·true
+     60     │ - ····},
+     61     │ - ····{
+     62     │ - ······"idx":·8,
+     63     │ - ······"version":·"7",
+     64     │ - ······"when":·1768479010084,
+     65     │ - ······"tag":·"0008_flat_forgotten_one",
+     66     │ - ······"breakpoints":·true
+     67     │ - ····},
+     68     │ - ····{
+     69     │ - ······"idx":·9,
+     70     │ - ······"version":·"7",
+     71     │ - ······"when":·1768554805132,
+     72     │ - ······"tag":·"0009_modern_elektra",
+     73     │ - ······"breakpoints":·true
+     74     │ - ····},
+     75     │ - ····{
+     76     │ - ······"idx":·10,
+     77     │ - ······"version":·"7",
+     78     │ - ······"when":·1768844259502,
+     79     │ - ······"tag":·"0010_loose_proteus",
+     80     │ - ······"breakpoints":·true
+     81     │ - ····},
+     82     │ - ····{
+     83     │ - ······"idx":·11,
+     84     │ - ······"version":·"7",
+     85     │ - ······"when":·1768985168935,
+     86     │ - ······"tag":·"0011_wakeful_payback",
+     87     │ - ······"breakpoints":·true
+     88     │ - ····},
+     89     │ - ····{
+     90     │ - ······"idx":·12,
+     91     │ - ······"version":·"7",
+     92     │ - ······"when":·1768987239516,
+     93     │ - ······"tag":·"0012_last_wraith",
+     94     │ - ······"breakpoints":·true
+     95     │ - ····},
+     96     │ - ····{
+     97     │ - ······"idx":·13,
+     98     │ - ······"version":·"7",
+     99     │ - ······"when":·1768989183850,
+    100     │ - ······"tag":·"0013_condemned_gladiator",
+    101     │ - ······"breakpoints":·true
+    102     │ - ····},
+    103     │ - ····{
+    104     │ - ······"idx":·14,
+    105     │ - ······"version":·"7",
+    106     │ - ······"when":·1769255175518,
+    107     │ - ······"tag":·"0014_spicy_praxagora",
+    108     │ - ······"breakpoints":·true
+    109     │ - ····},
+    110     │ - ····{
+    111     │ - ······"idx":·15,
+    112     │ - ······"version":·"7",
+    113     │ - ······"when":·1769257811330,
+    114     │ - ······"tag":·"0015_bumpy_pepper_potts",
+    115     │ - ······"breakpoints":·true
+    116     │ - ····},
+    117     │ - ····{
+    118     │ - ······"idx":·16,
+    119     │ - ······"version":·"7",
+    120     │ - ······"when":·1769501218771,
+    121     │ - ······"tag":·"0016_supreme_jean_grey",
+    122     │ - ······"breakpoints":·true
+    123     │ - ····},
+    124     │ - ····{
+    125     │ - ······"idx":·17,
+    126     │ - ······"version":·"7",
+    127     │ - ······"when":·1769889898480,
+    128     │ - ······"tag":·"0017_outstanding_king_cobra",
+    129     │ - ······"breakpoints":·true
+    130     │ - ····},
+    131     │ - ····{
+    132     │ - ······"idx":·18,
+    133     │ - ······"version":·"7",
+    134     │ - ······"when":·1769890850681,
+    135     │ - ······"tag":·"0018_concerned_revanche",
+    136     │ - ······"breakpoints":·true
+    137     │ - ····},
+    138     │ - ····{
+    139     │ - ······"idx":·19,
+    140     │ - ······"version":·"7",
+    141     │ - ······"when":·1770041578549,
+    142     │ - ······"tag":·"0019_tricky_betty_brant",
+    143     │ - ······"breakpoints":·true
+    144     │ - ····},
+    145     │ - ····{
+    146     │ - ······"idx":·20,
+    147     │ - ······"version":·"7",
+    148     │ - ······"when":·1770143768285,
+    149     │ - ······"tag":·"0020_soft_miracleman",
+    150     │ - ······"breakpoints":·true
+  212 more lines truncated
+  
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 1.
+Checked 290 files in 261ms. No fixes applied.
+Found 3 errors.
+Found 9 warnings.
+Found 9 infos.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+Error: Lint errors found
+    at file:///Users/igortkachenko/Downloads/newchat/node_modules/ultracite/dist/index.js:313:13045
+    at async resolveMiddleware (file:///Users/igortkachenko/Downloads/newchat/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:221:17)
+    at async callRecursive (file:///Users/igortkachenko/Downloads/newchat/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async callRecursive (file:///Users/igortkachenko/Downloads/newchat/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async procedure (file:///Users/igortkachenko/Downloads/newchat/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:281:18)
+    at async file:///Users/igortkachenko/Downloads/newchat/node_modules/@trpc/server/dist/tracked-D4V22yc5.mjs:298:13
+    at async Command.<anonymous> (file:///Users/igortkachenko/Downloads/newchat/node_modules/trpc-cli/dist/index.js:355:32)
+    at async Command.parseAsync (/Users/igortkachenko/Downloads/newchat/node_modules/trpc-cli/node_modules/commander/lib/command.js:1122:5)
+    at async Object.run (file:///Users/igortkachenko/Downloads/newchat/node_modules/trpc-cli/dist/index.js:461:9)
+ ELIFECYCLE  Command failed with exit code 1.

@@ -14,7 +14,6 @@ import {
 	entitlementsByUserType,
 	SUBSCRIPTION_LIMITS,
 } from "@/lib/ai/entitlements";
-import { IMAGE_MODELS } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createClan, joinClan, leaveClan } from "@/lib/clan/actions";
@@ -149,6 +148,48 @@ const PROVIDER_MAP: Record<string, string> = {
 	model_video_pika: "openai/gpt-4o",
 	model_video_hailuo: "openai/gpt-4o",
 };
+
+const PRANK_SCENARIOS = [
+	{
+		id: "shattered_screen",
+		name: "1. 📱 Я разбил экран",
+		description:
+			"Сфотографируйте свой телевизор или монитор (выключенный, черный экран) фронтально. В кадре должно быть видно немного комнаты.",
+		prompt:
+			"Change the screen to look completely shattered with spiderweb cracks, glowing glitch lines, and broken LCD leakage.",
+	},
+	{
+		id: "flooded_floor",
+		name: "2. 💧 Меня топят соседи",
+		description:
+			"Сфотографируйте пол в коридоре или на кухне. Желательно захватить плинтус или ножку мебели.",
+		prompt:
+			"Add a large realistic water puddle covering the floor, with reflections of the room lights on the water surface, looking like a severe pipe leak.",
+	},
+	{
+		id: "broken_limb",
+		name: "3. 🤕 Сломал руку / ногу",
+		description:
+			"Сделайте фото своей руки (предплечья) или ноги, лежащей на кровати или диване. Важно: рука/нога должна быть в фокусе.",
+		prompt:
+			"Put a heavy white orthopedic plaster cast, realistic medical texture, looking like a treatment for a broken bone.",
+	},
+	{
+		id: "name_tattoo",
+		name: "4. ✍️ Имя на запястье",
+		description:
+			"Фото внутренней стороны запястья. Можно держать в руке чашку или телефон.",
+		prompt:
+			'Add a handwritten tattoo of the name "Настя" on the wrist, messy cursive font, black fresh ink, swollen red skin.',
+	},
+	{
+		id: "door_vandalism",
+		name: "5. 🎨 Вандализм на двери",
+		description: "Фото вашей входной двери снаружи.",
+		prompt:
+			"Add messy red spray paint graffiti scribbles on the door surface, looking like aggressive vandalism.",
+	},
+];
 
 const KLING_MOTIONS = [
 	{
@@ -403,7 +444,7 @@ async function getImageModelKeyboard(
 
 	// Row 1: Top 10 Pranks + GPT Images 1.5
 	const row1 = [];
-	row1.push({ text: "🎭 ТОП 10 Пранков", callback_data: "menu_top_pranks" });
+	row1.push({ text: "🎭 Топ 5 Пранков", callback_data: "menu_top_pranks" });
 
 	const gptBtn = getModelBtn("model_image_gpt_images_1_5", "GPT Images 1.5");
 	if (gptBtn) row1.push(gptBtn);
@@ -4839,6 +4880,21 @@ bot.on("message:photo", async (ctx) => {
 			// Heuristic for Image Edit cost
 			// "gpt-image-1-edit" = 20. default to 20.
 			cost = 20;
+
+			// --- PRANK COST OVERRIDE ---
+			if (
+				selectedModelId === "model_image_nano_banana" &&
+				(user.preferences as any)?.prank_id
+			) {
+				const prank = PRANK_SCENARIOS.find(
+					(p) => p.id === (user.preferences as any).prank_id,
+				);
+				if (prank) {
+					cost = 15;
+				}
+			}
+			// ---------------------------
+
 			// If we want precise mapping:
 			// const key = selectedModelId.replace("model_", "").replace(/_/g, "-") + "-edit";
 			// cost = FEATURE_COSTS[key] || 20;
@@ -4930,9 +4986,7 @@ bot.on("message:photo", async (ctx) => {
 						m.role === "user"
 							? // Simple text mapping for history, preserving images might be complex in this DB schema
 								// if parts are not stored fully. Assuming parts has text.
-								(m.parts as any[])
-									.map((p) => p.text)
-									.join("\n")
+								(m.parts as any[]).map((p) => p.text).join("\n")
 							: (m.parts as any[]).map((p) => p.text).join("\n"),
 				}));
 
@@ -5194,6 +5248,27 @@ bot.on("message:photo", async (ctx) => {
 
 			const model = genAI.getGenerativeModel({ model: modelId });
 
+			// --- PRANK LOGIC START ---
+			let promptToSend = caption || "Edit this image";
+			const prankId = (user.preferences as any)?.prank_id;
+			if (prankId) {
+				const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+				if (prank) {
+					promptToSend = prank.prompt;
+					cost = 15; // Prank specific cost
+					await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+						parse_mode: "HTML",
+					});
+
+					// Optional: Clear prank after use?
+					// User flow: "Select prank -> Send photo".
+					// If they send another photo, should it still be prank?
+					// Usually "State" persists until changed or cleared.
+					// Let's keep it persistent as per "checkbox" UI implies state.
+				}
+			}
+			// --- PRANK LOGIC END ---
+
 			const result = await model.generateContent([
 				{
 					inlineData: {
@@ -5201,7 +5276,7 @@ bot.on("message:photo", async (ctx) => {
 						mimeType: "image/jpeg",
 					},
 				},
-				caption || "Edit this image",
+				promptToSend,
 			]);
 
 			const response = await result.response;
@@ -5291,6 +5366,20 @@ bot.on("message:document", async (ctx) => {
 		if (selectedModelId.startsWith("model_image_")) {
 			// Heuristic for Image Edit cost
 			cost = 20;
+
+			// --- PRANK COST OVERRIDE ---
+			if (
+				selectedModelId === "model_image_nano_banana" &&
+				(user.preferences as any)?.prank_id
+			) {
+				const prank = PRANK_SCENARIOS.find(
+					(p) => p.id === (user.preferences as any).prank_id,
+				);
+				if (prank) {
+					cost = 15;
+				}
+			}
+			// ---------------------------
 		} else {
 			cost = FEATURE_COSTS.image_recognition || 10;
 		}
@@ -5495,9 +5584,24 @@ bot.on("message:document", async (ctx) => {
 					"gemini-2.5-flash-image";
 				const model = genAI.getGenerativeModel({ model: modelId });
 
+				// --- PRANK LOGIC START ---
+				let promptToSend = caption || "Edit this image";
+				const prankId = (user.preferences as any)?.prank_id;
+				if (prankId) {
+					const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+					if (prank) {
+						promptToSend = prank.prompt;
+						cost = 15; // Prank specific cost
+						await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+							parse_mode: "HTML",
+						});
+					}
+				}
+				// --- PRANK LOGIC END ---
+
 				const result = await model.generateContent([
 					{ inlineData: { data: base64Image, mimeType: mimeType } },
-					caption || "Edit this image",
+					promptToSend,
 				]);
 				const response = await result.response;
 
