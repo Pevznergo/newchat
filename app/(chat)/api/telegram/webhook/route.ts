@@ -2422,6 +2422,85 @@ bot.callbackQuery("scenarios_back", async (ctx) => {
 	await safeAnswerCallbackQuery(ctx);
 });
 
+// --- Prank Handlers ---
+
+bot.callbackQuery("menu_top_pranks", async (ctx) => {
+	const telegramId = ctx.from.id.toString();
+	const [user] = await getUserByTelegramId(telegramId);
+	const activePrankId = (user?.preferences as any)?.prank_id;
+
+	const buttons = PRANK_SCENARIOS.map((prank) => {
+		const isSelected = activePrankId === prank.id;
+		return [
+			{
+				text: `${isSelected ? "✅ " : ""}${prank.name}`,
+				callback_data: `prank_select_${prank.id}`,
+			},
+		];
+	});
+
+	buttons.push([{ text: "🔙 Назад к фоторежиму", callback_data: "image_gen" }]);
+
+	await ctx.editMessageText("🎭 <b>Топ 5 Пранков</b>\n\nВыберите розыгрыш:", {
+		parse_mode: "HTML",
+		reply_markup: {
+			inline_keyboard: buttons,
+		},
+	});
+	await safeAnswerCallbackQuery(ctx);
+});
+
+bot.callbackQuery(/^prank_select_(.+)$/, async (ctx) => {
+	const prankId = ctx.match[1];
+	const telegramId = ctx.from.id.toString();
+	const [user] = await getUserByTelegramId(telegramId);
+	const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+
+	if (!prank || !user) {
+		await safeAnswerCallbackQuery(ctx, "Пранк не найден");
+		return;
+	}
+
+	// Update user state: selected prank + switch to Nano Banana
+	await updateUserPreferences(user.id, {
+		...(user.preferences as any),
+		prank_id: prankId,
+	});
+	await updateUserSelectedModel(user.id, "model_image_nano_banana");
+
+	// Update the menu (to show checkmark)
+	const buttons = PRANK_SCENARIOS.map((p) => {
+		const isSelected = p.id === prankId;
+		return [
+			{
+				text: `${isSelected ? "✅ " : ""}${p.name}`,
+				callback_data: `prank_select_${p.id}`,
+			},
+		];
+	});
+
+	buttons.push([{ text: "🔙 Назад к фоторежиму", callback_data: "image_gen" }]);
+
+	try {
+		await ctx.editMessageText("🎭 <b>Топ 5 Пранков</b>\n\nВыберите розыгрыш:", {
+			parse_mode: "HTML",
+			reply_markup: {
+				inline_keyboard: buttons,
+			},
+		});
+	} catch (e) {
+		// Ignore if not modified
+	}
+
+	// Send description message
+	await ctx.reply(
+		`🎭 <b>${prank.name}</b>\n\n${prank.description}\n\n📸 <b>Отправьте фото для розыгрыша!</b>\n⚠️ <i>Будет списано 15 запросов (как для Nano Banana).</i>`,
+		{ parse_mode: "HTML" },
+	);
+
+	await safeAnswerCallbackQuery(ctx, "Пранк выбран!");
+});
+
 bot.command("clear", async (ctx) => {
 	await safeDeleteMessage(ctx);
 	const telegramId = ctx.from?.id.toString();
