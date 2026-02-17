@@ -4512,11 +4512,9 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						);
 
 						// Strip "google/" prefix and "models/" prefix if present
-						const modelId =
-							imageModelConfig.id
-								.replace(/^google\//, "")
-								.replace(/^models\//, "")
-								.replace(/-image$/, "") || "gemini-1.5-flash"; // Fallback
+						const modelId = imageModelConfig.id
+							.replace(/^google\//, "")
+							.replace(/^models\//, "");
 
 						const model = genAI.getGenerativeModel({ model: modelId });
 
