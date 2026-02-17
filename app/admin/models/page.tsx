@@ -183,6 +183,7 @@ export default function AdminModelsPage() {
 															>
 																<option value="openai">OpenAI</option>
 																<option value="openrouter">OpenRouter</option>
+																<option value="aporto">Aporto</option>
 																<option value="google">Google</option>
 																<option value="anthropic">Anthropic</option>
 																<option value="perplexity">Perplexity</option>
