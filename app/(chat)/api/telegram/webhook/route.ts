@@ -4556,6 +4556,86 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 						);
 						break;
 
+					case "aporto": {
+						const apiKey = process.env.APORTO_API_KEY;
+						if (!apiKey) throw new Error("Missing APORTO_API_KEY");
+
+						console.log("[DEBUG] Starting Aporto T2I Request", {
+							model: imageModelConfig.id,
+							provider: "aporto",
+						});
+
+						const controller = new AbortController();
+						const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+						const response = await fetch(
+							"https://api.aporto.tech/chat/completions",
+							{
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${apiKey}`,
+									"Content-Type": "application/json",
+									"HTTP-Referer": "https://aporto.tech",
+									"X-Title": "Aporto Bot",
+								},
+								body: JSON.stringify({
+									model: imageModelConfig.id.replace(/^aporto\//, ""),
+									messages: [
+										{
+											role: "user",
+											content: text,
+										},
+									],
+								}),
+								signal: controller.signal,
+							},
+						);
+
+						clearTimeout(timeoutId);
+
+						if (!response.ok) {
+							const err = await response.text();
+							throw new Error(`Aporto API Error: ${response.status} - ${err}`);
+						}
+
+						const data = await response.json();
+						const message = data.choices?.[0]?.message;
+
+						if (!message) throw new Error("No message from Aporto");
+
+						// Handle Image URL in content (OpenAI DALL-E style) or Image Object
+						if (message.images && message.images.length > 0) {
+							const imageUrl = message.images[0].image_url?.url;
+
+							if (imageUrl?.startsWith("data:image")) {
+								const base64Data = imageUrl.split(",")[1];
+								const buffer = Buffer.from(base64Data, "base64");
+								await ctx.replyWithPhoto(
+									new InputFile(buffer, `image_${Date.now()}.png`),
+									{ caption: "Сделано в @aporto_bot" },
+								);
+							} else if (imageUrl?.startsWith("http")) {
+								await ctx.replyWithPhoto(imageUrl, {
+									caption: "Сделано в @aporto_bot",
+								});
+							}
+						} else if (message.content) {
+							// Try to find image URL in markdown or text
+							const urlMatch = message.content.match(/https?:\/\/[^\s)]+/);
+							if (urlMatch) {
+								await ctx.replyWithPhoto(urlMatch[0], {
+									caption: "Сделано в @aporto_bot",
+								});
+							} else {
+								// Fallback: just text
+								await ctx.reply(message.content);
+							}
+						} else {
+							throw new Error("No content or images returned");
+						}
+						break;
+					}
+
 					default:
 						await ctx.reply("❌ Неизвестный провайдер модели.");
 				}
