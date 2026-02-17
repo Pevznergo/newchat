@@ -5068,7 +5068,9 @@ bot.on("message:photo", async (ctx) => {
 						m.role === "user"
 							? // Simple text mapping for history, preserving images might be complex in this DB schema
 								// if parts are not stored fully. Assuming parts has text.
-								(m.parts as any[]).map((p) => p.text).join("\n")
+								(m.parts as any[])
+									.map((p) => p.text)
+									.join("\n")
 							: (m.parts as any[]).map((p) => p.text).join("\n"),
 				}));
 
@@ -5752,8 +5754,9 @@ bot.on("message:document", async (ctx) => {
 				const { GoogleGenerativeAI } = await import("@google/generative-ai");
 				const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 				const modelId =
-					imageModelConfig.id.replace(/^google\//, "") ||
-					"gemini-2.5-flash-image";
+					imageModelConfig.id
+						.replace(/^google\//, "")
+						.replace(/^models\//, "") || "gemini-1.5-flash";
 				const model = genAI.getGenerativeModel({ model: modelId });
 
 				// --- PRANK LOGIC START ---
