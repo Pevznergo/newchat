@@ -38,6 +38,11 @@ const openrouter = createOpenAI({
 	apiKey: process.env.OPENROUTER_API_KEY,
 });
 
+const aporto = createOpenAI({
+	baseURL: "https://api.aporto.tech",
+	apiKey: process.env.APORTO_API_KEY,
+});
+
 export function getLanguageModel(modelId: string): LanguageModel {
 	if (isTestEnvironment && myProvider) {
 		return myProvider.languageModel(modelId);
@@ -78,6 +83,12 @@ export function getLanguageModel(modelId: string): LanguageModel {
 		// OpenRouter model IDs often contain slashes, so we join the rest
 		const modelName = modelId.split("/").slice(1).join("/");
 		return openrouter(modelName);
+	}
+
+	// Handle Aporto
+	if (modelId.startsWith("aporto/")) {
+		const modelName = modelId.split("/").slice(1).join("/");
+		return aporto(modelName);
 	}
 
 	// Fallback or legacy gateway support if needed, but per request we use connected providers directly
