@@ -5288,6 +5288,109 @@ bot.on("message:photo", async (ctx) => {
 			} else {
 				throw new Error("No content or images in response");
 			}
+		} else if (imageModelConfig.provider === "aporto") {
+			const apiKey = process.env.APORTO_API_KEY;
+			if (!apiKey) {
+				throw new Error("Missing APORTO_API_KEY");
+			}
+
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+			// --- PRANK PROMPT OVERRIDE ---
+			let textPrompt = caption || "Опиши это изображение";
+			const prankId = (user.preferences as any)?.prank_id;
+			if (prankId) {
+				const prank = PRANK_SCENARIOS.find((p) => p.id === prankId);
+				if (prank) {
+					textPrompt = prank.prompt;
+					cost = 15;
+					await ctx.reply(`🎭 Применяю пранк: <b>${prank.name}</b>...`, {
+						parse_mode: "HTML",
+					});
+
+					// Track Prank Generation
+					trackBackendEvent(telegramId, "Prank: Generation", {
+						prank_id: prank.id,
+						prank_name: prank.name,
+						cost: cost,
+						model: imageModelConfig.id,
+					});
+				}
+			}
+			// -----------------------------
+
+			const response = await fetch("https://api.aporto.tech/chat/completions", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					model: imageModelConfig.id.replace(/^aporto\//, ""),
+					messages: [
+						{
+							role: "user",
+							content: [
+								{
+									type: "image_url",
+									image_url: {
+										url: `data:${mimeType};base64,${base64Image}`,
+									},
+								},
+								{
+									type: "text",
+									text: textPrompt,
+								},
+							],
+						},
+					],
+					modalities: ["image", "text"],
+				}),
+				signal: controller.signal,
+			});
+
+			clearTimeout(timeoutId);
+
+			if (!response.ok) {
+				const err = await response.text();
+				console.error("Aporto API Error:", response.status, err);
+				throw new Error(`Aporto API Error: ${response.status} - ${err}`);
+			}
+
+			const data = await response.json();
+			console.log("Aporto Photo Response:", JSON.stringify(data, null, 2));
+
+			const message = data.choices?.[0]?.message;
+
+			if (!message) {
+				throw new Error("No message from Aporto");
+			}
+
+			// Check if response contains images
+			if (message.images && message.images.length > 0) {
+				const imageUrl = message.images[0].image_url?.url;
+
+				if (imageUrl?.startsWith("data:image")) {
+					const base64Data = imageUrl.split(",")[1];
+					const buffer = Buffer.from(base64Data, "base64");
+					await ctx.replyWithPhoto(
+						new InputFile(buffer, `edited_${Date.now()}.png`),
+						{
+							caption: "Сделано в @aporto_bot",
+						},
+					);
+				} else if (imageUrl?.startsWith("http")) {
+					await ctx.replyWithPhoto(imageUrl, {
+						caption: "Сделано в @aporto_bot",
+					});
+				}
+			} else if (message.content) {
+				// If no image, send text response
+				await ctx.reply(message.content);
+			} else {
+				throw new Error("No content or images in response");
+			}
 		} else if (imageModelConfig.provider === "openai") {
 			// Stub for GPT Images/Flux/etc - Only allow Nano Banana (if it's OpenAI)
 			if (imageModelConfig.id !== "model_image_nano_banana") {
