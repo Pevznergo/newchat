@@ -4646,8 +4646,14 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 		// --- Text Generation Flow ---
 		// Resolve API Model ID from DB if available
 		const dbModel = CACHED_MODELS?.find((m) => m.modelId === selectedModelId);
-		const apiModelId =
+		let apiModelId =
 			dbModel?.apiModelId || PROVIDER_MAP[selectedModelId] || selectedModelId;
+
+		// Fix for Aporto provider if model ID is missing prefix
+		if (dbModel?.provider === "aporto" && !apiModelId.startsWith("aporto/")) {
+			apiModelId = `aporto/${apiModelId}`;
+		}
+
 		const realModelId = apiModelId;
 
 		await ctx.replyWithChatAction("typing");
