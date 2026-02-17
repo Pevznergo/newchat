@@ -4504,34 +4504,47 @@ Last Reset: ${target.lastResetDate ? target.lastResetDate.toISOString() : "Never
 					}
 
 					case "google": {
-						const { experimental_generateImage } = await import("ai");
-						const { google } = await import("@ai-sdk/google");
+						const { GoogleGenerativeAI } = await import(
+							"@google/generative-ai"
+						);
+						const genAI = new GoogleGenerativeAI(
+							process.env.GOOGLE_API_KEY || "",
+						);
 
-						// Strip "google/" prefix if present
-						const modelId = imageModelConfig.id.replace(/^google\//, "");
+						// Strip "google/" prefix and "models/" prefix if present
+						const modelId =
+							imageModelConfig.id
+								.replace(/^google\//, "")
+								.replace(/^models\//, "")
+								.replace(/-image$/, "") || "gemini-1.5-flash"; // Fallback
 
-						const { image } = await experimental_generateImage({
-							model: google.image(modelId),
-							prompt: text,
-							n: 1,
-							providerOptions: {
-								google: {
-									aspectRatio: "1:1",
-									safetySettings: [],
-								},
-							},
-						});
+						const model = genAI.getGenerativeModel({ model: modelId });
 
-						if (image?.base64) {
-							const buffer = Buffer.from(image.base64, "base64");
+						const result = await model.generateContent(text);
+						const response = await result.response;
+
+						// Check for image in response
+						let imageData: string | null = null;
+						for (const part of response.candidates?.[0]?.content?.parts || []) {
+							if (part.inlineData) {
+								imageData = part.inlineData.data;
+								break;
+							}
+						}
+
+						if (imageData) {
+							const buffer = Buffer.from(imageData, "base64");
 							await ctx.replyWithPhoto(
 								new InputFile(buffer, `image_${Date.now()}.png`),
 								{
 									caption: "Сделано в @aporto_bot",
 								},
 							);
+						} else if (response.text()) {
+							// Fallback if model returns text instead of image
+							await ctx.reply(response.text());
 						} else {
-							throw new Error("No image data returned from Google");
+							throw new Error("No image or text returned from Google");
 						}
 						break;
 					}
