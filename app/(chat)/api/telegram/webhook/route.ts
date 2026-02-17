@@ -5016,7 +5016,19 @@ bot.on("message:photo", async (ctx) => {
 			const IMAGE_MODELS = await getImageModels();
 			const imageModelConfig = IMAGE_MODELS[selectedModelId];
 
+			console.log("[DEBUG] Image Model Request:", {
+				selectedModelId,
+				configFound: !!imageModelConfig,
+				provider: imageModelConfig?.provider,
+				id: imageModelConfig?.id,
+				enabled: imageModelConfig?.enabled,
+			});
+
 			if (!imageModelConfig || !imageModelConfig.enabled) {
+				console.warn(
+					"[DEBUG] Image model not found or disabled:",
+					selectedModelId,
+				);
 				await ctx.reply("⚠️ Эта модель пока недоступна.");
 				return;
 			}
@@ -5177,7 +5189,13 @@ bot.on("message:photo", async (ctx) => {
 		const mimeType = "image/jpeg"; // Telegram usually sends JPEG
 
 		await ctx.replyWithChatAction("upload_photo");
+		await ctx.replyWithChatAction("upload_photo");
 		await ctx.reply(`🎨 Обрабатываю изображение (${imageModelConfig.name})...`);
+
+		console.log(
+			"[DEBUG] Processing Image with Provider:",
+			imageModelConfig.provider,
+		);
 
 		// Handle OpenRouter image models
 		if (imageModelConfig.provider === "openrouter") {
@@ -5565,11 +5583,13 @@ bot.on("message:photo", async (ctx) => {
 			return;
 		}
 		await incrementUserRequestCount(user.id, cost); // Charge for Image Edit
-	} catch (error) {
-		console.error("Photo Processing Error:", error);
-		await ctx.reply(
-			"Произошла ошибка при обработке изображения. Попробуйте позже.",
-		);
+	} catch (error: any) {
+		console.error("[DEBUG] Photo Processing Error:", {
+			message: error.message,
+			stack: error.stack,
+			name: error.name,
+		});
+		await ctx.reply(`❌ Ошибка: ${error.message || "Неизвестная ошибка"}`);
 	}
 });
 

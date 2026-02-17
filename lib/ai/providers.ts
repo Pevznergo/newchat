@@ -44,6 +44,8 @@ const aporto = createOpenAI({
 });
 
 export function getLanguageModel(modelId: string): LanguageModel {
+	console.log("[DEBUG] getLanguageModel called with:", modelId);
+
 	if (isTestEnvironment && myProvider) {
 		return myProvider.languageModel(modelId);
 	}
